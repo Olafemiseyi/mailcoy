@@ -1,0 +1,46 @@
+{
+  "timeZone": "Africa/Lagos",
+  "dependencies": {
+    "enabledAdvancedServices": []
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "addOns": {
+    "common": {
+      "name": "LightOrb Connect",
+      "logoUrl": "https://raw.githubusercontent.com/lightorb/assets/main/logo-32.png",
+      "useLocaleFromApp": true,
+      "homepageTrigger": {
+        "runFunction": "onGmailHomepage",
+        "enabled": true
+      },
+      "universalActions": [
+        {
+          "label": "Open LightOrb Dashboard",
+          "openLink": "https://connect.lightorb.com/dashboard"
+        }
+      ]
+    },
+    "gmail": {
+      "contextualTriggers": [
+        {
+          "unconditional": {},
+          "onTriggerFunction": "onGmailMessageOpen"
+        }
+      ],
+      "composeTrigger": {
+        "selectActions": [
+          {
+            "text": "Insert LightOrb Signature",
+            "runFunction": "insertLightOrbSignature"
+          },
+          {
+            "text": "Switch Professional Identity",
+            "runFunction": "switchIdentity"
+          }
+        ],
+        "draftAccess": "METADATA"
+      }
+    }
+  }
+}
