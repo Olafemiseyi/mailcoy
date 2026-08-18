@@ -142,6 +142,15 @@ export const listEmailLogs = createServerFn({ method: "GET" })
 export const listMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: members, error } = await supabaseAdmin
+      .from("organization_members")
+      .select("*")
+      .eq("organization_id", ctx.organizationId);
+
+    if (error) throw error;
     if (!members || members.length === 0) return [];
 
     // Fetch user profiles & auth emails
