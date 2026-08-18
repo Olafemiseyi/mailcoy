@@ -31,6 +31,7 @@ import { Route as ApiRegistrarDetectRouteImport } from './routes/api/registrar-d
 import { Route as ApiDnsResolveRouteImport } from './routes/api/dns-resolve'
 import { Route as ApiAliasSuggestionsRouteImport } from './routes/api/alias-suggestions'
 import { Route as AdminStatusRouteImport } from './routes/admin/status'
+import { Route as AdminPromosRouteImport } from './routes/admin/promos'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -167,6 +168,11 @@ const ApiAliasSuggestionsRoute = ApiAliasSuggestionsRouteImport.update({
 const AdminStatusRoute = AdminStatusRouteImport.update({
   id: '/status',
   path: '/status',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPromosRoute = AdminPromosRouteImport.update({
+  id: '/promos',
+  path: '/promos',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/promos': typeof AdminPromosRoute
   '/admin/status': typeof AdminStatusRoute
   '/api/alias-suggestions': typeof ApiAliasSuggestionsRoute
   '/api/dns-resolve': typeof ApiDnsResolveRoute
@@ -390,6 +397,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/promos': typeof AdminPromosRoute
   '/admin/status': typeof AdminStatusRoute
   '/api/alias-suggestions': typeof ApiAliasSuggestionsRoute
   '/api/dns-resolve': typeof ApiDnsResolveRoute
@@ -442,6 +450,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/promos': typeof AdminPromosRoute
   '/admin/status': typeof AdminStatusRoute
   '/api/alias-suggestions': typeof ApiAliasSuggestionsRoute
   '/api/dns-resolve': typeof ApiDnsResolveRoute
@@ -494,6 +503,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/admin/login'
     | '/admin/organizations'
+    | '/admin/promos'
     | '/admin/status'
     | '/api/alias-suggestions'
     | '/api/dns-resolve'
@@ -543,6 +553,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/admin/login'
     | '/admin/organizations'
+    | '/admin/promos'
     | '/admin/status'
     | '/api/alias-suggestions'
     | '/api/dns-resolve'
@@ -594,6 +605,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/admin/login'
     | '/admin/organizations'
+    | '/admin/promos'
     | '/admin/status'
     | '/api/alias-suggestions'
     | '/api/dns-resolve'
@@ -813,6 +825,13 @@ declare module '@tanstack/react-router' {
       path: '/status'
       fullPath: '/admin/status'
       preLoaderRoute: typeof AdminStatusRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/promos': {
+      id: '/admin/promos'
+      path: '/promos'
+      fullPath: '/admin/promos'
+      preLoaderRoute: typeof AdminPromosRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/organizations': {
@@ -1118,6 +1137,7 @@ const AuthenticatedRouteRouteWithChildren =
 interface AdminRouteRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
+  AdminPromosRoute: typeof AdminPromosRoute
   AdminStatusRoute: typeof AdminStatusRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -1125,6 +1145,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
+  AdminPromosRoute: AdminPromosRoute,
   AdminStatusRoute: AdminStatusRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

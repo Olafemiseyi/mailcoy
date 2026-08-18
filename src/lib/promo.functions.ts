@@ -155,7 +155,7 @@ export const validatePromoCode = createServerFn({ method: "POST" })
       code: row.code as string,
       discountPct: row.discount_pct as number,
       duration: row.duration as "once" | "forever",
-      message: ${row.discount_pct}% off applied — .,
+      message: `${row.discount_pct}% off applied — ${durLabel}.`,
     };
   });
 

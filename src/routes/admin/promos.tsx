@@ -125,7 +125,6 @@ function AdminPromosPage() {
         </Button>
       </div>
 
-      {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Total codes", value: codes.length },
@@ -139,7 +138,6 @@ function AdminPromosPage() {
         ))}
       </div>
 
-      {/* Table */}
       <Card className="p-0 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-[13px] text-ink-3">Loading codes…</div>
@@ -184,7 +182,7 @@ function AdminPromosPage() {
                         <span className="font-semibold text-primary">{p.discount_pct}% off</span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium }>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${p.duration === "forever" ? "bg-violet-500/10 text-violet-600" : "bg-sky-500/10 text-sky-600"}`}>
                           {p.duration === "forever" ? "Forever" : "First month"}
                         </span>
                       </td>
@@ -192,8 +190,8 @@ function AdminPromosPage() {
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 bg-ink/[0.06] rounded-full overflow-hidden">
                             <div
-                              className={h-full rounded-full transition-all }
-                              style={{ width: p.max_uses === 0 ? "0%" : ${usagePct}% }}
+                              className={`h-full rounded-full transition-all ${isExhausted ? "bg-danger" : "bg-primary"}`}
+                              style={{ width: p.max_uses === 0 ? "0%" : `${usagePct}%` }}
                             />
                           </div>
                           <span className="text-[12px] font-mono text-ink-3 shrink-0">
@@ -238,7 +236,6 @@ function AdminPromosPage() {
         )}
       </Card>
 
-      {/* Create / Edit Modal */}
       {modal !== null && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4 backdrop-blur-sm">
           <Card className="w-full max-w-md shadow-2xl p-6">
@@ -310,13 +307,12 @@ function AdminPromosPage() {
                 <label htmlFor="is_active" className="text-[13px] font-medium">Active (users can redeem this code)</label>
               </div>
 
-              {/* Live preview */}
               {form.code && form.discount_pct > 0 && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-3 flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                   <p className="text-[12.5px] text-emerald-700 dark:text-emerald-400">
                     <strong>{form.code}</strong> gives <strong>{form.discount_pct}% off</strong> — {form.duration === "forever" ? "every renewal" : "first month only"}.
-                    {form.max_uses > 0 ?  Max  uses. : " Unlimited uses."}
+                    {form.max_uses > 0 ? ` Max ${form.max_uses} uses.` : " Unlimited uses."}
                   </p>
                 </div>
               )}
@@ -338,7 +334,6 @@ function AdminPromosPage() {
         </div>
       )}
 
-      {/* Delete Confirmation */}
       {pendingDelete && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4 backdrop-blur-sm">
           <Card className="w-full max-w-sm shadow-2xl p-5">
