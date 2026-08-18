@@ -135,7 +135,7 @@ function Pricing() {
       </div>
 
       {/* Pricing Cards Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((p) => (
           <div
             key={p.name}
