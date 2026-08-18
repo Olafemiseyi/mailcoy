@@ -61,7 +61,7 @@ function MembersRoute() {
             </p>
           </div>
           <Button onClick={() => setOpenModal(true)} className="gap-2 shrink-0">
-            <UserPlus className="h-4 w-4" /> Invite Admin
+            <UserPlus className="h-4 w-4" /> Invite Member
           </Button>
         </div>
 
@@ -112,13 +112,13 @@ function MembersRoute() {
         )}
       </Card>
 
-      {/* Invite Admin Dialog Modal */}
+      {/* Invite User Dialog Modal */}
       {openModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-xl relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-                <UserPlus className="h-5 w-5 text-primary" /> Invite Workspace Admin
+                <UserPlus className="h-5 w-5 text-primary" /> Invite Team Member
               </div>
               <button
                 onClick={() => {
@@ -126,16 +126,23 @@ function MembersRoute() {
                   setResult(null);
                   setEmail("");
                 }}
-                className="text-ink-4 hover:text-ink transition"
+                className="p-1 text-ink-3 hover:text-ink hover:bg-ink/[0.04] rounded-md transition"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {result ? (
-              <div className="space-y-4 py-2">
-                <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[13px] leading-relaxed">
-                  {result.message}
+              <div className="mt-5 space-y-4">
+                <div className="rounded-xl border border-line bg-surface-muted/30 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-green-500/10 p-1.5 mt-0.5">
+                      <Check className="h-4 w-4 text-green-600" />
+                    </div>
+                    <p className="text-[13.5px] leading-relaxed text-ink-2">
+                      {result.message}
+                    </p>
+                  </div>
                 </div>
 
                 {result.inviteUrl && (
@@ -147,41 +154,32 @@ function MembersRoute() {
                         value={result.inviteUrl}
                         className="h-10 flex-1 rounded-xl border border-line bg-surface-muted px-3 text-[12px] font-mono text-ink outline-none"
                       />
-                      <Button onClick={copyLink} className="gap-1.5 shrink-0 h-10 px-3">
-                        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                        {copied ? "Copied" : "Copy"}
+                      <Button variant="secondary" onClick={copyLink} className="w-10 px-0 shrink-0">
+                        {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>
+                    <p className="text-[12px] text-ink-4">Send this link to the user to let them sign up and join your workspace.</p>
                   </div>
                 )}
 
-                <Button
-                  onClick={() => {
-                    setOpenModal(false);
-                    setResult(null);
-                    setEmail("");
-                  }}
-                  className="w-full mt-2"
-                >
-                  Done
-                </Button>
+                <Button className="w-full mt-2" onClick={() => setOpenModal(false)}>Done</Button>
               </div>
             ) : (
               <form onSubmit={handleInvite} className="space-y-4 pt-2">
                 <label className="grid gap-1.5 text-[13px] font-semibold text-ink-2">
-                  Admin Email Address
+                  Email Address
                   <input
                     required
                     type="email"
+                    placeholder="e.g. jane@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="co-founder@company.com"
-                    className="h-10 rounded-xl border border-line bg-background px-3 text-[14px] text-ink outline-none focus:border-primary"
+                    className="h-10 rounded-xl border border-line bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
                   />
                 </label>
 
                 <label className="grid gap-1.5 text-[13px] font-semibold text-ink-2">
-                  Permission Role
+                  Role
                   <CustomSelect
                     options={[
                       { value: "admin", label: "Workspace Admin (DNS, Inboxes, Signatures)" },
@@ -192,16 +190,12 @@ function MembersRoute() {
                   />
                 </label>
 
-                <div className="pt-2 flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setOpenModal(false)}
-                  >
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button type="button" variant="ghost" onClick={() => setOpenModal(false)}>
                     Cancel
                   </Button>
                   <Button type="submit" disabled={busy} className="gap-2">
-                    {busy ? "Sending…" : "Send Admin Invite"}
+                    {busy ? "Sending..." : "Send Invite"}
                   </Button>
                 </div>
               </form>
