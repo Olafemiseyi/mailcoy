@@ -60,7 +60,15 @@ function MembersRoute() {
               People who have administrative login access to manage this Mailcoy workspace, domains, and billing.
             </p>
           </div>
-          <Button onClick={() => setOpenModal(true)} className="gap-2 shrink-0">
+          <Button 
+            onClick={() => {
+              setResult(null);
+              setEmail("");
+              setRole("admin");
+              setOpenModal(true);
+            }} 
+            className="gap-2 shrink-0"
+          >
             <UserPlus className="h-4 w-4" /> Invite Member
           </Button>
         </div>

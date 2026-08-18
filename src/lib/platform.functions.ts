@@ -199,6 +199,26 @@ export const inviteMember = createServerFn({ method: "POST" })
     );
 
     if (user) {
+      if (user.id === context.userId) {
+        throw new Error("You cannot change your own role or re-invite yourself.");
+      }
+
+      // Prevent modifying an owner
+      const { data: existingMember } = await supabaseAdmin
+        .from("organization_members")
+        .select("role")
+        .eq("organization_id", ctx.organizationId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existingMember?.role === "owner") {
+        throw new Error("Cannot modify the role of the workspace owner.");
+      }
+      
+      if (existingMember?.role === data.role) {
+        throw new Error(`${data.email} is already a ${data.role} in this workspace.`);
+      }
+
       // Add directly to organization members
       const { error: insertErr } = await supabaseAdmin
         .from("organization_members")
@@ -209,7 +229,7 @@ export const inviteMember = createServerFn({ method: "POST" })
         }, { onConflict: "organization_id,user_id" });
 
       if (insertErr) throw insertErr;
-      return { status: "added", message: `${data.email} was added as ${data.role}!` };
+      return { status: "added", message: `${data.email} is already on Mailcoy and was added to your workspace directly as ${data.role}!` };
     }
 
     return {
