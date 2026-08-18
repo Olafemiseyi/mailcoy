@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { getEmployeeDetail } from "@/lib/employees.functions";
+import { getEmployeeDetail, updateEmployee } from "@/lib/employees.functions";
 import { createInvite, revokeInvite, listInvitesForEmployee } from "@/lib/invitations.functions";
 import { PageHeader, Card, StatusPill, Button } from "@/components/app/AppShell";
 import { ArrowLeft, Mail, Shield, ArrowUpRight, ArrowDownLeft, Eye, X, Send, Copy, QrCode, RefreshCw, Check, Activity } from "lucide-react";
@@ -54,6 +54,7 @@ export const Route = createFileRoute("/_authenticated/_shell/employees/$id")({
 
 function EmployeeDetailRoute() {
   const { id } = Route.useParams();
+  const qc = useQueryClient();
   const { data } = useSuspenseQuery(detailOpts(id));
   const emp = data.employee;
   const aliases = data.aliases;
@@ -61,6 +62,8 @@ function EmployeeDetailRoute() {
   const stats = data.stats;
   const [selectedMessage, setSelectedMessage] = useState<(typeof data.messages)[number] | null>(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [offboarding, setOffboarding] = useState(false);
+  const offboardFn = useServerFn(updateEmployee);
 
   const chartData = useMemo(() => {
     const map = new Map<string, { label: string; sent: number; received: number }>();
@@ -204,14 +207,21 @@ function EmployeeDetailRoute() {
               <Button
                 variant="danger"
                 className="w-full h-8 text-[12.5px]"
+                disabled={offboarding}
                 onClick={async () => {
                   if (confirm(`Revoke professional email access for ${emp.full_name ?? emp.professional_email}? This will immediately sever Gmail send-as permissions.`)) {
-                    // Triggers connection pause/revoke
-                    window.location.reload();
+                    setOffboarding(true);
+                    try {
+                      await offboardFn({ data: { id: emp.id, status: "inactive" } });
+                      await qc.invalidateQueries({ queryKey: ["employee", id] });
+                      await qc.invalidateQueries({ queryKey: ["employees"] });
+                    } finally {
+                      setOffboarding(false);
+                    }
                   }
                 }}
               >
-                1-Click Offboard Employee
+                {offboarding ? "Offboarding…" : "1-Click Offboard Employee"}
               </Button>
             ) : (
               <span className="text-[12px] text-danger font-medium block text-center py-1">

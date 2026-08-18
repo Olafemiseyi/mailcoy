@@ -61,7 +61,12 @@ function useRegistrarDetect(domainName: string) {
     queryFn: async (): Promise<{ registrar: RegistrarInfo; nsRecords: string[] }> => {
       const res = await fetch(`/api/registrar-detect?domain=${encodeURIComponent(domainName)}`);
       if (!res.ok) throw new Error("Failed to detect registrar");
-      return res.json();
+      const json = await res.json();
+      // API returns 'nameservers', normalise to 'nsRecords' for the component
+      return {
+        registrar: json.registrar ?? null,
+        nsRecords: Array.isArray(json.nameservers) ? json.nameservers : (Array.isArray(json.nsRecords) ? json.nsRecords : []),
+      };
     },
     staleTime: 5 * 60_000, // cache for 5 min — NS records rarely change
     retry: 1,
@@ -250,7 +255,7 @@ function RegistrarBanner({
   }
 
   const reg = query.data.registrar;
-  const ns = query.data.nsRecords;
+  const ns = query.data.nsRecords ?? [];
 
   return (
     <Card className="mb-6 p-0 overflow-hidden border-blue-500/20 bg-blue-500/[0.03]">
