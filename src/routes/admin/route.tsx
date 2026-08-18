@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPlatformAdminStatus } from "@/lib/admin.functions";
 import { Logomark } from "@/components/brand/Logomark";
-import { LayoutDashboard, Building2, LogOut, ShieldCheck, Activity, Server } from "lucide-react";
+import { LayoutDashboard, Building2, LogOut, ShieldCheck, Activity, Server, Tag } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/admin")({
 const NAV = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard },
   { to: "/admin/organizations", label: "Organizations", icon: Building2 },
+  { to: "/admin/promos", label: "Promo Codes", icon: Tag },
   { to: "/admin/status", label: "System status & Infrastructure", icon: Activity },
 ] as const;
 

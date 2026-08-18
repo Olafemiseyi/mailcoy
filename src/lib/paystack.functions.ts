@@ -19,6 +19,7 @@ const initSchema = z.object({
   interval: z.enum(["monthly", "yearly"]).default("monthly"),
   amountKobo: z.number().int().positive().max(1_000_000_00),
   callbackUrl: z.string().url(),
+  promoCode: z.string().trim().toUpperCase().max(32).optional(),
 });
 
 function planEnvName(planCode: string, interval: "monthly" | "yearly") {
@@ -34,6 +35,35 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
     const email = context.claims.email as string | undefined;
     if (!email) throw new Error("No email on session");
 
+    // ── Promo code validation (server-side re-check) ──────────────────────────
+    let finalAmountKobo = data.amountKobo;
+    let promoDiscountPct: number | null = null;
+    let promoDuration: "once" | "forever" | null = null;
+
+    if (data.promoCode) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: promo } = await supabaseAdmin
+        .from("promo_codes")
+        .select("discount_pct, duration, is_active, max_uses, current_uses, expires_at")
+        .eq("code", data.promoCode)
+        .maybeSingle();
+
+      if (
+        promo &&
+        promo.is_active &&
+        (!promo.expires_at || new Date(promo.expires_at) >= new Date()) &&
+        (promo.max_uses === 0 || promo.current_uses < promo.max_uses)
+      ) {
+        // Apply discount to this month's charge
+        promoDiscountPct = promo.discount_pct as number;
+        promoDuration = promo.duration as "once" | "forever";
+        finalAmountKobo = Math.round(finalAmountKobo * (1 - promoDiscountPct / 100));
+        // Enforce Paystack minimum (Paystack requires at least ₦100 = 10000 kobo)
+        if (finalAmountKobo < 10_000) finalAmountKobo = 10_000;
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const recurringPlan = process.env[planEnvName(data.planCode, data.interval)];
     const payload: Record<string, unknown> = {
       email,
@@ -43,10 +73,13 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
         plan_code: data.planCode,
         billing_interval: data.interval,
         user_id: context.userId,
+        promo_code: data.promoCode ?? null,
+        promo_discount_pct: promoDiscountPct,
+        promo_duration: promoDuration,
       },
     };
     if (recurringPlan) payload.plan = recurringPlan;
-    else payload.amount = data.amountKobo;
+    else payload.amount = finalAmountKobo;
 
     const res = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
       method: "POST",
@@ -68,6 +101,8 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
       authorizationUrl: body.data.authorization_url,
       reference: body.data.reference,
       recurring: Boolean(recurringPlan),
+      discountedAmountKobo: finalAmountKobo,
+      promoDiscountPct,
     };
   });
 
@@ -89,7 +124,14 @@ export const verifyPaystackReference = createServerFn({ method: "POST" })
 
     // Best-effort: persist subscription state via admin client (webhook is source of truth).
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const meta = (body.data.metadata ?? {}) as { plan_code?: string; organization_id?: string; billing_interval?: "monthly" | "yearly" };
+    const meta = (body.data.metadata ?? {}) as {
+      plan_code?: string;
+      organization_id?: string;
+      billing_interval?: "monthly" | "yearly";
+      promo_code?: string;
+      promo_discount_pct?: number;
+      promo_duration?: string;
+    };
     const orgId = meta.organization_id ?? ctx.organizationId;
     const periodDays = meta.billing_interval === "yearly" ? 365 : 30;
     await supabaseAdmin.from("subscriptions").upsert(
@@ -103,9 +145,20 @@ export const verifyPaystackReference = createServerFn({ method: "POST" })
         amount_kobo: body.data.amount,
         current_period_end: new Date(Date.now() + periodDays * 24 * 3600 * 1000).toISOString(),
         updated_at: new Date().toISOString(),
+        // Persist promo info so we can apply discount on future renewals if duration=forever
+        promo_code: meta.promo_code ?? null,
+        promo_discount_pct: meta.promo_discount_pct ?? null,
+        promo_duration: meta.promo_duration ?? null,
       } as never,
       { onConflict: "provider_reference" },
     );
+
+    // Atomically redeem the promo code (increment uses, insert redemption row)
+    if (meta.promo_code) {
+      const { redeemPromoCodeInternal } = await import("@/lib/promo.functions");
+      await redeemPromoCodeInternal(supabaseAdmin, meta.promo_code, orgId, body.data.reference);
+    }
+
     return { ok: true as const, reference: body.data.reference };
   });
 

@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Card, Button, StatusPill } from "@/components/app/AppShell";
-import { CreditCard, ReceiptText, Globe } from "lucide-react";
+import { Card, Button, StatusPill, Input } from "@/components/app/AppShell";
+import { CreditCard, ReceiptText, Globe, Tag, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { initPaystackCheckout, verifyPaystackReference, getBillingOverview, cancelSubscription } from "@/lib/paystack.functions";
+import { validatePromoCode, type PromoValidation } from "@/lib/promo.functions";
 import { detectUserCurrency, Currency, PRICING_PLANS } from "@/lib/currency";
 
 const billingOpts = queryOptions({ queryKey: ["billing-overview"], queryFn: async () => getBillingOverview(), staleTime: 30_000 });
@@ -26,11 +27,39 @@ function BillingPage() {
   const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
   const [currency, setCurrency] = useState<Currency>("USD");
 
+  // Promo code state
+  const [promoInput, setPromoInput] = useState("");
+  const [promoExpanded, setPromoExpanded] = useState(false);
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [promoResult, setPromoResult] = useState<PromoValidation | null>(null);
+  const validateFn = useServerFn(validatePromoCode);
+
+  async function applyPromoCode() {
+    if (!promoInput.trim()) return;
+    setPromoChecking(true);
+    setPromoResult(null);
+    try {
+      const result = await validateFn({ data: { code: promoInput.trim().toUpperCase() } });
+      setPromoResult(result);
+    } catch {
+      setPromoResult({ valid: false, message: "Could not validate code. Please try again." });
+    } finally {
+      setPromoChecking(false);
+    }
+  }
+
+  function clearPromo() {
+    setPromoInput("");
+    setPromoResult(null);
+    setPromoExpanded(false);
+  }
+
+  const activePromo = promoResult?.valid ? promoResult : null;
+
   useEffect(() => {
     setCurrency(detectUserCurrency());
   }, []);
 
-  // On return from Paystack, ?reference=... appears in the URL.
   const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const returnedRef = params?.get("reference") ?? params?.get("trxref");
   const [verifyState, setVerifyState] = useState<"idle" | "checking" | "ok" | "fail">(
@@ -52,7 +81,13 @@ function BillingPage() {
     try {
       const callback = `${window.location.origin}/settings/billing`;
       const { authorizationUrl } = await init({
-        data: { planCode, interval, amountKobo, callbackUrl: callback },
+        data: {
+          planCode,
+          interval,
+          amountKobo,
+          callbackUrl: callback,
+          promoCode: activePromo?.code,
+        },
       });
       window.location.href = authorizationUrl;
     } catch (e) {
@@ -223,14 +258,74 @@ function BillingPage() {
       </Card>
       </div>
 
+      {/* Promo Code Input */}
+      <div className="rounded-xl border border-line bg-surface p-4">
+        {!promoExpanded && !activePromo ? (
+          <button
+            onClick={() => setPromoExpanded(true)}
+            className="inline-flex items-center gap-1.5 text-[13px] text-ink-3 hover:text-primary transition-colors font-medium"
+          >
+            <Tag className="h-3.5 w-3.5" /> Have a promo code?
+          </button>
+        ) : activePromo ? (
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+              <div>
+                <span className="font-mono text-[13px] font-semibold text-emerald-700 dark:text-emerald-400">{activePromo.code}</span>
+                <span className="ml-2 text-[13px] text-ink-2">{activePromo.message}</span>
+              </div>
+            </div>
+            <button onClick={clearPromo} className="p-1 rounded text-ink-3 hover:text-ink" title="Remove promo">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                placeholder="Enter promo code"
+                className="font-mono uppercase flex-1"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyPromoCode(); } }}
+                disabled={promoChecking}
+                autoFocus
+              />
+              <Button onClick={applyPromoCode} disabled={promoChecking || !promoInput.trim()}>
+                {promoChecking ? "Checking…" : "Apply"}
+              </Button>
+              <button onClick={clearPromo} className="p-2 rounded text-ink-3 hover:text-ink" title="Cancel">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {promoResult && !promoResult.valid && (
+              <div className="flex items-center gap-2 text-[12.5px] text-danger">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {promoResult.message}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Plan Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         {PRICING_PLANS.map((p) => {
           const isActive = currentPlanCode === p.code;
           const isYearly = interval === "yearly";
-          const amountKobo = isYearly ? p.ngnYearlyKobo : p.ngnMonthlyKobo;
-          const displayPrice = currency === "NGN" 
+          const baseAmountKobo = isYearly ? p.ngnYearlyKobo : p.ngnMonthlyKobo;
+          const baseDisplayPrice = currency === "NGN"
             ? (isYearly ? p.ngnYearlyDisplay : p.ngnDisplay)
             : (isYearly ? p.usdYearlyDisplay : p.usdDisplay);
+
+          const discountedAmountKobo = activePromo && p.code !== "free"
+            ? Math.max(10_000, Math.round(baseAmountKobo * (1 - activePromo.discountPct / 100)))
+            : baseAmountKobo;
+          const discountedDisplayPrice = activePromo && p.code !== "free"
+            ? (currency === "NGN"
+              ? `₦${(discountedAmountKobo / 100).toLocaleString()}`
+              : `$${Math.round(discountedAmountKobo / 100 / 1300)}`)
+            : null;
 
           return (
             <Card key={p.code} className={`p-5 flex flex-col justify-between transition-colors ${isActive ? "border-primary bg-primary/[0.02]" : "border-line hover:border-ink/20"}`}>
@@ -240,18 +335,29 @@ function BillingPage() {
                   {isActive && <span className="rounded bg-primary/10 px-2 py-0.5 text-[11px] font-medium tracking-wide text-primary">CURRENT</span>}
                 </div>
                 <p className="mt-1 text-[12.5px] text-ink-3 min-h-[34px]">{p.blurb}</p>
-                <div className="mt-3 flex items-baseline gap-1.5">
-                  <span className="text-2xl font-bold tracking-tight text-ink">
-                    {displayPrice}
-                  </span>
-                  <span className="text-[12.5px] font-normal text-ink-3">
-                    / {isYearly ? "yr" : "mo"}
-                  </span>
+                <div className="mt-3 flex items-baseline gap-1.5 flex-wrap">
+                  {discountedDisplayPrice ? (
+                    <>
+                      <span className="text-2xl font-bold tracking-tight text-emerald-600">{discountedDisplayPrice}</span>
+                      <span className="text-[13px] line-through text-ink-4">{baseDisplayPrice}</span>
+                      <span className="text-[12.5px] font-normal text-ink-3">/ {isYearly ? "yr" : "mo"}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-2xl font-bold tracking-tight text-ink">{baseDisplayPrice}</span>
+                      <span className="text-[12.5px] font-normal text-ink-3">/ {isYearly ? "yr" : "mo"}</span>
+                    </>
+                  )}
                 </div>
+                {discountedDisplayPrice && (
+                  <div className="mt-1 text-[11px] font-medium text-emerald-600">
+                    {activePromo!.discountPct}% off — {activePromo!.duration === "forever" ? "every month" : "first month only"}
+                  </div>
+                )}
               </div>
               <Button
                 variant={isActive ? "ghost" : "primary"}
-                onClick={() => subscribe(p.code, amountKobo)}
+                onClick={() => subscribe(p.code, discountedAmountKobo)}
                 disabled={busy !== null || isActive || p.code === "free"}
                 className="mt-5 w-full"
               >
