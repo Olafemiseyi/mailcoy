@@ -1,0 +1,1 @@
+import{tt as e}from"./index-Dz2-A0oo.js";var t=e;export{t as errorComponent};

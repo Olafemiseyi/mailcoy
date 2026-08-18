@@ -39,28 +39,64 @@ export async function resolveOrgContext(
   userId: string,
   preferredOrgId?: string | null,
 ): Promise<OrgContext | null> {
-  // BYPASS SUPABASE NETWORK CALLS
-  // The remote Supabase instance from Lovable is dead/unreachable, causing a 15-second
-  // timeout on every single dashboard navigation. We return a mocked context instantly.
+  // First, find the user's organization membership
+  let query = supabase.from("organization_members").select("organization_id, role").eq("user_id", userId);
   
-  const planCode = "free";
+  if (preferredOrgId) {
+    query = query.eq("organization_id", preferredOrgId);
+  } else {
+    // If no preferred org, just get the first one (most users only have 1 anyway)
+    query = query.limit(1);
+  }
+  
+  const { data: members, error: memberErr } = await query;
+  
+  if (memberErr || !members || members.length === 0) {
+    return null; // No organization found for this user
+  }
+  
+  const member = members[0];
+  const orgId = member.organization_id;
+  
+  // Now fetch the subscription for this org
+  const { data: subData, error: subErr } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("organization_id", orgId)
+    .single();
+    
+  let planCode = "free";
+  let status = "active";
+  let isTrial = false;
+  let isLocked = false;
+  let currentPeriodEnd = null;
+  
+  if (subData) {
+    planCode = subData.plan_code || "free";
+    status = subData.status || "active";
+    currentPeriodEnd = subData.current_period_end;
+    if (status !== "active" && status !== "trialing") {
+      isLocked = true;
+    }
+  }
+
   const limits = PLAN_LIMITS[planCode] || PLAN_LIMITS.free;
 
   const subscription: SubscriptionInfo = {
     plan: limits.name,
     planCode,
-    status: "active",
-    isTrial: false,
+    status: status as any,
+    isTrial,
     trialDaysLeft: 0,
-    isLocked: false,
+    isLocked,
     maxDomains: limits.maxDomains,
     maxEmployees: limits.maxEmployees,
-    currentPeriodEnd: null,
+    currentPeriodEnd,
   };
 
   return { 
-    organizationId: preferredOrgId || "mock-org-123", 
-    role: "owner", 
+    organizationId: orgId, 
+    role: member.role as OrgRole, 
     subscription 
   };
 }
