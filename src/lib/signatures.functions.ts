@@ -7,14 +7,31 @@ import { requireOrgContext, resolveOrgContext, assertAdmin } from "@/server/orgC
 export const listSignatures = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    return {
-      org: { id: "sig-org-1", scope: "org", scope_ref: "org", name: "Default Signature", html: "<p>Regards,<br/>Mailcoy Team</p>", is_default: true, updated_at: new Date().toISOString() },
-      departments: [],
-      employees: [],
-      allEmployees: [
-        { id: "mock-emp-1", full_name: "Chisom Okoye", professional_email: "chisom@mailcoy.com", department: "Operations", job_title: "Head of Operations" }
-      ]
-    };
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    
+    const { data: sigs } = await context.supabase
+      .from("email_signatures")
+      .select("*")
+      .eq("organization_id", ctx.organizationId);
+
+    const { data: emps } = await context.supabase
+      .from("employees")
+      .select("id, full_name, professional_email, company_email, department, job_title")
+      .eq("organization_id", ctx.organizationId);
+
+    const org = sigs?.find((s: any) => s.scope === "org") || null;
+    const departments = sigs?.filter((s: any) => s.scope === "department") || [];
+    const employees = sigs?.filter((s: any) => s.scope === "employee") || [];
+
+    const allEmployees = (emps || []).map((e: any) => ({
+      id: e.id,
+      full_name: e.full_name,
+      professional_email: e.professional_email || e.company_email,
+      department: e.department,
+      job_title: e.job_title
+    }));
+
+    return { org, departments, employees, allEmployees };
   });
 
 const upsertSchema = z.object({

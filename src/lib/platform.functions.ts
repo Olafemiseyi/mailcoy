@@ -22,10 +22,15 @@ function newWebhookSecret(): string {
 export const listApiKeys = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
-    return [
-      { id: "mock-key-1", prefix: "mcoy", created_at: new Date().toISOString(), last_used_at: null }
-    ];
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("api_keys")
+      .select("id, name, prefix, created_at, last_used_at, scopes")
+      .eq("organization_id", ctx.organizationId)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
   });
 
 export const createApiKey = createServerFn({ method: "POST" })
@@ -47,9 +52,9 @@ export const createApiKey = createServerFn({ method: "POST" })
         hash: sha256(full),
         scopes: data.scopes,
         created_by: context.userId,
-      }).select("id, name, prefix, scopes, created_at").single();
-    if (error) throw error;
-    return { ...row, key: full }; // only time the full key is returned
+      } as never).select("id, prefix, created_at, last_used_at").single();
+    if (error || !row) throw error ?? new Error("Failed");
+    return { ...row, full_key: full }; // only time the full key is returned
   });
 
 export const revokeApiKey = createServerFn({ method: "POST" })
@@ -59,7 +64,7 @@ export const revokeApiKey = createServerFn({ method: "POST" })
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
     const { error } = await context.supabase
-      .from("api_keys").update({ revoked_at: new Date().toISOString() })
+      .from("api_keys").update({ revoked_at: new Date().toISOString() } as never)
       .eq("id", data.id).eq("organization_id", ctx.organizationId);
     if (error) throw error;
     return { ok: true };
@@ -70,8 +75,14 @@ export const revokeApiKey = createServerFn({ method: "POST" })
 export const listWebhooks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
-    return [];
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("webhooks")
+      .select("id, url, events, status, created_at, updated_at")
+      .eq("organization_id", ctx.organizationId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
   });
 
 export const createWebhook = createServerFn({ method: "POST" })

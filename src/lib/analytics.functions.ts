@@ -12,17 +12,65 @@ export const getAnalytics = createServerFn({ method: "GET" })
     z.object({ range: z.enum(["today", "week", "month", "year"]).default("week") }).parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+
+    // Dynamic date range filter
+    const now = new Date();
+    const startDate = new Date();
+    if (data.range === "today") startDate.setDate(now.getDate() - 1);
+    if (data.range === "week") startDate.setDate(now.getDate() - 7);
+    if (data.range === "month") startDate.setMonth(now.getMonth() - 1);
+    if (data.range === "year") startDate.setFullYear(now.getFullYear() - 1);
+
+    const { data: sentData } = await context.supabase
+      .from("outgoing_messages")
+      .select("sent_at")
+      .eq("organization_id", ctx.organizationId)
+      .gte("sent_at", startDate.toISOString());
+
+    const { data: recData } = await context.supabase
+      .from("incoming_messages")
+      .select("received_at")
+      .eq("organization_id", ctx.organizationId)
+      .gte("received_at", startDate.toISOString());
+
+    const sent = sentData?.length || 0;
+    const received = recData?.length || 0;
+
+    // Build time series
+    const seriesMap = new Map<string, { date: string; sent: number; received: number }>();
+    
+    // Initialize empty days for "week" or "month" to make chart look good
+    const daysToMap = data.range === "week" ? 7 : (data.range === "month" ? 30 : 0);
+    for (let i = daysToMap; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
+      const dayStr = d.toISOString().split('T')[0];
+      seriesMap.set(dayStr, { date: dayStr, sent: 0, received: 0 });
+    }
+
+    sentData?.forEach((m: any) => {
+      const day = m.sent_at.split('T')[0];
+      if (!seriesMap.has(day)) seriesMap.set(day, { date: day, sent: 0, received: 0 });
+      seriesMap.get(day)!.sent++;
+    });
+    recData?.forEach((m: any) => {
+      const day = m.received_at.split('T')[0];
+      if (!seriesMap.has(day)) seriesMap.set(day, { date: day, sent: 0, received: 0 });
+      seriesMap.get(day)!.received++;
+    });
+
+    const series = Array.from(seriesMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
     return { 
-      sent: 120, 
-      received: 45, 
-      delivered: 118, 
-      bounced: 2, 
+      sent, 
+      received, 
+      delivered: sent, 
+      bounced: 0, 
       failed: 0, 
-      deliverability: 98, 
-      bounceRate: 2, 
-      series: [], 
-      total: 165 
+      deliverability: 100, 
+      bounceRate: 0, 
+      series, 
+      total: sent + received 
     };
   });
 
@@ -31,10 +79,15 @@ export const getAnalytics = createServerFn({ method: "GET" })
 export const listAliases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
-    return [
-      { id: "mock-alias-1", address: "support@mailcoy.com", is_primary: false, employee_id: "mock-emp-1", created_at: new Date().toISOString() }
-    ];
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("aliases")
+      .select("*")
+      .eq("organization_id", ctx.organizationId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   });
 
 export const createAlias = createServerFn({ method: "POST" })
@@ -99,7 +152,17 @@ export const updateAliasEmployee = createServerFn({ method: "POST" })
 export const getOrgSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("settings")
+      .select("*")
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data) return data;
+
+    // Default settings if no row exists yet
     return {
       company_signature: null,
       catchall_mode: "reject",

@@ -30,67 +30,29 @@ function randomNonce(): string {
 export const listDomains = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // Mock response for Demo mode
-    return [
-      {
-        id: "mock-domain-1",
-        organization_id: "mock-org",
-        domain_name: "mailcoy.com",
-        verification_status: "verified",
-        txt_status: "verified",
-        mx_status: "verified",
-        spf_status: "verified",
-        dkim_status: "verified",
-        dmarc_status: "verified",
-        txt_record_key: "@",
-        txt_record_value: "mailcoy-verify=mock-1234",
-        spf_value: "v=spf1 include:_spf.mailcoy.com ~all",
-        dkim_selector: "mailcoy",
-        dkim_value: "v=DKIM1; k=rsa; p=mock",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "mock-domain-2",
-        organization_id: "mock-org",
-        domain_name: "example.org",
-        verification_status: "pending",
-        txt_status: "pending",
-        mx_status: "pending",
-        spf_status: "pending",
-        dkim_status: "pending",
-        dmarc_status: "pending",
-        txt_record_key: "@",
-        txt_record_value: "mailcoy-verify=mock-5678",
-        spf_value: "v=spf1 include:_spf.mailcoy.com ~all",
-        dkim_selector: "mailcoy",
-        dkim_value: "v=DKIM1; k=rsa; p=mock",
-        created_at: new Date().toISOString(),
-      }
-    ];
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("domains")
+      .select("*")
+      .eq("organization_id", ctx.organizationId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
   });
 
 export const getDomain = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ id: z.string() }).parse(data))
   .handler(async ({ data, context }) => {
-    // Mock response for Demo mode
-    return {
-      id: data.id,
-      organization_id: "mock-org",
-      domain_name: data.id === "mock-domain-1" ? "mailcoy.com" : "example.org",
-      verification_status: data.id === "mock-domain-1" ? "verified" : "pending",
-      txt_status: data.id === "mock-domain-1" ? "verified" : "pending",
-      mx_status: data.id === "mock-domain-1" ? "verified" : "pending",
-      spf_status: data.id === "mock-domain-1" ? "verified" : "pending",
-      dkim_status: data.id === "mock-domain-1" ? "verified" : "pending",
-      dmarc_status: data.id === "mock-domain-1" ? "verified" : "pending",
-      txt_record_key: "@",
-      txt_record_value: "mailcoy-verify=mock-1234",
-      spf_value: "v=spf1 include:_spf.mailcoy.com ~all",
-      dkim_selector: "mailcoy",
-      dkim_value: "v=DKIM1; k=rsa; p=mock",
-      created_at: new Date().toISOString(),
-    };
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data: row, error } = await context.supabase
+      .from("domains")
+      .select("*")
+      .eq("organization_id", ctx.organizationId)
+      .eq("id", data.id)
+      .single();
+    if (error || !row) throw error ?? new Error("Domain not found");
+    return row;
   });
 
 export const addDomain = createServerFn({ method: "POST" })

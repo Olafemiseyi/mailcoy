@@ -35,19 +35,16 @@ export const listInvitesForEmployee = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ employeeId: z.string().uuid().or(z.string()) }).parse(d))
   .handler(async ({ data, context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
-    return [
-      {
-        id: "mock-invite-1",
-        token: "mocktoken123",
-        sent_at: new Date().toISOString(),
-        sent_via: "email",
-        opened_at: new Date().toISOString(),
-        accepted_at: null,
-        revoked_at: null,
-        expires_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()
-      }
-    ];
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data: invites, error } = await context.supabase
+      .from("employee_invitations")
+      .select("id, token, sent_at, sent_via, opened_at, accepted_at, revoked_at, expires_at")
+      .eq("employee_id", data.employeeId)
+      .eq("organization_id", ctx.organizationId)
+      .order("sent_at", { ascending: false });
+
+    if (error) throw error;
+    return invites || [];
   });
 
 export const createInvite = createServerFn({ method: "POST" })

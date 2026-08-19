@@ -183,18 +183,34 @@ export const cancelSubscription = createServerFn({ method: "POST" })
 export const getBillingOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
     const ctx = await requireOrgContext(context.supabase, context.userId);
     
-    // Hardcoded mock values instead of Supabase fetches
+    // Fetch subscription
+    const { data: sub } = await context.supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
+
+    // Fetch usage counts
+    const { count: employees } = await context.supabase
+      .from("employees")
+      .select("*", { count: 'exact', head: true })
+      .eq("organization_id", ctx.organizationId);
+      
+    const { count: domains } = await context.supabase
+      .from("domains")
+      .select("*", { count: 'exact', head: true })
+      .eq("organization_id", ctx.organizationId);
+      
     return { 
-      subscription: {
+      subscription: sub || {
         plan: ctx.subscription.plan,
         plan_code: ctx.subscription.planCode,
         status: ctx.subscription.status,
         amount_kobo: null,
         provider: "paystack",
-        provider_reference: "mock-sub-123",
+        provider_reference: null,
         current_period_end: ctx.subscription.currentPeriodEnd,
         renewal_date: null,
         updated_at: new Date().toISOString()
@@ -202,8 +218,8 @@ export const getBillingOverview = createServerFn({ method: "GET" })
       card: null, 
       events: [],
       usage: {
-        employees: 6, // Hardcoded to 6 to simulate the data we had
-        domains: 4    // Hardcoded to 4 to simulate the data we had
+        employees: employees || 0,
+        domains: domains || 0
       }
     };
   });

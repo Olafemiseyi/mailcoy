@@ -28,21 +28,44 @@ export const getDashboardSummary = createServerFn({ method: "GET" })
     const s = context.supabase;
     const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
+    const [
+      { count: domainsTotal },
+      { count: domainsVerified },
+      { count: employeesTotal },
+      { count: employeesConnected },
+      { count: sentToday },
+      { count: receivedToday },
+      { data: recentOut }
+    ] = await Promise.all([
+      s.from("domains").select("*", { count: "exact", head: true }).eq("organization_id", org),
+      s.from("domains").select("*", { count: "exact", head: true }).eq("organization_id", org).eq("verification_status", "verified"),
+      s.from("employees").select("*", { count: "exact", head: true }).eq("organization_id", org),
+      s.from("employees").select("*", { count: "exact", head: true }).eq("organization_id", org).eq("status", "active"),
+      s.from("outgoing_messages").select("*", { count: "exact", head: true }).eq("organization_id", org).gte("sent_at", since24h),
+      s.from("incoming_messages").select("*", { count: "exact", head: true }).eq("organization_id", org).gte("received_at", since24h),
+      s.from("outgoing_messages").select("id, from_addr, to_addr, sent_at").eq("organization_id", org).order("sent_at", { ascending: false }).limit(5)
+    ]);
+
+    const recentLogs = (recentOut || []).map((m: any) => ({
+      id: m.id,
+      sender: m.from_addr,
+      receiver: m.to_addr,
+      subject: "No Subject",
+      status: "delivered",
+      timestamp: m.sent_at
+    }));
+
     return {
       hasOrganization: true,
-      domainsTotal: 2,
-      domainsVerified: 1,
-      employeesTotal: 12,
-      employeesConnected: 12,
-      sentToday: 1284,
-      receivedToday: 420,
-      bouncedToday: 3,
-      deliverabilityPct: 99.7,
-      recentLogs: [
-        { id: "1", sender: "sales@mailcoy.com", receiver: "akin@gmail.com", subject: "Invoice #1024", status: "delivered", timestamp: new Date().toISOString() },
-        { id: "2", sender: "john@mailcoy.com", receiver: "john.doe@gmail.com", subject: "Meeting Notes", status: "delivered", timestamp: new Date(Date.now() - 120000).toISOString() },
-        { id: "3", sender: "support@mailcoy.com", receiver: "team@gmail.com", subject: "Customer Inquiry", status: "delivered", timestamp: new Date(Date.now() - 300000).toISOString() },
-      ],
+      domainsTotal: domainsTotal || 0,
+      domainsVerified: domainsVerified || 0,
+      employeesTotal: employeesTotal || 0,
+      employeesConnected: employeesConnected || 0,
+      sentToday: sentToday || 0,
+      receivedToday: receivedToday || 0,
+      bouncedToday: 0,
+      deliverabilityPct: 100,
+      recentLogs
     };
   });
 

@@ -17,21 +17,29 @@ const createOrgSchema = z.object({
 export const getMyOrganization = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // BYPASS SUPABASE NETWORK CALLS to prevent 15-second timeouts
     const ctx = await resolveOrgContext(context.supabase, context.userId);
     if (!ctx) return null;
+    
+    const { data: org, error } = await context.supabase
+      .from("organizations")
+      .select("*")
+      .eq("id", ctx.organizationId)
+      .single();
+      
+    if (error || !org) return null;
+
     return {
-      id: ctx.organizationId,
-      name: "Empyre Homes",
-      slug: "empyre-homes",
-      industry: "Real Estate",
-      country: "NG",
-      timezone: "Africa/Lagos",
-      currency: "NGN",
-      logo_url: null,
-      onboarding_step: 3,
-      onboarding_completed_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      industry: org.industry,
+      country: org.country,
+      timezone: org.timezone,
+      currency: org.currency,
+      logo_url: org.logo_url,
+      onboarding_step: org.onboarding_step,
+      onboarding_completed_at: org.onboarding_completed_at,
+      created_at: org.created_at,
       role: ctx.role,
       platformAdmin: false,
       subscription: ctx.subscription
