@@ -42,11 +42,11 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
 
     if (data.promoCode) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: promo } = await supabaseAdmin
+      const { data: promo } = await (supabaseAdmin as any)
         .from("promo_codes")
         .select("discount_pct, duration, is_active, max_uses, current_uses, expires_at")
         .eq("code", data.promoCode)
-        .maybeSingle();
+        .maybeSingle() as { data: any, error: any };
 
       if (
         promo &&
@@ -180,9 +180,21 @@ export const cancelSubscription = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type BillingCard = {
+  last4: string;
+  brand: string;
+  expMonth: number;
+  expYear: number;
+} | null;
+
 export const getBillingOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<{
+    subscription: any;
+    card: BillingCard;
+    events: any[];
+    usage: { employees: number; domains: number };
+  }> => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     
     // Fetch subscription

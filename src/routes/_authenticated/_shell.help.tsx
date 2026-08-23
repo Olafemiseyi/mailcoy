@@ -113,7 +113,16 @@ function DocsRoute() {
 
   return (
     <div>
-      <PageHeader title="Documentation" subtitle="Everything you need to run your team's email on Mailcoy." />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <PageHeader title="Documentation" subtitle="Everything you need to run your team's email on Mailcoy." />
+        <button
+          onClick={() => window.dispatchEvent(new Event("open-ai-assistant"))}
+          className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors border border-primary/20 font-medium text-sm"
+        >
+          <Bot className="w-4 h-4" />
+          Ask AI Assistant
+        </button>
+      </div>
 
       {/* Mobile: dropdown selector */}
       <div className="lg:hidden mb-5">

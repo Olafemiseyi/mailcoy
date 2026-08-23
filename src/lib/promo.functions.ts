@@ -1,4 +1,4 @@
-﻿// Promo code server functions.
+// Promo code server functions.
 // Admin CRUD: createPromoCode, updatePromoCode, deletePromoCode, listPromoCodes
 // User-facing: validatePromoCode
 // Internal: redeemPromoCodeInternal (called from paystack.functions after payment confirmed)
@@ -44,7 +44,7 @@ export const listPromoCodes = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<PromoCode[]> => {
     await assertPlatformAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("promo_codes")
       .select("*")
       .order("created_at", { ascending: false });
@@ -68,7 +68,7 @@ export const createPromoCode = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<PromoCode> => {
     await assertPlatformAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await (supabaseAdmin as any)
       .from("promo_codes")
       .insert({
         code: data.code,
@@ -106,7 +106,7 @@ export const updatePromoCode = createServerFn({ method: "POST" })
     await assertPlatformAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...fields } = data;
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await (supabaseAdmin as any)
       .from("promo_codes")
       .update(fields as never)
       .eq("id", id)
@@ -122,7 +122,7 @@ export const deletePromoCode = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ ok: boolean }> => {
     await assertPlatformAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("promo_codes").delete().eq("id", data.id);
+    const { error } = await (supabaseAdmin as any).from("promo_codes").delete().eq("id", data.id);
     if (error) throw error;
     return { ok: true };
   });
@@ -134,11 +134,11 @@ export const validatePromoCode = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<PromoValidation> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await (supabaseAdmin as any)
       .from("promo_codes")
       .select("id, code, discount_pct, duration, is_active, max_uses, current_uses, expires_at")
       .eq("code", data.code)
-      .maybeSingle();
+      .maybeSingle() as { data: PromoCode | null; error: unknown };
 
     if (error) throw error;
     if (!row) return { valid: false, message: "Promo code not found." };

@@ -3,6 +3,7 @@ import { useSuspenseQuery, useQueryClient, queryOptions, useQuery } from "@tanst
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { getOrgSettings, updateCatchAll } from "@/lib/analytics.functions";
+import { listEmailLogs } from "@/lib/platform.functions";
 import { PageHeader, Card, Button, Input, Field } from "@/components/app/AppShell";
 import { Inbox, Reply, Forward, AlertCircle, Power, Lock } from "lucide-react";
 import * as Switch from "@radix-ui/react-switch";
@@ -200,6 +201,70 @@ function CatchAllRoute() {
           </div>
         )}
       </Card>
+      
+      {/* Webmail Inbox Section */}
+      {!isFreePlan && enabled && activeMode === "receive" && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
+            <Inbox className="h-5 w-5" /> Webmail Inbox
+          </h2>
+          <WebmailInbox />
+        </div>
+      )}
     </div>
+  );
+}
+
+function WebmailInbox() {
+  const fetchLogs = useServerFn(listEmailLogs);
+  const { data, isPending } = useQuery({
+    queryKey: ["email-logs", "incoming"],
+    queryFn: async () => fetchLogs({ data: { limit: 50, offset: 0, direction: "incoming" } }),
+    staleTime: 5_000,
+  });
+
+  const rows = data?.rows ?? [];
+
+  return (
+    <Card className="p-0 overflow-hidden min-h-[300px] border-line shadow-sm">
+      {isPending ? (
+        <div className="p-10 flex justify-center text-ink-3">Loading inbox...</div>
+      ) : rows.length === 0 ? (
+        <div className="py-16 text-center flex flex-col items-center justify-center bg-surface-muted/10">
+          <div className="h-12 w-12 rounded-full bg-ink/[0.04] grid place-items-center mb-3">
+            <Inbox className="h-6 w-6 text-ink-3" />
+          </div>
+          <h3 className="font-semibold text-ink">Inbox is empty</h3>
+          <p className="mt-1 text-[13px] text-ink-3 max-w-sm">
+            Any emails routed to your catch-all address will securely land here.
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y divide-line">
+          {rows.map((msg: any) => (
+            <div key={msg.id} className="p-4 hover:bg-surface-muted/20 transition group flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[14px]">
+                {(msg.sender || "U")[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <span className="font-semibold text-ink text-[14px] truncate">{msg.sender}</span>
+                  <span className="text-[11px] text-ink-4 whitespace-nowrap">
+                    {new Date(msg.timestamp).toLocaleString()}
+                  </span>
+                </div>
+                <div className="text-[13px] font-medium text-ink truncate mb-0.5">
+                  {msg.subject || "(No Subject)"}
+                </div>
+                <div className="text-[12px] text-ink-3 truncate pr-4">
+                  <span className="font-mono text-[10px] bg-ink/5 px-1 rounded mr-1">To: {msg.receiver}</span>
+                  {msg.snippet || "No preview available"}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }

@@ -70,3 +70,34 @@ export const sendEmailViaResend = createServerFn({ method: "POST" })
 
     return result;
   });
+
+export async function createResendDomain(domainName: string) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) throw new Error("RESEND_API_KEY is missing");
+
+  const response = await fetch("https://api.resend.com/domains", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: domainName }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to create Resend domain: ${errorText}`);
+  }
+
+  return await response.json();
+}
+
+export async function verifyResendDomain(domainId: string) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const response = await fetch(`https://api.resend.com/domains/${domainId}/verify`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${resendApiKey}` },
+  });
+  if (!response.ok) throw new Error("Failed to trigger Resend verification");
+  return await response.json();
+}

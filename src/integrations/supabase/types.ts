@@ -454,6 +454,44 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          subject: string
+          html_body: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          subject: string
+          html_body: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          name?: string
+          subject?: string
+          html_body?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       email_signatures: {
         Row: {
           created_at: string

@@ -90,7 +90,7 @@ export const bulkAddEmployees = createServerFn({ method: "POST" })
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
     
-    const inserts = data.rows.map(r => {
+    const inserts = data.rows.map((r: { local_part: string; full_name: string }) => {
       const email = `${r.local_part}@${data.domain}`;
       return {
         organization_id: ctx.organizationId,
@@ -104,7 +104,7 @@ export const bulkAddEmployees = createServerFn({ method: "POST" })
     
     const { error } = await context.supabase.from("employees").insert(inserts);
     if (error) throw error;
-    return { inserted: data.rows.map(r => `${r.local_part}@${data.domain}`), skipped: [] };
+    return { inserted: data.rows.map((r: { local_part: string }) => `${r.local_part}@${data.domain}`), skipped: [] };
   });
 
 export const updateEmployee = createServerFn({ method: "POST" })

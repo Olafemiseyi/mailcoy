@@ -78,6 +78,26 @@ export const addDomain = createServerFn({ method: "POST" })
     }
 
     const nonce = randomNonce();
+    
+    // 1. Call Resend API to provision the domain
+    const { createResendDomain } = await import("@/lib/resend.functions");
+    let resendData: any = null;
+    let dkimValue = "v=DKIM1; k=rsa; p=<generated when SES is wired>";
+    let spfValue = "v=spf1 include:_spf.mailcoy.com ~all";
+    let resendDomainId = null;
+
+    try {
+      resendData = await createResendDomain(data.name);
+      resendDomainId = resendData.id;
+      const dkimRecord = resendData.records?.find((r: any) => r.record === "DKIM");
+      const spfTxtRecord = resendData.records?.find((r: any) => r.record === "SPF" && r.type === "TXT");
+      
+      if (dkimRecord) dkimValue = dkimRecord.value;
+      if (spfTxtRecord) spfValue = spfTxtRecord.value;
+    } catch (e) {
+      console.warn("Failed to provision Resend domain. Falling back to pending state.", e);
+    }
+
     const { data: row, error } = await context.supabase
       .from("domains")
       .insert({
@@ -87,11 +107,11 @@ export const addDomain = createServerFn({ method: "POST" })
         txt_record_key: "@",
         txt_record_value: `mailcoy-verify=${nonce}`,
         // SPF record value shown in DNS setup UI
-        spf_value: "v=spf1 include:_spf.mailcoy.com ~all",
+        spf_value: spfValue,
         // DKIM
-        dkim_selector: "mailcoy",
-        dkim_value: "v=DKIM1; k=rsa; p=<generated when SES is wired>",
-        // Initial statuses — all pending until verified
+        dkim_selector: "resend", // Resend usually uses 'resend' instead of 'mailcoy'
+        dkim_value: dkimValue,
+        // Initial statuses
         verification_status: "pending",
         txt_status: "pending",
         mx_status: "pending",

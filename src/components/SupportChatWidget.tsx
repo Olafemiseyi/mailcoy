@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Bot, Sparkles, AlertCircle, ArrowUpRight, Check
 import { Card, Button } from "@/components/app/AppShell";
 import { useServerFn } from "@tanstack/react-start";
 import { askAiAssistant, escalateToAdmin } from "@/lib/chat.functions";
+import { Logomark } from "@/components/brand/Logomark";
 
 interface Message {
   role: "assistant" | "user" | "system";
@@ -41,6 +42,12 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, open]);
+
+  useEffect(() => {
+    const handleOpen = () => setOpen(true);
+    window.addEventListener("open-ai-assistant", handleOpen);
+    return () => window.removeEventListener("open-ai-assistant", handleOpen);
+  }, []);
 
   function getDynamicLoadingStatus(text: string) {
     const lower = text.toLowerCase();
@@ -126,21 +133,17 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
 
   return (
     <div className="fixed bottom-5 right-5 z-50">
-      {/* Floating Chat Trigger Button */}
-      {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="group relative flex items-center justify-center rounded-full bg-primary h-12 w-12 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5 text-primary-foreground shadow-2xl hover:bg-primary-focus transition-all duration-200 hover:scale-105"
-          aria-label="Open support chat"
-        >
-          <div className="relative flex items-center gap-2">
-            <Bot className="h-5 w-5" />
-            <span className="hidden sm:inline text-[13px] font-semibold">AI Support</span>
-            {/* Perfectly anchored status indicator */}
-            <span className="absolute -top-1 -right-1 sm:static h-2 w-2 rounded-full bg-emerald-400 border border-primary sm:border-0 animate-pulse" />
-          </div>
-        </button>
-      )}
+        {/* Floating Chat Trigger Button */}
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="group relative flex items-center justify-center rounded-full bg-ink text-surface shadow-2xl h-[56px] w-[56px] transition-all duration-200 hover:scale-105 hover:-translate-y-1"
+            aria-label="Open support chat"
+          >
+            <Logomark className="h-7 w-7" />
+            <span className="absolute top-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-400 border-2 border-background animate-pulse" />
+          </button>
+        )}
 
       {/* Interactive Chat Window */}
       {open && (

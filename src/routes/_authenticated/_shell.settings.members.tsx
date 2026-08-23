@@ -162,7 +162,7 @@ function MembersRoute() {
                         value={result.inviteUrl}
                         className="h-10 flex-1 rounded-xl border border-line bg-surface-muted px-3 text-[12px] font-mono text-ink outline-none"
                       />
-                      <Button variant="secondary" onClick={copyLink} className="w-10 px-0 shrink-0">
+                      <Button variant="ghost" onClick={copyLink} className="w-10 px-0 shrink-0">
                         {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     </div>

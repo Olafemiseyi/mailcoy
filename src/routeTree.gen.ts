@@ -29,6 +29,7 @@ import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as ApiRegistrarDetectRouteImport } from './routes/api/registrar-detect'
 import { Route as ApiDnsResolveRouteImport } from './routes/api/dns-resolve'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiAliasSuggestionsRouteImport } from './routes/api/alias-suggestions'
 import { Route as AdminStatusRouteImport } from './routes/admin/status'
 import { Route as AdminPromosRouteImport } from './routes/admin/promos'
@@ -37,6 +38,7 @@ import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedShellRouteImport } from './routes/_authenticated/_shell'
 import { Route as ApiPublicStatusRouteImport } from './routes/api/public/status'
+import { Route as AuthenticatedShellTemplatesRouteImport } from './routes/_authenticated/_shell.templates'
 import { Route as AuthenticatedShellSignaturesRouteImport } from './routes/_authenticated/_shell.signatures'
 import { Route as AuthenticatedShellSettingsRouteImport } from './routes/_authenticated/_shell.settings'
 import { Route as AuthenticatedShellLogsRouteImport } from './routes/_authenticated/_shell.logs'
@@ -160,6 +162,11 @@ const ApiDnsResolveRoute = ApiDnsResolveRouteImport.update({
   path: '/api/dns-resolve',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAliasSuggestionsRoute = ApiAliasSuggestionsRouteImport.update({
   id: '/api/alias-suggestions',
   path: '/api/alias-suggestions',
@@ -199,6 +206,12 @@ const ApiPublicStatusRoute = ApiPublicStatusRouteImport.update({
   path: '/api/public/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedShellTemplatesRoute =
+  AuthenticatedShellTemplatesRouteImport.update({
+    id: '/templates',
+    path: '/templates',
+    getParentRoute: () => AuthenticatedShellRoute,
+  } as any)
 const AuthenticatedShellSignaturesRoute =
   AuthenticatedShellSignaturesRouteImport.update({
     id: '/signatures',
@@ -350,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/admin/promos': typeof AdminPromosRoute
   '/admin/status': typeof AdminStatusRoute
   '/api/alias-suggestions': typeof ApiAliasSuggestionsRoute
+  '/api/chat': typeof ApiChatRoute
   '/api/dns-resolve': typeof ApiDnsResolveRoute
   '/api/registrar-detect': typeof ApiRegistrarDetectRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -370,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/logs': typeof AuthenticatedShellLogsRoute
   '/settings': typeof AuthenticatedShellSettingsRouteWithChildren
   '/signatures': typeof AuthenticatedShellSignaturesRoute
+  '/templates': typeof AuthenticatedShellTemplatesRoute
   '/api/public/status': typeof ApiPublicStatusRoute
   '/domains/$id': typeof AuthenticatedShellDomainsIdRoute
   '/employees/$id': typeof AuthenticatedShellEmployeesIdRoute
@@ -400,6 +415,7 @@ export interface FileRoutesByTo {
   '/admin/promos': typeof AdminPromosRoute
   '/admin/status': typeof AdminStatusRoute
   '/api/alias-suggestions': typeof ApiAliasSuggestionsRoute
+  '/api/chat': typeof ApiChatRoute
   '/api/dns-resolve': typeof ApiDnsResolveRoute
   '/api/registrar-detect': typeof ApiRegistrarDetectRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -419,6 +435,7 @@ export interface FileRoutesByTo {
   '/help': typeof AuthenticatedShellHelpRoute
   '/logs': typeof AuthenticatedShellLogsRoute
   '/signatures': typeof AuthenticatedShellSignaturesRoute
+  '/templates': typeof AuthenticatedShellTemplatesRoute
   '/api/public/status': typeof ApiPublicStatusRoute
   '/domains/$id': typeof AuthenticatedShellDomainsIdRoute
   '/employees/$id': typeof AuthenticatedShellEmployeesIdRoute
@@ -453,6 +470,7 @@ export interface FileRoutesById {
   '/admin/promos': typeof AdminPromosRoute
   '/admin/status': typeof AdminStatusRoute
   '/api/alias-suggestions': typeof ApiAliasSuggestionsRoute
+  '/api/chat': typeof ApiChatRoute
   '/api/dns-resolve': typeof ApiDnsResolveRoute
   '/api/registrar-detect': typeof ApiRegistrarDetectRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -473,6 +491,7 @@ export interface FileRoutesById {
   '/_authenticated/_shell/logs': typeof AuthenticatedShellLogsRoute
   '/_authenticated/_shell/settings': typeof AuthenticatedShellSettingsRouteWithChildren
   '/_authenticated/_shell/signatures': typeof AuthenticatedShellSignaturesRoute
+  '/_authenticated/_shell/templates': typeof AuthenticatedShellTemplatesRoute
   '/api/public/status': typeof ApiPublicStatusRoute
   '/_authenticated/_shell/domains/$id': typeof AuthenticatedShellDomainsIdRoute
   '/_authenticated/_shell/employees/$id': typeof AuthenticatedShellEmployeesIdRoute
@@ -506,6 +525,7 @@ export interface FileRouteTypes {
     | '/admin/promos'
     | '/admin/status'
     | '/api/alias-suggestions'
+    | '/api/chat'
     | '/api/dns-resolve'
     | '/api/registrar-detect'
     | '/auth/forgot-password'
@@ -526,6 +546,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/settings'
     | '/signatures'
+    | '/templates'
     | '/api/public/status'
     | '/domains/$id'
     | '/employees/$id'
@@ -556,6 +577,7 @@ export interface FileRouteTypes {
     | '/admin/promos'
     | '/admin/status'
     | '/api/alias-suggestions'
+    | '/api/chat'
     | '/api/dns-resolve'
     | '/api/registrar-detect'
     | '/auth/forgot-password'
@@ -575,6 +597,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/logs'
     | '/signatures'
+    | '/templates'
     | '/api/public/status'
     | '/domains/$id'
     | '/employees/$id'
@@ -608,6 +631,7 @@ export interface FileRouteTypes {
     | '/admin/promos'
     | '/admin/status'
     | '/api/alias-suggestions'
+    | '/api/chat'
     | '/api/dns-resolve'
     | '/api/registrar-detect'
     | '/auth/forgot-password'
@@ -628,6 +652,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_shell/logs'
     | '/_authenticated/_shell/settings'
     | '/_authenticated/_shell/signatures'
+    | '/_authenticated/_shell/templates'
     | '/api/public/status'
     | '/_authenticated/_shell/domains/$id'
     | '/_authenticated/_shell/employees/$id'
@@ -656,6 +681,7 @@ export interface RootRouteChildren {
   StatusRoute: typeof StatusRoute
   TermsRoute: typeof TermsRoute
   ApiAliasSuggestionsRoute: typeof ApiAliasSuggestionsRoute
+  ApiChatRoute: typeof ApiChatRoute
   ApiDnsResolveRoute: typeof ApiDnsResolveRoute
   ApiRegistrarDetectRoute: typeof ApiRegistrarDetectRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
@@ -813,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDnsResolveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/alias-suggestions': {
       id: '/api/alias-suggestions'
       path: '/api/alias-suggestions'
@@ -868,6 +901,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/status'
       preLoaderRoute: typeof ApiPublicStatusRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/_shell/templates': {
+      id: '/_authenticated/_shell/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AuthenticatedShellTemplatesRouteImport
+      parentRoute: typeof AuthenticatedShellRoute
     }
     '/_authenticated/_shell/signatures': {
       id: '/_authenticated/_shell/signatures'
@@ -1101,6 +1141,7 @@ interface AuthenticatedShellRouteChildren {
   AuthenticatedShellLogsRoute: typeof AuthenticatedShellLogsRoute
   AuthenticatedShellSettingsRoute: typeof AuthenticatedShellSettingsRouteWithChildren
   AuthenticatedShellSignaturesRoute: typeof AuthenticatedShellSignaturesRoute
+  AuthenticatedShellTemplatesRoute: typeof AuthenticatedShellTemplatesRoute
 }
 
 const AuthenticatedShellRouteChildren: AuthenticatedShellRouteChildren = {
@@ -1116,6 +1157,7 @@ const AuthenticatedShellRouteChildren: AuthenticatedShellRouteChildren = {
   AuthenticatedShellLogsRoute: AuthenticatedShellLogsRoute,
   AuthenticatedShellSettingsRoute: AuthenticatedShellSettingsRouteWithChildren,
   AuthenticatedShellSignaturesRoute: AuthenticatedShellSignaturesRoute,
+  AuthenticatedShellTemplatesRoute: AuthenticatedShellTemplatesRoute,
 }
 
 const AuthenticatedShellRouteWithChildren =
@@ -1167,6 +1209,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatusRoute: StatusRoute,
   TermsRoute: TermsRoute,
   ApiAliasSuggestionsRoute: ApiAliasSuggestionsRoute,
+  ApiChatRoute: ApiChatRoute,
   ApiDnsResolveRoute: ApiDnsResolveRoute,
   ApiRegistrarDetectRoute: ApiRegistrarDetectRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,

@@ -3,7 +3,7 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDashboardSummary } from "@/lib/dashboard.functions";
 import { PageHeader, Card, Button, StatusPill } from "@/components/app/AppShell";
-import { Globe, Users, ArrowUpRight, ArrowDownLeft, ShieldCheck, ArrowRight, Check, Mail, Rocket } from "lucide-react";
+import { Globe, Users, ArrowUpRight, ArrowDownLeft, ShieldCheck, ArrowRight, Check, Mail, Rocket, Bot } from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
 
 const dashOpts = queryOptions({
@@ -77,6 +77,58 @@ function DashboardRoute() {
         />
       </div>
 
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-[14px] font-semibold text-ink">Workspace Apps</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link to="/templates">
+            <Card className="p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-surface-muted/30 transition-all cursor-pointer group">
+              <div className="h-10 w-10 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Rocket className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-semibold text-ink truncate">Email Templates</div>
+                <div className="text-[12px] text-ink-3 truncate">Build transactional HTML</div>
+              </div>
+            </Card>
+          </Link>
+          <Link to="/analytics">
+            <Card className="p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-surface-muted/30 transition-all cursor-pointer group">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-semibold text-ink truncate">Analytics</div>
+                <div className="text-[12px] text-ink-3 truncate">Volume & deliverability</div>
+              </div>
+            </Card>
+          </Link>
+          <Link to="/logs">
+            <Card className="p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-surface-muted/30 transition-all cursor-pointer group">
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <ArrowUpRight className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-semibold text-ink truncate">Real-time Logs</div>
+                <div className="text-[12px] text-ink-3 truncate">Monitor all traffic</div>
+              </div>
+            </Card>
+          </Link>
+          <Link to="/catch-all">
+            <Card className="p-4 flex items-center gap-3 hover:border-primary/40 hover:bg-surface-muted/30 transition-all cursor-pointer group">
+              <div className="h-10 w-10 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Mail className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[14px] font-semibold text-ink truncate">Catch-All Webmail</div>
+                <div className="text-[12px] text-ink-3 truncate">Shared team inbox</div>
+              </div>
+            </Card>
+          </Link>
+        </div>
+      </div>
+
       {!data.hasOrganization && (
         <Card className="p-6 mb-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -106,7 +158,7 @@ function DashboardRoute() {
               <div className="p-8 text-center text-[13px] text-ink-3">No recent logs.</div>
             ) : (
               <ul className="divide-y divide-line">
-                {data.recentLogs.map((log) => (
+                {data.recentLogs.map((log: { id: string; subject?: string; sender: string; receiver: string; status: string; timestamp: string }) => (
                   <li key={log.id} className="px-5 py-3 flex items-center justify-between gap-4 text-[13.5px]">
                     <div className="min-w-0">
                       <div className="truncate font-medium">{log.subject || "(No subject)"}</div>
@@ -248,6 +300,15 @@ function DocsCard() {
             </div>
           </Link>
         ))}
+      </div>
+      <div className="p-3 border-t border-line bg-surface-muted/10">
+        <button
+          onClick={() => window.dispatchEvent(new Event("open-ai-assistant"))}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors font-medium text-[13px] shadow-sm"
+        >
+          <Bot className="w-4 h-4" />
+          Chat with Mailcoy AI
+        </button>
       </div>
     </Card>
   );

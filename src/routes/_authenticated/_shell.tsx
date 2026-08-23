@@ -2,6 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { AppShell } from "@/components/app/AppShell";
 import { GlobalError } from "@/components/GlobalError";
 import { Skeleton } from "@/components/Skeleton";
+import { SupportChatWidget } from "@/components/SupportChatWidget";
 
 export const Route = createFileRoute("/_authenticated/_shell")({
   ssr: false,
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/_shell")({
   component: () => (
     <AppShell>
       <Outlet />
+      <SupportChatWidget />
     </AppShell>
   ),
 });

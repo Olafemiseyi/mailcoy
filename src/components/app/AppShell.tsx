@@ -5,13 +5,13 @@ import {
   LayoutDashboard, Globe, Users, Mail, ScrollText, Settings as SettingsIcon,
   LogOut, PanelLeftClose, PanelLeftOpen, Menu, X, BarChart3, AtSign, PenLine, Inbox,
   BookOpen, HelpCircle, Sun, Moon, Laptop, User as UserIcon, Trash2, ChevronDown,
+  LayoutTemplate
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyOrganization } from "@/lib/orgs.functions";
 import { useEffect, useState, type ReactNode } from "react";
-import { SupportChatWidget } from "@/components/SupportChatWidget";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -21,6 +21,7 @@ const NAV = [
   { to: "/aliases", label: "Aliases", icon: AtSign },
   { to: "/signatures", label: "Signatures", icon: PenLine },
   { to: "/catch-all", label: "Catch-all", icon: Inbox },
+  { to: "/templates", label: "Templates", icon: LayoutTemplate },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/logs", label: "Logs", icon: ScrollText },
   { to: "/help", label: "Help & Docs", icon: HelpCircle },
@@ -144,7 +145,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   active ? "bg-primary text-primary-foreground" : "text-ink-2 hover:bg-ink/[0.04]"
                 }`}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-4 w-4 shrink-0 group-hover:animate-icon-pop origin-center" />
                 {!collapsed && <span className="truncate">{item.label}</span>}
                 {collapsed && (
                   <span className="pointer-events-none absolute left-full ml-2 z-40 hidden group-hover:block whitespace-nowrap rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink shadow-sm">
@@ -161,27 +162,27 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setCollapsed((v) => !v)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:bg-ink/[0.04] transition`}
+            className={`group w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:bg-ink/[0.04] transition`}
           >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            {collapsed ? <PanelLeftOpen className="h-4 w-4 group-hover:animate-icon-pop origin-center" /> : <PanelLeftClose className="h-4 w-4 group-hover:animate-icon-pop origin-center" />}
             {!collapsed && <span>Collapse</span>}
           </button>
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
             title="Toggle theme"
-            className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:bg-ink/[0.04] transition`}
+            className={`group w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:bg-ink/[0.04] transition`}
           >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {theme === "dark" ? <Sun className="h-4 w-4 group-hover:animate-icon-pop origin-center" /> : <Moon className="h-4 w-4 group-hover:animate-icon-pop origin-center" />}
             {!collapsed && <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
           </button>
           <button
             onClick={signOut}
             aria-label="Sign out"
             title="Sign out"
-            className={`w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:text-danger hover:bg-danger/10 transition`}
+            className={`group w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:text-danger hover:bg-danger/10 transition`}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 group-hover:animate-icon-pop origin-center" />
             {!collapsed && <span>Sign out</span>}
           </button>
           {orgName && (
@@ -327,7 +328,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="px-5 md:px-10 py-6 md:py-8 max-w-6xl">{children}</div>
-        <SupportChatWidget userEmail={userEmail} />
       </main>
     </div>
   );
