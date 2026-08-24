@@ -307,14 +307,14 @@ function HowItWorks() {
           return (
             <div
               key={s.n}
-              className="group relative rounded-2xl border border-line bg-surface p-8 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 flex flex-col justify-between"
+              className="group relative rounded-2xl border border-line bg-surface p-5 sm:p-8 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <span className="font-mono text-[12px] font-bold tracking-widest text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-center justify-between gap-1 sm:gap-2 mb-6">
+                  <span className="font-mono text-[10px] sm:text-[12px] font-bold tracking-widest text-primary px-2 sm:px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 whitespace-nowrap">
                     STEP {s.n}
                   </span>
-                  <span className="text-[11px] font-mono text-ink-4 bg-surface-muted px-2.5 py-1 rounded-md border border-line">
+                  <span className="text-[9px] sm:text-[11px] font-mono text-ink-4 bg-surface-muted px-2 sm:px-2.5 py-1 rounded-md border border-line whitespace-nowrap overflow-hidden text-ellipsis">
                     {s.badge}
                   </span>
                 </div>
@@ -448,7 +448,7 @@ function RoutingDiagram() {
             ))}
           </div>
 
-          <div className="mt-8 flex gap-2">
+          <div className="mt-8 flex flex-wrap gap-2">
             <button
               onClick={() => setActiveScenario("inbound")}
               className={`px-4 py-2 rounded-xl text-[13px] font-semibold transition ${
@@ -606,14 +606,14 @@ function SavingsCalculator() {
         <div className="rounded-2xl border border-line-strong bg-background p-8 md:p-10 shadow-lg">
           <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] items-center">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-[13.5px] font-semibold text-ink uppercase tracking-wider">
-                  Team Size (Employees)
-                </label>
-                <span className="font-mono text-2xl font-bold text-primary px-3 py-1 rounded-lg bg-primary/10 border border-primary/20">
-                  {employees} {employees === 1 ? "person" : "people"}
-                </span>
-              </div>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <label className="text-[12px] sm:text-[13.5px] font-semibold text-ink uppercase tracking-wider truncate">
+                    Team Size <span className="hidden sm:inline">(Employees)</span>
+                  </label>
+                  <span className="font-mono text-lg sm:text-2xl font-bold text-primary px-2 sm:px-3 py-1 rounded-lg bg-primary/10 border border-primary/20 whitespace-nowrap">
+                    {employees} {employees === 1 ? "person" : "people"}
+                  </span>
+                </div>
 
               <input
                 type="range"
@@ -625,18 +625,18 @@ function SavingsCalculator() {
               />
 
               <div className="flex justify-between text-[11.5px] text-ink-4 font-mono">
-                <span>3 employees</span>
-                <span>25 employees</span>
-                <span>50 employees</span>
-                <span>100+ employees</span>
+                <span>3<span className="hidden sm:inline"> employees</span></span>
+                <span className="hidden sm:inline">25 employees</span>
+                <span className="hidden sm:inline">50 employees</span>
+                <span>100+<span className="hidden sm:inline"> employees</span></span>
               </div>
 
               <div className="mt-8 space-y-3 text-[13px] text-ink-3">
-                <div className="flex justify-between py-2 border-b border-line">
+                <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-line gap-1 sm:gap-4">
                   <span>Google Workspace ($7/seat/mo):</span>
                   <span className="font-mono font-medium text-ink-2">${workspaceCost.toLocaleString()} / year</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-line">
+                <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-line gap-1 sm:gap-4">
                   <span>Mailcoy ($2/seat/mo):</span>
                   <span className="font-mono font-medium text-emerald-600">${mailcoyCost.toLocaleString()} / year</span>
                 </div>

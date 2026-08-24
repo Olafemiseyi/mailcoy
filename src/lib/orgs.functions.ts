@@ -5,7 +5,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveOrgContext } from "@/server/orgContext.server";
 
 const slugify = (v: string) =>
-  v.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "workspace";
+  v
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48) || "workspace";
 
 const createOrgSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -19,13 +24,14 @@ export const getMyOrganization = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const ctx = await resolveOrgContext(context.supabase, context.userId);
     if (!ctx) return null;
-    
-    const { data: org, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: org, error } = await supabaseAdmin
       .from("organizations")
       .select("*")
       .eq("id", ctx.organizationId)
       .single();
-      
+
     if (error || !org) return null;
 
     return {
@@ -42,7 +48,7 @@ export const getMyOrganization = createServerFn({ method: "GET" })
       created_at: org.created_at,
       role: ctx.role,
       platformAdmin: false,
-      subscription: ctx.subscription
+      subscription: ctx.subscription,
     };
   });
 
@@ -57,7 +63,10 @@ export const createOrganization = createServerFn({ method: "POST" })
     let slug = baseSlug;
     for (let i = 1; i < 20; i++) {
       const { data: taken } = await context.supabase
-        .from("organizations").select("id").ilike("slug", slug).maybeSingle();
+        .from("organizations")
+        .select("id")
+        .ilike("slug", slug)
+        .maybeSingle();
       if (!taken) break;
       slug = `${baseSlug}-${i}`;
     }
@@ -82,7 +91,11 @@ export const createOrganization = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: memberErr } = await supabaseAdmin
       .from("organization_members")
-      .insert({ organization_id: (org as { id: string }).id, user_id: context.userId, role: "owner" } as never);
+      .insert({
+        organization_id: (org as { id: string }).id,
+        user_id: context.userId,
+        role: "owner",
+      } as never);
     if (memberErr) throw memberErr;
 
     await supabaseAdmin.from("activity_logs").insert({
@@ -98,7 +111,9 @@ export const createOrganization = createServerFn({ method: "POST" })
 export const setOnboardingStep = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({ step: z.number().int().min(0).max(10), completed: z.boolean().optional() }).parse(data),
+    z
+      .object({ step: z.number().int().min(0).max(10), completed: z.boolean().optional() })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const ctx = await resolveOrgContext(context.supabase, context.userId);
@@ -106,7 +121,9 @@ export const setOnboardingStep = createServerFn({ method: "POST" })
     const patch: Record<string, unknown> = { onboarding_step: data.step };
     if (data.completed) patch.onboarding_completed_at = new Date().toISOString();
     const { error } = await context.supabase
-      .from("organizations").update(patch as never).eq("id", ctx.organizationId);
+      .from("organizations")
+      .update(patch as never)
+      .eq("id", ctx.organizationId);
     if (error) throw error;
     return { ok: true };
   });
@@ -128,25 +145,43 @@ export const updateOrganization = createServerFn({ method: "POST" })
     if (!ctx) throw new Error("NO_ORGANIZATION");
     if (ctx.role !== "owner" && ctx.role !== "admin") throw new Error("FORBIDDEN");
     const { error } = await context.supabase
-      .from("organizations").update(data).eq("id", ctx.organizationId);
+      .from("organizations")
+      .update(data)
+      .eq("id", ctx.organizationId);
     if (error) throw error;
     return { ok: true };
   });
 
 export const uploadOrganizationLogo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({
-    fileName: z.string().trim().min(1).max(160),
-    contentType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"]),
-    base64: z.string().min(10).max(7_000_000),
-  }).parse(data))
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        fileName: z.string().trim().min(1).max(160),
+        contentType: z.enum([
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/gif",
+          "image/svg+xml",
+        ]),
+        base64: z.string().min(10).max(7_000_000),
+      })
+      .parse(data),
+  )
   .handler(async ({ data, context }) => {
     const ctx = await resolveOrgContext(context.supabase, context.userId);
     if (!ctx) throw new Error("NO_ORGANIZATION");
     if (ctx.role !== "owner" && ctx.role !== "admin") throw new Error("FORBIDDEN");
 
-    const ext = data.contentType === "image/jpeg" ? "jpg" : data.contentType.split("/")[1].replace("svg+xml", "svg");
-    const safeName = data.fileName.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").slice(0, 80);
+    const ext =
+      data.contentType === "image/jpeg"
+        ? "jpg"
+        : data.contentType.split("/")[1].replace("svg+xml", "svg");
+    const safeName = data.fileName
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .slice(0, 80);
     const path = `logos/${ctx.organizationId}/${Date.now()}-${safeName || `logo.${ext}`}`;
     const bytes = Buffer.from(data.base64, "base64");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

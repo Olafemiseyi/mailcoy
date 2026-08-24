@@ -180,7 +180,7 @@ function UptimeBars({ series, currentStatus }: { series?: DailyBucket[]; current
         <span>Today</span>
       </div>
 
-      <div className="flex items-end gap-[3px] h-9">
+      <div className="flex items-end gap-[1px] sm:gap-[3px] h-9">
         {bars.map((b) => (
           <div
             key={b.day}
@@ -190,7 +190,7 @@ function UptimeBars({ series, currentStatus }: { series?: DailyBucket[]; current
             className={`flex-1 h-7 rounded-[2px] transition-all duration-150 cursor-pointer ${barColor(
               b.status
             )} hover:scale-y-125 hover:opacity-100 opacity-90`}
-            style={{ minWidth: "2.5px" }}
+            style={{ minWidth: "1.5px" }}
           />
         ))}
       </div>
@@ -245,20 +245,22 @@ function StatusPage() {
             </span>
           </Link>
           <div className="flex items-center gap-3">
-            <button
-              onClick={load}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-line bg-background text-[12.5px] font-medium hover:bg-surface-muted transition shadow-xs"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-primary" : "text-ink-3"}`} />
-              <span>{loading ? "Checking…" : "Refresh"}</span>
-            </button>
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center gap-1 h-8 px-3 rounded-lg bg-primary text-primary-foreground text-[12.5px] font-medium shadow-xs hover:opacity-90 transition"
-            >
-              Dashboard <ArrowRight className="h-3 w-3" />
-            </Link>
+              <button
+                onClick={load}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg border border-line bg-background text-[12.5px] font-medium hover:bg-surface-muted transition shadow-xs"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-primary" : "text-ink-3"}`} />
+                <span className="hidden sm:inline">{loading ? "Checking…" : "Refresh"}</span>
+              </button>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1 h-8 px-2 sm:px-3 rounded-lg bg-primary text-primary-foreground text-[12.5px] font-medium shadow-xs hover:opacity-90 transition"
+              >
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Dash</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
           </div>
         </div>
       </header>
@@ -275,7 +277,7 @@ function StatusPage() {
           }`}
         >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <div
                 className={`h-12 w-12 rounded-2xl grid place-items-center shrink-0 ${
                   data?.status === "operational"

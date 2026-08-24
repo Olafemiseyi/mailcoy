@@ -35,10 +35,14 @@ export const listApiKeys = createServerFn({ method: "GET" })
 
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
-    name: z.string().trim().min(1).max(80),
-    scopes: z.array(z.string().max(60)).max(20).default([]),
-  }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        name: z.string().trim().min(1).max(80),
+        scopes: z.array(z.string().max(60)).max(20).default([]),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
@@ -52,7 +56,9 @@ export const createApiKey = createServerFn({ method: "POST" })
         hash: sha256(full),
         scopes: data.scopes,
         created_by: context.userId,
-      } as never).select("id, prefix, created_at, last_used_at").single();
+      } as never)
+      .select("id, prefix, created_at, last_used_at")
+      .single();
     if (error || !row) throw error ?? new Error("Failed");
     return { ...row, full_key: full }; // only time the full key is returned
   });
@@ -64,8 +70,10 @@ export const revokeApiKey = createServerFn({ method: "POST" })
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
     const { error } = await context.supabase
-      .from("api_keys").update({ revoked_at: new Date().toISOString() } as never)
-      .eq("id", data.id).eq("organization_id", ctx.organizationId);
+      .from("api_keys")
+      .update({ revoked_at: new Date().toISOString() } as never)
+      .eq("id", data.id)
+      .eq("organization_id", ctx.organizationId);
     if (error) throw error;
     return { ok: true };
   });
@@ -87,10 +95,14 @@ export const listWebhooks = createServerFn({ method: "GET" })
 
 export const createWebhook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
-    url: z.string().url().max(2048),
-    events: z.array(z.string().max(60)).min(1).max(30),
-  }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        url: z.string().url().max(2048),
+        events: z.array(z.string().max(60)).min(1).max(30),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
@@ -102,7 +114,9 @@ export const createWebhook = createServerFn({ method: "POST" })
         url: data.url,
         events: data.events,
         secret_hash: sha256(secret),
-      }).select("id, url, events, active, created_at").single();
+      })
+      .select("id, url, events, active, created_at")
+      .single();
     if (error) throw error;
     return { ...row, secret }; // only time the secret is returned
   });
@@ -114,7 +128,10 @@ export const deleteWebhook = createServerFn({ method: "POST" })
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
     const { error } = await context.supabase
-      .from("webhooks").delete().eq("id", data.id).eq("organization_id", ctx.organizationId);
+      .from("webhooks")
+      .delete()
+      .eq("id", data.id)
+      .eq("organization_id", ctx.organizationId);
     if (error) throw error;
     return { ok: true };
   });
@@ -123,30 +140,39 @@ export const deleteWebhook = createServerFn({ method: "POST" })
 
 export const listEmailLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
-    limit: z.number().int().min(1).max(200).default(50),
-    offset: z.number().int().min(0).max(10000).default(0),
-    status: z.string().max(30).optional(),
-    direction: z.enum(["incoming", "outgoing"]).optional(),
-    search: z.string().max(120).optional(),
-  }).parse(d ?? {}))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        limit: z.number().int().min(1).max(200).default(50),
+        offset: z.number().int().min(0).max(10000).default(0),
+        status: z.string().max(30).optional(),
+        direction: z.enum(["incoming", "outgoing"]).optional(),
+        search: z.string().max(120).optional(),
+      })
+      .parse(d ?? {}),
+  )
   .handler(async ({ data, context }) => {
     const ctx = await resolveOrgContext(context.supabase, context.userId);
     if (!ctx) return { rows: [], total: 0 };
-    let q = context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let q = supabaseAdmin
       .from("email_logs")
-      .select("id, sender, receiver, subject, snippet, direction, status, timestamp", { count: "exact" })
+      .select("id, sender, receiver, subject, snippet, direction, status, timestamp", {
+        count: "exact",
+      })
       .eq("organization_id", ctx.organizationId)
       .order("timestamp", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
     if (data.status) q = q.eq("status", data.status as never);
     if (data.direction) q = q.eq("direction", data.direction as never);
-    if (data.search) q = q.or(`subject.ilike.%${data.search}%,sender.ilike.%${data.search}%,receiver.ilike.%${data.search}%`);
+    if (data.search)
+      q = q.or(
+        `subject.ilike.%${data.search}%,sender.ilike.%${data.search}%,receiver.ilike.%${data.search}%`,
+      );
     const { data: rows, error, count } = await q;
     if (error) throw error;
     return { rows: rows ?? [], total: count ?? 0 };
   });
-
 
 /* ---------------- MEMBERS ---------------- */
 
@@ -173,7 +199,10 @@ export const listMembers = createServerFn({ method: "GET" })
 
     const profileMap = new Map<string, { full_name?: string | null; email?: string | null }>();
     (authUsers?.users || []).forEach((u) => {
-      profileMap.set(u.id, { email: u.email, full_name: (u.user_metadata as any)?.name || (u.user_metadata as any)?.full_name || null });
+      profileMap.set(u.id, {
+        email: u.email,
+        full_name: (u.user_metadata as any)?.name || (u.user_metadata as any)?.full_name || null,
+      });
     });
     (profiles || []).forEach((p: any) => {
       const prev = profileMap.get(p.id) || {};
@@ -195,10 +224,14 @@ export const listMembers = createServerFn({ method: "GET" })
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
-    email: z.string().email(),
-    role: z.enum(["admin", "member"]).default("admin"),
-  }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        email: z.string().email(),
+        role: z.enum(["admin", "member"]).default("admin"),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
@@ -206,7 +239,7 @@ export const inviteMember = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
     const user = authUsers?.users?.find(
-      (u: any) => u.email?.toLowerCase() === data.email.toLowerCase().trim()
+      (u: any) => u.email?.toLowerCase() === data.email.toLowerCase().trim(),
     );
 
     if (user) {
@@ -225,22 +258,26 @@ export const inviteMember = createServerFn({ method: "POST" })
       if (existingMember?.role === "owner") {
         throw new Error("Cannot modify the role of the workspace owner.");
       }
-      
+
       if (existingMember?.role === data.role) {
         throw new Error(`${data.email} is already a ${data.role} in this workspace.`);
       }
 
       // Add directly to organization members
-      const { error: insertErr } = await supabaseAdmin
-        .from("organization_members")
-        .upsert({
+      const { error: insertErr } = await supabaseAdmin.from("organization_members").upsert(
+        {
           organization_id: ctx.organizationId,
           user_id: user.id,
           role: data.role,
-        }, { onConflict: "organization_id,user_id" });
+        },
+        { onConflict: "organization_id,user_id" },
+      );
 
       if (insertErr) throw insertErr;
-      return { status: "added", message: `${data.email} is already on Mailcoy and was added to your workspace directly as ${data.role}!` };
+      return {
+        status: "added",
+        message: `${data.email} is already on Mailcoy and was added to your workspace directly as ${data.role}!`,
+      };
     }
 
     return {
@@ -263,20 +300,65 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
     if (!allowed) throw new Error("FORBIDDEN");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [orgs, users, domains, verifiedDomains, employees, emailLogs, activeSubs, recentOrgs, recentEvents, recentAudits] = await Promise.all([
-      supabaseAdmin.from("organizations").select("*", { count: "exact", head: true }).is("deleted_at", null),
+    const [
+      orgs,
+      users,
+      domains,
+      verifiedDomains,
+      employees,
+      emailLogs,
+      activeSubs,
+      recentOrgs,
+      recentEvents,
+      recentAudits,
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("organizations")
+        .select("*", { count: "exact", head: true })
+        .is("deleted_at", null),
       supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
       supabaseAdmin.from("domains").select("*", { count: "exact", head: true }),
-      supabaseAdmin.from("domains").select("*", { count: "exact", head: true }).eq("verification_status", "verified"),
-      supabaseAdmin.from("employees").select("*", { count: "exact", head: true }).is("deleted_at", null),
+      supabaseAdmin
+        .from("domains")
+        .select("*", { count: "exact", head: true })
+        .eq("verification_status", "verified"),
+      supabaseAdmin
+        .from("employees")
+        .select("*", { count: "exact", head: true })
+        .is("deleted_at", null),
       supabaseAdmin.from("email_logs").select("*", { count: "exact", head: true }),
-      supabaseAdmin.from("subscriptions").select("*", { count: "exact", head: true }).eq("status", "active"),
-      supabaseAdmin.from("organizations").select("id, name, slug, industry, country, created_at").is("deleted_at", null).order("created_at", { ascending: false }).limit(8),
-      supabaseAdmin.from("billing_events").select("id, provider, event_type, reference, status, created_at").order("created_at", { ascending: false }).limit(8),
-      supabaseAdmin.from("audit_logs").select("id, actor_user_id, action, meta, at").order("at", { ascending: false }).limit(8),
+      supabaseAdmin
+        .from("subscriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active"),
+      supabaseAdmin
+        .from("organizations")
+        .select("id, name, slug, industry, country, created_at")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(8),
+      supabaseAdmin
+        .from("billing_events")
+        .select("id, provider, event_type, reference, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(8),
+      supabaseAdmin
+        .from("audit_logs")
+        .select("id, actor_user_id, action, meta, at")
+        .order("at", { ascending: false })
+        .limit(8),
     ]);
 
-    for (const res of [orgs, domains, verifiedDomains, employees, activeSubs, recentOrgs, recentEvents, recentAudits]) {
+    for (const res of [
+      orgs,
+      domains,
+      verifiedDomains,
+      employees,
+      activeSubs,
+      recentOrgs,
+      recentEvents,
+      recentAudits,
+    ]) {
       if (res.error) throw res.error;
     }
 

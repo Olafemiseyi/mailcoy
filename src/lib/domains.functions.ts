@@ -8,30 +8,41 @@ import { toAppError } from "@/lib/errors";
 const DOMAIN_RE = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})+$/;
 
 const cleanDomain = (val: unknown) => {
-  if (typeof val !== 'string') return val;
+  if (typeof val !== "string") return val;
   try {
-    const url = new URL(val.includes('://') ? val : `http://${val}`);
-    return url.hostname.replace(/^www\./, '');
+    const url = new URL(val.includes("://") ? val : `http://${val}`);
+    return url.hostname.replace(/^www\./, "");
   } catch {
-    return val.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '').trim().toLowerCase();
+    return val
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .replace(/\/$/, "")
+      .trim()
+      .toLowerCase();
   }
 };
 
 const addSchema = z.object({
-  name: z.preprocess(cleanDomain, z.string().trim().toLowerCase().min(3).max(253).regex(DOMAIN_RE, "Invalid domain")),
+  name: z.preprocess(
+    cleanDomain,
+    z.string().trim().toLowerCase().min(3).max(253).regex(DOMAIN_RE, "Invalid domain"),
+  ),
 });
 
 function randomNonce(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export const listDomains = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
-    const { data, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("domains")
       .select("*")
       .eq("organization_id", ctx.organizationId)
@@ -45,7 +56,8 @@ export const getDomain = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => z.object({ id: z.string() }).parse(data))
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
-    const { data: row, error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
       .from("domains")
       .select("*")
       .eq("organization_id", ctx.organizationId)
@@ -73,12 +85,12 @@ export const addDomain = createServerFn({ method: "POST" })
 
     if ((domainCount ?? 0) >= ctx.subscription.maxDomains) {
       throw new Error(
-        `Your current plan (${ctx.subscription.plan}) allows up to ${ctx.subscription.maxDomains} domain(s). Please upgrade your plan in Settings → Billing to add more domains.`
+        `Your current plan (${ctx.subscription.plan}) allows up to ${ctx.subscription.maxDomains} domain(s). Please upgrade your plan in Settings → Billing to add more domains.`,
       );
     }
 
     const nonce = randomNonce();
-    
+
     // 1. Call Resend API to provision the domain
     const { createResendDomain } = await import("@/lib/resend.functions");
     let resendData: any = null;
@@ -90,8 +102,10 @@ export const addDomain = createServerFn({ method: "POST" })
       resendData = await createResendDomain(data.name);
       resendDomainId = resendData.id;
       const dkimRecord = resendData.records?.find((r: any) => r.record === "DKIM");
-      const spfTxtRecord = resendData.records?.find((r: any) => r.record === "SPF" && r.type === "TXT");
-      
+      const spfTxtRecord = resendData.records?.find(
+        (r: any) => r.record === "SPF" && r.type === "TXT",
+      );
+
       if (dkimRecord) dkimValue = dkimRecord.value;
       if (spfTxtRecord) spfValue = spfTxtRecord.value;
     } catch (e) {
@@ -119,7 +133,8 @@ export const addDomain = createServerFn({ method: "POST" })
         dkim_status: "pending",
         dmarc_status: "pending",
       } as never)
-      .select("*").single();
+      .select("*")
+      .single();
     if (error || !row) {
       console.error("[addDomain] Error inserting domain:", error);
       throw new Error(toAppError(error, "Failed to add domain. Please try again."));
@@ -145,9 +160,12 @@ export const deleteDomain = createServerFn({ method: "POST" })
 
     // Get the domain name first
     const { data: domain, error: fetchErr } = await context.supabase
-      .from("domains").select("domain_name")
-      .eq("id", data.id).eq("organization_id", ctx.organizationId).single();
-    
+      .from("domains")
+      .select("domain_name")
+      .eq("id", data.id)
+      .eq("organization_id", ctx.organizationId)
+      .single();
+
     if (fetchErr || !domain) throw new Error("Domain not found");
 
     // Check if any employees use this domain
@@ -160,11 +178,16 @@ export const deleteDomain = createServerFn({ method: "POST" })
 
     if (empErr) throw empErr;
     if (count && count > 0) {
-      throw new Error(`Cannot delete domain. There are ${count} employee(s) associated with ${domain.domain_name}.`);
+      throw new Error(
+        `Cannot delete domain. There are ${count} employee(s) associated with ${domain.domain_name}.`,
+      );
     }
 
     const { error } = await context.supabase
-      .from("domains").delete().eq("id", data.id).eq("organization_id", ctx.organizationId);
+      .from("domains")
+      .delete()
+      .eq("id", data.id)
+      .eq("organization_id", ctx.organizationId);
     if (error) throw error;
     return { ok: true };
   });
@@ -179,8 +202,11 @@ export const verifyDomainNow = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     const { data: domain, error } = await context.supabase
-      .from("domains").select("*").eq("id", data.id)
-      .eq("organization_id", ctx.organizationId).maybeSingle();
+      .from("domains")
+      .select("*")
+      .eq("id", data.id)
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle();
     if (error) throw error;
     if (!domain) throw new Error("Domain not found");
 
@@ -231,7 +257,11 @@ export const verifyDomainNow = createServerFn({ method: "POST" })
     };
 
     const { data: updated, error: uerr } = await context.supabase
-      .from("domains").update(patch as never).eq("id", domain.id).select("*").single();
+      .from("domains")
+      .update(patch as never)
+      .eq("id", domain.id)
+      .select("*")
+      .single();
     if (uerr) throw uerr;
     return updated;
   });

@@ -1,4 +1,4 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, Navigate } from "@tanstack/react-router";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import { Button } from "./app/AppShell";
 import { useEffect } from "react";
@@ -9,6 +9,10 @@ export function GlobalError({ error, reset }: { error: Error; reset: () => void 
   useEffect(() => {
     console.error("Global boundary caught error:", error);
   }, [error]);
+
+  if (error?.message?.includes("NO_ORGANIZATION")) {
+    return <Navigate to="/onboarding" replace />;
+  }
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center p-8 text-center animate-fade-in">

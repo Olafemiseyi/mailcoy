@@ -5,14 +5,41 @@ import { useState, useEffect } from "react";
 import { listEmployees, addEmployee, deleteEmployee } from "@/lib/employees.functions";
 import { listDomains } from "@/lib/domains.functions";
 import { PageHeader, Card, Button, Input, Field, StatusPill } from "@/components/app/AppShell";
-import { FileSpreadsheet, Search, Plus, BriefcaseBusiness, Mail, Send, Trash2, Users, ChevronRight } from "lucide-react";
+import {
+  FileSpreadsheet,
+  Search,
+  Plus,
+  BriefcaseBusiness,
+  Mail,
+  Send,
+  Trash2,
+  Users,
+  ChevronRight,
+  AlertCircle,
+} from "lucide-react";
 import { EmployeesSkeleton } from "@/components/Skeleton";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { InviteModal } from "@/components/InviteModal";
 import { BulkImportModal } from "@/components/BulkImportModal";
+import { friendlyError } from "@/lib/errors";
 
-const empOpts = queryOptions({ queryKey: ["employees"], queryFn: async () => listEmployees(), staleTime: 15_000 });
-const domOpts = queryOptions({ queryKey: ["domains"], queryFn: async () => listDomains(), staleTime: 30_000 });
+const empOpts = queryOptions({
+  queryKey: ["employees"],
+  queryFn: async () => listEmployees(),
+  staleTime: 15_000,
+});
+const domOpts = queryOptions({
+  queryKey: ["domains"],
+  queryFn: async () => listDomains(),
+  staleTime: 30_000,
+});
 
 export const Route = createFileRoute("/_authenticated/_shell/employees")({
   head: () => ({ meta: [{ title: "Employees — Mailcoy" }] }),
@@ -28,22 +55,31 @@ export const Route = createFileRoute("/_authenticated/_shell/employees")({
     <div className="p-6">
       <h1 className="text-lg font-semibold mb-2">Unable to load employees</h1>
       <p className="text-[13px] text-ink-3 mb-4">{error.message}</p>
-      <button onClick={reset} className="h-9 px-3 rounded-md border border-line text-[13px]">Retry</button>
+      <button onClick={reset} className="h-9 px-3 rounded-md border border-line text-[13px]">
+        Retry
+      </button>
     </div>
   ),
   component: EmployeesRoute,
 });
 
 function EmployeesRoute() {
-  const path = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
+  const path = useRouterState({
+    select: (s: { location: { pathname: string } }) => s.location.pathname,
+  });
   if (path !== "/employees") return <Outlet />;
   return <EmployeesList />;
 }
 
 type EmployeeRow = {
-  id: string; full_name: string | null; professional_email: string | null;
-  job_title: string | null; department: string | null; status: string;
-  gmail_connected?: boolean; gmail_email?: string | null;
+  id: string;
+  full_name: string | null;
+  professional_email: string | null;
+  job_title: string | null;
+  department: string | null;
+  status: string;
+  gmail_connected?: boolean;
+  gmail_email?: string | null;
 };
 
 function EmployeesList() {
@@ -60,17 +96,27 @@ function EmployeesList() {
   const [jobTitle, setJobTitle] = useState("");
   const [department, setDepartment] = useState("");
   const [phone, setPhone] = useState("");
-  const [dom, setDom] = useState<string>((domains[0] as { domain_name?: string })?.domain_name ?? "");
+  const [dom, setDom] = useState<string>(
+    (domains[0] as { domain_name?: string })?.domain_name ?? "",
+  );
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<null | { id: string; name: string; email: string }>(null);
+  const [pendingDelete, setPendingDelete] = useState<null | {
+    id: string;
+    name: string;
+    email: string;
+  }>(null);
   const [inviteFor, setInviteFor] = useState<EmployeeRow | null>(null);
   const [localEdited, setLocalEdited] = useState(false);
 
   useEffect(() => {
     if (!localEdited && name) {
-      const suggested = name.toLowerCase().replace(/[^a-z0-9]/g, '.').replace(/\.+/g, '.').replace(/^\.+|\.+$/g, '');
+      const suggested = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, ".")
+        .replace(/\.+/g, ".")
+        .replace(/^\.+|\.+$/g, "");
       if (suggested) {
         setLocal(suggested);
       }
@@ -80,12 +126,17 @@ function EmployeesList() {
   }, [name, localEdited]);
 
   const allEmps = employees as EmployeeRow[];
-  const uniqueDepts = Array.from(new Set(allEmps.map((e) => e.department).filter(Boolean))) as string[];
-  const uniquePositions = Array.from(new Set(allEmps.map((e) => e.job_title).filter(Boolean))) as string[];
+  const uniqueDepts = Array.from(
+    new Set(allEmps.map((e) => e.department).filter(Boolean)),
+  ) as string[];
+  const uniquePositions = Array.from(
+    new Set(allEmps.map((e) => e.job_title).filter(Boolean)),
+  ) as string[];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setErr(null); setBusy(true);
+    setErr(null);
+    setBusy(true);
     try {
       await add({
         data: {
@@ -98,10 +149,18 @@ function EmployeesList() {
         },
       });
       await qc.invalidateQueries({ queryKey: ["employees"] });
-      setName(""); setLocal(""); setJobTitle(""); setDepartment(""); setPhone(""); setLocalEdited(false); setOpenAdd(false);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed");
-    } finally { setBusy(false); }
+      setName("");
+      setLocal("");
+      setJobTitle("");
+      setDepartment("");
+      setPhone("");
+      setLocalEdited(false);
+      setOpenAdd(false);
+    } catch (e: any) {
+      setErr(friendlyError(e, "Could not add employee. Please verify details."));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function remove() {
@@ -111,7 +170,11 @@ function EmployeesList() {
       await del({ data: { id: pendingDelete.id } });
       await qc.invalidateQueries({ queryKey: ["employees"] });
       setPendingDelete(null);
-    } finally { setDeleting(false); }
+    } catch (e: any) {
+      alert(friendlyError(e, "Failed to delete employee"));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -120,11 +183,15 @@ function EmployeesList() {
         title="Employees"
         subtitle="Create professional addresses. Each employee connects their own Gmail via an invite link — you never sign in for them."
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => setOpenBulk(true)} className="border border-line">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setOpenBulk(true)}
+              className="border border-line w-full sm:w-auto"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Bulk CSV import
             </Button>
-            <Button onClick={() => setOpenAdd((v) => !v)}>
+            <Button onClick={() => setOpenAdd((v) => !v)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-1.5" /> Add employee
             </Button>
           </div>
@@ -145,58 +212,95 @@ function EmployeesList() {
           ) : (
             <form onSubmit={submit} className="space-y-5">
               <Field label="Full name">
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required />
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Jane Doe"
+                  required
+                />
               </Field>
               <Field label="Professional address">
                 <div className="flex">
-                  <Input 
-                    value={local} 
+                  <Input
+                    value={local}
                     onChange={(e) => {
                       setLocal(e.target.value.toLowerCase().replace(/\s+/g, ""));
                       setLocalEdited(true);
-                    }} 
-                    placeholder="jane.doe" 
-                    required 
-                    className="rounded-r-none" 
+                    }}
+                    placeholder="jane.doe"
+                    required
+                    className="rounded-r-none"
                   />
-                  <select value={dom} onChange={(e) => setDom(e.target.value)} className="h-10 border border-l-0 border-line rounded-r-md bg-surface-muted px-2 text-[13px]">
-                    {domains.map((d: { id: string; domain_name: string }) => <option key={d.id} value={d.domain_name}>@{d.domain_name}</option>)}
+                  <select
+                    value={dom}
+                    onChange={(e) => setDom(e.target.value)}
+                    className="h-10 border border-l-0 border-line rounded-r-md bg-surface-muted px-2 text-[13px]"
+                  >
+                    {domains.map((d: { id: string; domain_name: string }) => (
+                      <option key={d.id} value={d.domain_name}>
+                        @{d.domain_name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Department">
-                  <Input 
-                    value={department} 
-                    onChange={(e) => setDepartment(e.target.value)} 
-                    placeholder="Sales" 
-                    list="dept-list" 
+                  <Input
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    placeholder="Sales"
+                    list="dept-list"
                   />
                   <datalist id="dept-list">
-                    {uniqueDepts.map((d) => <option key={d} value={d} />)}
+                    {uniqueDepts.map((d) => (
+                      <option key={d} value={d} />
+                    ))}
                   </datalist>
                 </Field>
                 <Field label="Position">
-                  <Input 
-                    value={jobTitle} 
-                    onChange={(e) => setJobTitle(e.target.value)} 
-                    placeholder="Account Executive" 
-                    list="pos-list" 
+                  <Input
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="Account Executive"
+                    list="pos-list"
                   />
                   <datalist id="pos-list">
-                    {uniquePositions.map((p) => <option key={p} value={p} />)}
+                    {uniquePositions.map((p) => (
+                      <option key={p} value={p} />
+                    ))}
                   </datalist>
                 </Field>
               </div>
               <Field label="Phone number (optional)">
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 0123" type="tel" />
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+1 555 0123"
+                  type="tel"
+                />
               </Field>
-              
+
+              {err && (
+                <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400 text-[12.5px] flex items-start gap-2 animate-fadeIn">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{err}</span>
+                </div>
+              )}
+
               <SheetFooter className="mt-8">
-                <Button type="button" variant="ghost" onClick={() => setOpenAdd(false)} disabled={busy}>Cancel</Button>
-                <Button type="submit" disabled={busy}>{busy ? "Adding…" : "Add employee"}</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setOpenAdd(false)}
+                  disabled={busy}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={busy}>
+                  {busy ? "Adding…" : "Add employee"}
+                </Button>
               </SheetFooter>
-              {err && <p className="text-[13px] text-red-600 mt-2">{err}</p>}
             </form>
           )}
         </SheetContent>
@@ -209,13 +313,20 @@ function EmployeesList() {
               <Users className="h-6 w-6 text-ink-3" />
             </div>
             <h3 className="font-semibold text-ink">No employees yet</h3>
-            <p className="mt-1 text-[13px] text-ink-3 max-w-sm">Add your staff to generate their professional email addresses.</p>
-            <Button onClick={() => setOpenAdd(true)} className="mt-5">Add employee</Button>
+            <p className="mt-1 text-[13px] text-ink-3 max-w-sm">
+              Add your staff to generate their professional email addresses.
+            </p>
+            <Button onClick={() => setOpenAdd(true)} className="mt-5">
+              Add employee
+            </Button>
           </div>
         ) : (
           <ul className="divide-y divide-line">
             {(employees as EmployeeRow[]).map((emp) => (
-              <li key={emp.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-5 py-4 hover:bg-ink/[0.02] transition">
+              <li
+                key={emp.id}
+                className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-5 py-4 hover:bg-ink/[0.02] transition"
+              >
                 <Link to="/employees/$id" params={{ id: emp.id }} className="min-w-0 flex-1">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                     <div className="font-medium truncate">{emp.full_name ?? "—"}</div>
@@ -226,13 +337,19 @@ function EmployeesList() {
                       </span>
                     )}
                   </div>
-                  <div className="mt-1 text-[12.5px] text-ink-3 font-mono truncate">{emp.professional_email ?? "—"}</div>
+                  <div className="mt-1 text-[12.5px] text-ink-3 font-mono truncate">
+                    {emp.professional_email ?? "—"}
+                  </div>
                 </Link>
                 <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto max-w-full mt-2 sm:mt-0">
                   <StatusPill status={emp.status ?? "pending"} />
                   {!emp.gmail_connected && (
                     <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setInviteFor(emp); }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setInviteFor(emp);
+                      }}
                       className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-2.5 text-[12.5px] text-ink-2 hover:bg-ink/[0.04]"
                       title="Send invite"
                     >
@@ -240,7 +357,15 @@ function EmployeesList() {
                     </button>
                   )}
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPendingDelete({ id: emp.id, name: emp.full_name ?? "Employee", email: emp.professional_email ?? "—" }); }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setPendingDelete({
+                        id: emp.id,
+                        name: emp.full_name ?? "Employee",
+                        email: emp.professional_email ?? "—",
+                      });
+                    }}
                     className="p-1.5 text-ink-3 hover:text-danger"
                     title="Delete"
                     aria-label="Delete employee"
@@ -256,7 +381,11 @@ function EmployeesList() {
       </Card>
 
       {pendingDelete && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
           <Card className="w-full max-w-md p-5 shadow-xl">
             <div className="flex items-start gap-3">
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-danger/10 text-danger">
@@ -265,20 +394,40 @@ function EmployeesList() {
               <div className="min-w-0">
                 <h2 className="font-display text-lg font-semibold">Delete employee?</h2>
                 <p className="mt-1 text-[13.5px] text-ink-3">
-                  {pendingDelete.name} ({pendingDelete.email}) will be removed from the active employee list.
+                  {pendingDelete.name} ({pendingDelete.email}) will be removed from the active
+                  employee list.
                 </p>
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setPendingDelete(null)} disabled={deleting}>Cancel</Button>
-              <Button type="button" variant="danger" onClick={remove} disabled={deleting}>{deleting ? "Deleting…" : "Delete"}</Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setPendingDelete(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button type="button" variant="danger" onClick={remove} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete"}
+              </Button>
             </div>
           </Card>
         </div>
       )}
 
-      {inviteFor && <InviteModal employee={inviteFor} onClose={() => { setInviteFor(null); qc.invalidateQueries({ queryKey: ["employees"] }); }} />}
-      {openBulk && <BulkImportModal domain={dom || "company.com"} onClose={() => setOpenBulk(false)} />}
+      {inviteFor && (
+        <InviteModal
+          employee={inviteFor}
+          onClose={() => {
+            setInviteFor(null);
+            qc.invalidateQueries({ queryKey: ["employees"] });
+          }}
+        />
+      )}
+      {openBulk && (
+        <BulkImportModal domain={dom || "company.com"} onClose={() => setOpenBulk(false)} />
+      )}
     </div>
   );
 }

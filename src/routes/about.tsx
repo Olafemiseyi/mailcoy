@@ -69,9 +69,9 @@ function About() {
             <strong>Enterprise-Grade Security:</strong> Under the hood, Mailcoy is powered by high-throughput Amazon SES and Resend delivery backbones, real-time DNSBL spam reputation monitoring, and AES-256 encryption.
           </p>
         </div>
-        <div className="mt-6 pt-6 border-t border-line flex items-center justify-between">
+        <div className="mt-6 pt-6 border-t border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <span className="text-[13px] text-ink-3">Ready to upgrade your business email?</span>
-          <Link to="/auth/signup" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary hover:underline">
+          <Link to="/auth/signup" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary hover:underline whitespace-nowrap">
             Start For Free <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

@@ -86,16 +86,16 @@ function TemplatesPage() {
   if (editing) {
     return (
       <div className="p-6 lg:p-10 max-w-6xl mx-auto flex flex-col h-full animate-in fade-in duration-300">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <button onClick={() => setEditing(null)} className="p-2 hover:bg-ink/[0.05] rounded-full transition">
               <X className="h-5 w-5 text-ink-3" />
             </button>
             <h1 className="text-2xl font-display font-bold text-ink">Edit Template</h1>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={handleSave} className="gap-2"><Save className="h-4 w-4" /> Save Template</Button>
+          <div className="flex w-full sm:w-auto items-center gap-2">
+            <Button variant="ghost" className="flex-1 sm:flex-none justify-center" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button onClick={handleSave} className="flex-1 sm:flex-none gap-2 justify-center"><Save className="h-4 w-4" /> Save</Button>
           </div>
         </div>
 

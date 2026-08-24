@@ -8,20 +8,21 @@ export const listSignatures = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     
-    const { data: sigs } = await context.supabase
+    const { data: sigs } = await supabaseAdmin
       .from("email_signatures")
       .select("*")
       .eq("organization_id", ctx.organizationId);
 
-    const { data: emps } = await context.supabase
+    const { data: emps } = await supabaseAdmin
       .from("employees")
       .select("id, full_name, professional_email, company_email, department, job_title")
       .eq("organization_id", ctx.organizationId);
 
     const org = sigs?.find((s: any) => s.scope === "org") || null;
     const departments = sigs?.filter((s: any) => s.scope === "department") || [];
-    const employees = sigs?.filter((s: any) => s.scope === "employee") || [];
+    const rawEmployees = sigs?.filter((s: any) => s.scope === "employee") || [];
 
     const allEmployees = (emps || []).map((e: any) => ({
       id: e.id,
@@ -30,6 +31,17 @@ export const listSignatures = createServerFn({ method: "GET" })
       department: e.department,
       job_title: e.job_title
     }));
+
+    const employees = rawEmployees.map((s: any) => {
+      const matchedEmp = allEmployees.find((e) => e.id === s.scope_ref);
+      return {
+        ...s,
+        employee_name: matchedEmp?.full_name || null,
+        professional_email: matchedEmp?.professional_email || null,
+        department: matchedEmp?.department || null,
+        job_title: matchedEmp?.job_title || null,
+      };
+    });
 
     return { org, departments, employees, allEmployees };
   });
@@ -47,6 +59,7 @@ export const upsertSignature = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     let scopeRef = "org";
     if (data.scope === "employee") {
@@ -58,7 +71,7 @@ export const upsertSignature = createServerFn({ method: "POST" })
     }
 
     // Look up existing by (org, scope, scope_ref)
-    const { data: existing } = await context.supabase
+    const { data: existing } = await supabaseAdmin
       .from("email_signatures")
       .select("id")
       .eq("organization_id", ctx.organizationId)
@@ -77,14 +90,14 @@ export const upsertSignature = createServerFn({ method: "POST" })
     };
 
     if (existing) {
-      const { error } = await context.supabase
+      const { error } = await supabaseAdmin
         .from("email_signatures")
         .update({ name: payload.name, html: payload.html } as never)
         .eq("id", (existing as { id: string }).id);
       if (error) throw error;
       return { id: (existing as { id: string }).id };
     }
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await supabaseAdmin
       .from("email_signatures")
       .insert(payload as never)
       .select("id").single();
@@ -98,7 +111,8 @@ export const deleteSignature = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
-    const { error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("email_signatures")
       .delete()
       .eq("id", data.id)

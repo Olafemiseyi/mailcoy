@@ -14,18 +14,24 @@ const EMPTY_DASHBOARD = {
   bouncedToday: 0,
   deliverabilityPct: 100,
   activity: [] as Array<{ id: string; action: string; at: string; meta: string | null }>,
-  recentLogs: [] as Array<{ id: string; sender: string; receiver: string; subject: string; status: string; timestamp: string }>,
+  recentLogs: [] as Array<{
+    id: string;
+    sender: string;
+    receiver: string;
+    subject: string;
+    status: string;
+    timestamp: string;
+  }>,
 };
-
-
 
 export const getDashboardSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = await resolveOrgContext(context.supabase, context.userId);
     if (!ctx) return EMPTY_DASHBOARD;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const org = ctx.organizationId;
-    const s = context.supabase;
+    const s = supabaseAdmin;
     const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
     const [
@@ -35,24 +41,45 @@ export const getDashboardSummary = createServerFn({ method: "GET" })
       { count: employeesConnected },
       { count: sentToday },
       { count: receivedToday },
-      { data: recentOut }
+      { data: recentLogsData },
     ] = await Promise.all([
       s.from("domains").select("*", { count: "exact", head: true }).eq("organization_id", org),
-      s.from("domains").select("*", { count: "exact", head: true }).eq("organization_id", org).eq("verification_status", "verified"),
+      s
+        .from("domains")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", org)
+        .eq("verification_status", "verified"),
       s.from("employees").select("*", { count: "exact", head: true }).eq("organization_id", org),
-      s.from("employees").select("*", { count: "exact", head: true }).eq("organization_id", org).eq("status", "active"),
-      s.from("outgoing_messages").select("*", { count: "exact", head: true }).eq("organization_id", org).gte("sent_at", since24h),
-      s.from("incoming_messages").select("*", { count: "exact", head: true }).eq("organization_id", org).gte("received_at", since24h),
-      s.from("outgoing_messages").select("id, from_addr, to_addr, sent_at").eq("organization_id", org).order("sent_at", { ascending: false }).limit(5)
+      s
+        .from("employees")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", org)
+        .eq("status", "active"),
+      s
+        .from("outgoing_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", org)
+        .gte("sent_at", since24h),
+      s
+        .from("incoming_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", org)
+        .gte("received_at", since24h),
+      s
+        .from("email_logs")
+        .select("id, sender, receiver, subject, status, timestamp")
+        .eq("organization_id", org)
+        .order("timestamp", { ascending: false })
+        .limit(6),
     ]);
 
-    const recentLogs = (recentOut || []).map((m: any) => ({
+    const recentLogs = (recentLogsData || []).map((m: any) => ({
       id: m.id,
-      sender: m.from_addr,
-      receiver: m.to_addr,
-      subject: "No Subject",
-      status: "delivered",
-      timestamp: m.sent_at
+      sender: m.sender,
+      receiver: m.receiver,
+      subject: m.subject || "No Subject",
+      status: m.status || "delivered",
+      timestamp: m.timestamp,
     }));
 
     return {
@@ -65,7 +92,6 @@ export const getDashboardSummary = createServerFn({ method: "GET" })
       receivedToday: receivedToday || 0,
       bouncedToday: 0,
       deliverabilityPct: 100,
-      recentLogs
+      recentLogs,
     };
   });
-

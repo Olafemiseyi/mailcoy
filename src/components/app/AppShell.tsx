@@ -2,10 +2,31 @@
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import { Logomark } from "@/components/brand/Logomark";
 import {
-  LayoutDashboard, Globe, Users, Mail, ScrollText, Settings as SettingsIcon,
-  LogOut, PanelLeftClose, PanelLeftOpen, Menu, X, BarChart3, AtSign, PenLine, Inbox,
-  BookOpen, HelpCircle, Sun, Moon, Laptop, User as UserIcon, Trash2, ChevronDown,
-  LayoutTemplate
+  LayoutDashboard,
+  Globe,
+  Users,
+  Mail,
+  ScrollText,
+  Settings as SettingsIcon,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Menu,
+  X,
+  BarChart3,
+  AtSign,
+  PenLine,
+  Inbox,
+  BookOpen,
+  HelpCircle,
+  Sun,
+  Moon,
+  Laptop,
+  User as UserIcon,
+  Trash2,
+  ChevronDown,
+  LayoutTemplate,
+  ArrowLeft,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,16 +49,17 @@ const NAV = [
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 
-
-
 const COLLAPSED_KEY = "mailcoy:sidebar-collapsed";
 
 function useTheme() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  
+
   useEffect(() => {
     const stored = localStorage.getItem("mailcoy_theme");
-    if (stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+    if (
+      stored === "dark" ||
+      (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)
+    ) {
       setTheme("dark");
       document.documentElement.classList.add("dark");
     } else {
@@ -60,7 +82,9 @@ function useTheme() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const path = useRouterState({ select: (s: { location: { pathname: string } }) => s.location.pathname });
+  const path = useRouterState({
+    select: (s: { location: { pathname: string } }) => s.location.pathname,
+  });
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -75,13 +99,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
-    try { setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1"); } catch { /* noop */ }
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1");
+    } catch {
+      /* noop */
+    }
   }, []);
   useEffect(() => {
-    try { localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0"); } catch { /* noop */ }
+    try {
+      localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+    } catch {
+      /* noop */
+    }
   }, [collapsed]);
   // Close mobile drawer on route change
-  useEffect(() => { setMobileOpen(false); }, [path]);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [path]);
 
   async function signOut() {
     await qc.cancelQueries();
@@ -111,13 +145,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     >
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col border-r border-line bg-background sticky top-0 h-screen">
-        <div className={`h-14 flex items-center ${collapsed ? "justify-center px-2" : "px-5"} border-b border-line`}>
+        <div
+          className={`h-14 flex items-center ${collapsed ? "justify-center px-2" : "px-5"} border-b border-line`}
+        >
           {collapsed ? (
             <Link to="/dashboard" title="Mailcoy">
               <Logomark className="h-6 w-6" />
             </Link>
           ) : (
-            <Link to="/dashboard" className="flex items-center gap-2.5 font-display font-bold text-ink hover:opacity-90 transition">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2.5 font-display font-bold text-ink hover:opacity-90 transition"
+            >
               <Logomark className="h-6 w-6" />
               <div className="flex flex-col">
                 <span className="text-[15px] leading-tight">Mailcoy</span>
@@ -164,7 +203,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={`group w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:bg-ink/[0.04] transition`}
           >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4 group-hover:animate-icon-pop origin-center" /> : <PanelLeftClose className="h-4 w-4 group-hover:animate-icon-pop origin-center" />}
+            {collapsed ? (
+              <PanelLeftOpen className="h-4 w-4 group-hover:animate-icon-pop origin-center" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4 group-hover:animate-icon-pop origin-center" />
+            )}
             {!collapsed && <span>Collapse</span>}
           </button>
           <button
@@ -173,7 +216,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             title="Toggle theme"
             className={`group w-full flex items-center ${collapsed ? "justify-center" : "gap-2.5 px-3"} h-9 rounded-md text-[13px] text-ink-3 hover:bg-ink/[0.04] transition`}
           >
-            {theme === "dark" ? <Sun className="h-4 w-4 group-hover:animate-icon-pop origin-center" /> : <Moon className="h-4 w-4 group-hover:animate-icon-pop origin-center" />}
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4 group-hover:animate-icon-pop origin-center" />
+            ) : (
+              <Moon className="h-4 w-4 group-hover:animate-icon-pop origin-center" />
+            )}
             {!collapsed && <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
           </button>
           <button
@@ -186,7 +233,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!collapsed && <span>Sign out</span>}
           </button>
           {orgName && (
-            <div className={`mt-2 flex items-center ${collapsed ? "justify-center" : "gap-2 px-2"} h-10 rounded-md bg-ink/[0.03] border border-line`}>
+            <div
+              className={`mt-2 flex items-center ${collapsed ? "justify-center" : "gap-2 px-2"} h-10 rounded-md bg-ink/[0.03] border border-line`}
+            >
               {orgLogo ? (
                 <img src={orgLogo} alt="" className="h-6 w-6 rounded object-cover shrink-0" />
               ) : (
@@ -256,7 +305,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                     key={item.to}
                     to={item.to}
                     className={`flex items-center gap-3 px-3 h-11 rounded-md text-[14px] whitespace-nowrap transition ${
-                      active ? "bg-primary text-primary-foreground" : "text-ink-2 hover:bg-ink/[0.04]"
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-ink-2 hover:bg-ink/[0.04]"
                     }`}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
@@ -277,26 +328,28 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="min-w-0">
         {/* Impersonation Banner */}
-        {typeof window !== "undefined" && localStorage.getItem("mailcoy_impersonating_org_name") && (
-          <div className="bg-amber-500 text-amber-950 px-4 py-2 text-[12.5px] font-medium flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-950 animate-pulse" />
-              <span>
-                <strong>Super Admin Ghost Mode:</strong> Viewing as <strong>{localStorage.getItem("mailcoy_impersonating_org_name")}</strong>
-              </span>
+        {typeof window !== "undefined" &&
+          localStorage.getItem("mailcoy_impersonating_org_name") && (
+            <div className="bg-amber-500 text-amber-950 px-4 py-2 text-[12.5px] font-medium flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-amber-950 animate-pulse" />
+                <span>
+                  <strong>Super Admin Ghost Mode:</strong> Viewing as{" "}
+                  <strong>{localStorage.getItem("mailcoy_impersonating_org_name")}</strong>
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem("mailcoy_impersonating_org_id");
+                  localStorage.removeItem("mailcoy_impersonating_org_name");
+                  window.location.href = "/admin/organizations";
+                }}
+                className="px-2.5 py-1 bg-amber-950 text-amber-100 rounded text-[11.5px] font-semibold hover:bg-black transition"
+              >
+                Exit Impersonation
+              </button>
             </div>
-            <button
-              onClick={() => {
-                localStorage.removeItem("mailcoy_impersonating_org_id");
-                localStorage.removeItem("mailcoy_impersonating_org_name");
-                window.location.href = "/admin/organizations";
-              }}
-              className="px-2.5 py-1 bg-amber-950 text-amber-100 rounded text-[11.5px] font-semibold hover:bg-black transition"
-            >
-              Exit Impersonation
-            </button>
-          </div>
-        )}
+          )}
 
         {/* Trial Status & Expiration Banner */}
         {org?.subscription && (
@@ -306,7 +359,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
                   <span>
-                    <strong>Subscription Inactive:</strong> Your workspace features are locked. Please activate your subscription to continue routing email and managing domains.
+                    <strong>Subscription Inactive:</strong> Your workspace features are locked.
+                    Please activate your subscription to continue routing email and managing
+                    domains.
                   </span>
                 </div>
                 <Link
@@ -351,7 +406,8 @@ function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>("system");
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    const saved = (typeof window !== "undefined" && (localStorage.getItem(THEME_KEY) as ThemeMode)) || "system";
+    const saved =
+      (typeof window !== "undefined" && (localStorage.getItem(THEME_KEY) as ThemeMode)) || "system";
     setMode(saved);
     applyTheme(saved);
     if (saved === "system") {
@@ -362,8 +418,13 @@ function ThemeToggle() {
     }
   }, []);
   function pick(m: ThemeMode) {
-    setMode(m); applyTheme(m);
-    try { localStorage.setItem(THEME_KEY, m); } catch { /* noop */ }
+    setMode(m);
+    applyTheme(m);
+    try {
+      localStorage.setItem(THEME_KEY, m);
+    } catch {
+      /* noop */
+    }
     setOpen(false);
   }
   const Icon = mode === "dark" ? Moon : mode === "light" ? Sun : Laptop;
@@ -399,7 +460,15 @@ function ThemeToggle() {
   );
 }
 
-function UserChip({ email, initial, onSignOut }: { email: string; initial: string; onSignOut: () => void }) {
+function UserChip({
+  email,
+  initial,
+  onSignOut,
+}: {
+  email: string;
+  initial: string;
+  onSignOut: () => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
@@ -418,10 +487,17 @@ function UserChip({ email, initial, onSignOut }: { email: string; initial: strin
               <div className="text-[12px] text-ink-3">Signed in as</div>
               <div className="text-[13px] font-medium truncate">{email || "—"}</div>
             </div>
-            <Link to="/settings" onClick={() => setOpen(false)} className="w-full flex items-center gap-2 px-2 h-8 rounded text-[13px] text-ink-2 hover:bg-ink/[0.05]">
+            <Link
+              to="/settings"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2 px-2 h-8 rounded text-[13px] text-ink-2 hover:bg-ink/[0.05]"
+            >
               <UserIcon className="h-3.5 w-3.5" /> Account settings
             </Link>
-            <button onClick={onSignOut} className="w-full flex items-center gap-2 px-2 h-8 rounded text-[13px] text-danger hover:bg-danger/10">
+            <button
+              onClick={onSignOut}
+              className="w-full flex items-center gap-2 px-2 h-8 rounded text-[13px] text-danger hover:bg-danger/10"
+            >
               <LogOut className="h-3.5 w-3.5" /> Sign out
             </button>
           </div>
@@ -431,14 +507,44 @@ function UserChip({ email, initial, onSignOut }: { email: string; initial: strin
   );
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+  backTo,
+  backLabel,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  backTo?: string;
+  backLabel?: string;
+}) {
   return (
-    <header className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="font-display text-2xl md:text-[28px] font-semibold tracking-tight truncate">{title}</h1>
-        {subtitle && <p className="mt-1 text-[14px] text-ink-3">{subtitle}</p>}
+    <header className="mb-6 sm:mb-8">
+      {backTo && (
+        <Link
+          to={backTo}
+          className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-3 hover:text-ink transition mb-2"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> {backLabel ?? "Back"}
+        </Link>
+      )}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-xl sm:text-2xl md:text-[28px] font-semibold tracking-tight text-ink break-words">
+            {title}
+          </h1>
+          {subtitle && (
+            <div className="mt-1 text-[13px] sm:text-[14px] text-ink-3 leading-normal">
+              {subtitle}
+            </div>
+          )}
+        </div>
+        {actions && (
+          <div className="flex flex-wrap items-center gap-2 shrink-0 pt-1 sm:pt-0">{actions}</div>
+        )}
       </div>
-      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
     </header>
   );
 }
@@ -452,7 +558,8 @@ export function Button({
   className = "",
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" }) {
-  const base = "inline-flex items-center justify-center h-9 px-4 rounded-md text-[13px] font-medium whitespace-nowrap transition disabled:opacity-50";
+  const base =
+    "inline-flex items-center justify-center h-9 px-4 rounded-md text-[13px] font-medium whitespace-nowrap transition disabled:opacity-50";
   const v =
     variant === "primary"
       ? "bg-primary text-primary-foreground hover:opacity-90"
@@ -473,7 +580,15 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 
 export { CustomSelect, CustomSelect as Select } from "@/components/CustomSelect";
 
-export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+export function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: string;
+}) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-[13px] font-medium text-ink-2">{label}</span>
@@ -500,7 +615,9 @@ export function StatusPill({ status }: { status: string }) {
     deleted: "bg-ink/[0.06] text-ink-3",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${map[status] ?? "bg-ink/[0.06] text-ink-3"}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${map[status] ?? "bg-ink/[0.06] text-ink-3"}`}
+    >
       {status.replace(/_/g, " ")}
     </span>
   );
@@ -528,27 +645,36 @@ export function ConfirmDeleteModal({
       aria-modal="true"
     >
       <Card className="w-full max-w-md p-5 shadow-xl">
-        <div className="flex items-start gap-3">
+        <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-danger/10 text-danger">
             <Trash2 className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <h2 className="font-display text-lg font-semibold">{title}</h2>
-            {description && (
-              <p className="mt-1 text-[13.5px] text-ink-3">{description}</p>
-            )}
+            {description && <p className="mt-1 text-[13.5px] text-ink-3">{description}</p>}
           </div>
         </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
+        <div className="mt-5 flex flex-col-reverse sm:flex-row justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            disabled={busy}
+            className="w-full sm:w-auto"
+          >
             Cancel
           </Button>
-          <Button type="button" variant="danger" onClick={onConfirm} disabled={busy}>
-            {busy ? "Deleting…" : confirmLabel}
+          <Button
+            type="button"
+            variant="danger"
+            onClick={onConfirm}
+            disabled={busy}
+            className="w-full sm:w-auto"
+          >
+            {busy ? "Processing..." : confirmLabel}
           </Button>
         </div>
       </Card>
     </div>
   );
 }
-
