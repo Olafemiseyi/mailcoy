@@ -69,15 +69,12 @@ export const sendEmailViaResend = createServerFn({ method: "POST" })
         timestamp: new Date().toISOString(),
       });
 
-      // Also record in outgoing_messages
+      // Also record in outgoing_messages using correct column names
       await supabaseAdmin.from("outgoing_messages").insert({
         organization_id: ctx.organizationId,
-        sender_alias: data.from,
-        recipient: data.to,
-        subject: data.subject,
-        body: data.html,
-        status: "delivered",
-      });
+        from_addr: data.from,
+        to_addr: data.to,
+      } as never);
     } catch (err) {
       console.error("[email_logs error]", err);
     }

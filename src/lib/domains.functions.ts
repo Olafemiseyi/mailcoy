@@ -91,25 +91,22 @@ export const addDomain = createServerFn({ method: "POST" })
 
     const nonce = randomNonce();
 
-    // 1. Call Resend API to provision the domain
+    // 1. Register the domain on Resend — this enables both sending AND receiving
+    //    Customers then add just 1 MX record → inbound-smtp.us-east-1.amazonaws.com
     const { createResendDomain } = await import("@/lib/resend.functions");
-    let resendData: any = null;
-    let dkimValue = "v=DKIM1; k=rsa; p=<generated when SES is wired>";
-    let spfValue = "v=spf1 include:_spf.mailcoy.com ~all";
-    let resendDomainId = null;
+    let dkimValue = "";
+    let spfValue = "v=spf1 include:amazonses.com ~all";
 
     try {
-      resendData = await createResendDomain(data.name);
-      resendDomainId = resendData.id;
+      const resendData = await createResendDomain(data.name);
       const dkimRecord = resendData.records?.find((r: any) => r.record === "DKIM");
       const spfTxtRecord = resendData.records?.find(
         (r: any) => r.record === "SPF" && r.type === "TXT",
       );
-
       if (dkimRecord) dkimValue = dkimRecord.value;
       if (spfTxtRecord) spfValue = spfTxtRecord.value;
     } catch (e) {
-      console.warn("Failed to provision Resend domain. Falling back to pending state.", e);
+      console.warn("[addDomain] Resend domain registration failed — will retry on verify:", e);
     }
 
     const { data: row, error } = await context.supabase
@@ -226,10 +223,10 @@ export const verifyDomainNow = createServerFn({ method: "POST" })
     const txtOk = txtRecords.some((r) => r.includes(expectedTxt));
     if (!txtOk) errors.push(`TXT ownership record not found (expected ${expectedTxt}).`);
 
-    const hasMx1 = mxRecords.some((r) => r.toLowerCase().includes("mx1.mailcoy.com"));
-    const hasMx2 = mxRecords.some((r) => r.toLowerCase().includes("mx2.mailcoy.com"));
-    const mxOk = hasMx1 && hasMx2;
-    if (!mxOk) errors.push("MX records must include mx1 and mx2.mailcoy.com.");
+    // Resend inbound MX — the record customers add to receive mail through Mailcoy
+    const RESEND_MX = "inbound-smtp.us-east-1.amazonaws.com";
+    const mxOk = mxRecords.some((r) => r.toLowerCase().includes(RESEND_MX));
+    if (!mxOk) errors.push(`MX record must point to ${RESEND_MX} (Resend inbound).`);
 
     const spfOk = txtRecords.some(
       (r) => r.toLowerCase().startsWith("v=spf1") && r.toLowerCase().includes("_spf.mailcoy.com"),
@@ -331,37 +328,37 @@ export const autoConfigureCloudflareDNS = createServerFn({ method: "POST" })
 
     const zoneId = zonesData.result[0].id;
 
-    // 2. Desired DNS Records for Mailcoy
+    // Desired DNS Records for Mailcoy (Resend-based routing)
     const records = [
       {
         type: "TXT",
         name: domainName,
-        content: `mailcoy-verify=${dom.txt_record_value || dom.txt_token || "mailcoy-ready"}`,
+        content: `mailcoy-verify=${dom.txt_record_value ?? "mailcoy-ready"}`,
         ttl: 3600,
         comment: "Mailcoy Domain Verification",
       },
       {
+        // Resend inbound MX — routes incoming mail through Resend → Mailcoy webhook → Gmail
         type: "MX",
         name: domainName,
-        content: "mx1.mailcoy.com",
+        content: "inbound-smtp.us-east-1.amazonaws.com",
         priority: 10,
         ttl: 3600,
-        comment: "Mailcoy Primary MX Router",
+        comment: "Mailcoy Inbound Mail Router (via Resend)",
       },
       {
-        type: "MX",
-        name: domainName,
-        content: "mx2.mailcoy.com",
-        priority: 20,
+        type: "TXT",
+        name: `resend._domainkey.${domainName}`,
+        content: dom.dkim_value || "v=DKIM1; k=rsa; p=",
         ttl: 3600,
-        comment: "Mailcoy Secondary MX Router",
+        comment: "Mailcoy DKIM Signing (Resend)",
       },
       {
         type: "TXT",
         name: domainName,
-        content: "v=spf1 include:_spf.mailcoy.com ~all",
+        content: "v=spf1 include:amazonses.com ~all",
         ttl: 3600,
-        comment: "Mailcoy SPF Deliverability",
+        comment: "Mailcoy SPF (Resend/SES)",
       },
       {
         type: "TXT",

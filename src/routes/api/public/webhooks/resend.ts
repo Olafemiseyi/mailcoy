@@ -56,11 +56,11 @@ export const Route = createFileRoute("/api/public/webhooks/resend")({
             let orgId: string | null = null;
             let employeeName: string = "Team Member";
 
-            const { data: emp } = await supabaseAdmin
+            const { data: emp } = await (supabaseAdmin
               .from("employees")
-              .select("id, organization_id, full_name, name, personal_gmail, personal_email, professional_email, company_email")
+              .select("id, organization_id, full_name, professional_email, company_email")
               .or(`professional_email.eq.${recipientEmail},company_email.eq.${recipientEmail}`)
-              .maybeSingle();
+              .maybeSingle() as any) as { data: any };
 
             if (emp) {
               const { data: gConn } = await supabaseAdmin
@@ -70,26 +70,34 @@ export const Route = createFileRoute("/api/public/webhooks/resend")({
                 .is("revoked_at", null)
                 .maybeSingle();
 
-              targetGmail = gConn?.google_email || (emp.personal_gmail !== recipientEmail ? emp.personal_gmail : null) || emp.personal_email;
+              // Prefer verified gmail_connection, then fall back to personal email
+              targetGmail = (gConn as any)?.google_email || emp.personal_email || null;
               orgId = emp.organization_id;
-              employeeName = emp.full_name || emp.name || "Team Member";
+              employeeName = emp.full_name || "Team Member";
             } else {
-              // 2. Check aliases table
-              const { data: alias } = await supabaseAdmin
+              // 2. Check aliases table — column is 'address' not 'alias_email'
+              const { data: alias } = await (supabaseAdmin
                 .from("aliases")
-                .select("id, organization_id, alias_email, employee_id")
-                .eq("alias_email", recipientEmail)
-                .maybeSingle();
+                .select("id, organization_id, address, employee_id")
+                .eq("address", recipientEmail)
+                .maybeSingle() as any) as { data: any };
 
               if (alias?.employee_id) {
-                const { data: aliasEmp } = await supabaseAdmin
+                const { data: aliasEmp } = await (supabaseAdmin
                   .from("employees")
-                  .select("id, organization_id, full_name, personal_gmail, personal_email")
+                  .select("id, organization_id, full_name, personal_email")
                   .eq("id", alias.employee_id)
-                  .maybeSingle();
+                  .maybeSingle() as any) as { data: any };
 
                 if (aliasEmp) {
-                  targetGmail = aliasEmp.personal_gmail || aliasEmp.personal_email;
+                  const { data: gConn } = await supabaseAdmin
+                    .from("gmail_connections")
+                    .select("google_email")
+                    .eq("employee_id", aliasEmp.id)
+                    .is("revoked_at", null)
+                    .maybeSingle();
+
+                  targetGmail = (gConn as any)?.google_email || aliasEmp.personal_email || null;
                   orgId = alias.organization_id;
                   employeeName = aliasEmp.full_name || "Team Member";
                 }
@@ -106,17 +114,24 @@ export const Route = createFileRoute("/api/public/webhooks/resend")({
 
               if (dom?.organization_id) {
                 orgId = dom.organization_id;
-                // Find primary owner
-                const { data: ownerEmp } = await supabaseAdmin
+                // Find primary owner's connected Gmail
+                const { data: ownerEmp } = await (supabaseAdmin
                   .from("employees")
-                  .select("personal_gmail, personal_email")
+                  .select("id, personal_email")
                   .eq("organization_id", dom.organization_id)
                   .order("created_at", { ascending: true })
                   .limit(1)
-                  .maybeSingle();
+                  .maybeSingle() as any) as { data: any };
 
                 if (ownerEmp) {
-                  targetGmail = ownerEmp.personal_gmail || ownerEmp.personal_email;
+                  const { data: ownerConn } = await supabaseAdmin
+                    .from("gmail_connections")
+                    .select("google_email")
+                    .eq("employee_id", ownerEmp.id)
+                    .is("revoked_at", null)
+                    .maybeSingle();
+
+                  targetGmail = (ownerConn as any)?.google_email || ownerEmp.personal_email || null;
                 }
               }
             }

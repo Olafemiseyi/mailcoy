@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async ({ location }: { location: { href: string } }) => {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data?.session) {

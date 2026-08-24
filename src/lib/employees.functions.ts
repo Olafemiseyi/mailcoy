@@ -82,7 +82,7 @@ export const addEmployee = createServerFn({ method: "POST" })
         department: data.department || null,
         phone_number: data.phone_number || null,
         status: "invited",
-      })
+      } as never)
       .select("id")
       .single();
 
@@ -275,13 +275,13 @@ export const getEmployeeDetail = createServerFn({ method: "GET" })
       .from("outgoing_messages")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", ctx.organizationId)
-      .eq("sender_alias", profEmail);
+      .eq("from_addr", profEmail);
 
     const { count: receivedCount } = await supabaseAdmin
       .from("incoming_messages")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", ctx.organizationId)
-      .eq("recipient_alias", profEmail);
+      .eq("to_addr", profEmail);
 
     // Fetch recent messages from email_logs with subjects and snippets
     const { data: logs } = await supabaseAdmin

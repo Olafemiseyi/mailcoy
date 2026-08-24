@@ -157,18 +157,18 @@ export async function addGmailSendAsAlias(opts: {
       // fallback below
     }
   }
-    // Fallback without direct smtpMsa if custom provider verification is needed
-    await gmail.users.settings.sendAs.create({
-      userId: "me",
-      requestBody: {
-        sendAsEmail: opts.sendAsEmail,
-        displayName: opts.displayName,
-        replyToAddress: opts.replyToEmail ?? opts.sendAsEmail,
-        isDefault: false,
-        treatAsAlias: true,
-      },
-    });
-  }
+
+  // Fallback without smtpMsa — Gmail will prompt user to verify alias via email link
+  await gmail.users.settings.sendAs.create({
+    userId: "me",
+    requestBody: {
+      sendAsEmail: opts.sendAsEmail,
+      displayName: opts.displayName,
+      replyToAddress: opts.replyToEmail ?? opts.sendAsEmail,
+      isDefault: false,
+      treatAsAlias: true,
+    },
+  });
 
   return "created";
 }
