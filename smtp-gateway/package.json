@@ -1,0 +1,17 @@
+{
+  "name": "mailcoy-smtp-gateway",
+  "version": "1.0.0",
+  "description": "Mailcoy Central Inbound SMTP Gateway — receives all incoming mail for customer domains and relays to employee Gmail inboxes via Resend",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "mailparser": "^3.7.1",
+    "smtp-server": "^3.13.0",
+    "dotenv": "^16.4.5"
+  }
+}
