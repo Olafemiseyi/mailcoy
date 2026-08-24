@@ -8,7 +8,17 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { getInviteByToken, startGmailByInvite } from "@/lib/invitations.functions";
-import { CheckCircle2, Mail, ShieldCheck, AlertTriangle, Loader2, Copy, Smartphone, Laptop, Check } from "lucide-react";
+import {
+  CheckCircle2,
+  Mail,
+  ShieldCheck,
+  AlertTriangle,
+  Loader2,
+  Copy,
+  Smartphone,
+  Laptop,
+  Check,
+} from "lucide-react";
 
 export const Route = createFileRoute("/invite/$token")({
   head: () => ({ meta: [{ title: "Connect Gmail — Mailcoy" }] }),
@@ -24,7 +34,7 @@ function InvitePage() {
   const start = useServerFn(startGmailByInvite);
   const [redirecting, setRedirecting] = useState(false);
   const [copied, setCopied] = useState(false);
-  
+
   // Basic mobile detection
   const isMobile = typeof navigator !== "undefined" && /Mobi|Android/i.test(navigator.userAgent);
 
@@ -98,7 +108,8 @@ function InvitePage() {
         </div>
         <h1 className="font-display text-2xl font-semibold">Connect your Gmail</h1>
         <p className="mt-2 text-[13.5px] text-ink-3">
-          {orgName} invited you to send business email from a professional address using your own Google account.
+          {orgName} invited you to send business email from a professional address using your own
+          Google account.
         </p>
       </div>
 
@@ -106,7 +117,10 @@ function InvitePage() {
         <InfoRow label="You are" value={emp?.full_name ?? "—"} />
         <InfoRow label="Business email" value={emp?.professional_email ?? "—"} mono />
         {emp?.job_title && (
-          <InfoRow label="Role" value={emp.job_title + (emp.department ? " · " + emp.department : "")} />
+          <InfoRow
+            label="Role"
+            value={emp.job_title + (emp.department ? " · " + emp.department : "")}
+          />
         )}
         <InfoRow label="Organization" value={orgName} />
       </div>
@@ -132,20 +146,25 @@ function InvitePage() {
                 Final Step: Send as {emp?.professional_email}
               </h3>
               <p className="text-[12.5px] text-ink-3 mt-1.5">
-                To remove the "via gmail.com" warning so your emails look 100% professional to clients, configure your Gmail to send through our secure servers.
+                To remove the "via gmail.com" warning so your emails look 100% professional to
+                clients, configure your Gmail to send through our secure servers.
               </p>
             </div>
-            
+
             {isMobile ? (
               <div className="p-5 text-center bg-orange-500/5 border-b border-line">
                 <Smartphone className="h-6 w-6 text-orange-500 mx-auto mb-2" />
-                <p className="text-[13px] font-medium text-orange-700 dark:text-orange-400">Mobile Device Detected</p>
+                <p className="text-[13px] font-medium text-orange-700 dark:text-orange-400">
+                  Mobile Device Detected
+                </p>
                 <p className="text-[12.5px] text-orange-600/80 dark:text-orange-400/80 mt-1 mb-3">
                   Google does not allow changing these settings from a phone.
                 </p>
-                <button 
+                <button
                   className="text-[13px] font-medium bg-white dark:bg-ink border border-line px-4 py-2 rounded-lg shadow-sm w-full"
-                  onClick={() => alert("We will email you a reminder link to finish this on your computer!")}
+                  onClick={() =>
+                    alert("We will email you a reminder link to finish this on your computer!")
+                  }
                 >
                   Email me these instructions
                 </button>
@@ -154,7 +173,9 @@ function InvitePage() {
               <div className="p-5 space-y-5 text-[13px] text-ink-2">
                 <div className="space-y-4">
                   <div className="flex gap-3 items-start">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">1</span>
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">
+                      1
+                    </span>
                     <div className="leading-relaxed">
                       Open your{" "}
                       <a
@@ -168,50 +189,57 @@ function InvitePage() {
                       (we'll open it in a new tab).
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-3 items-start">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">2</span>
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">
+                      2
+                    </span>
                     <div className="leading-relaxed">
-                      In the "Send mail as" section, find <strong>{emp?.professional_email}</strong> (we already added it for you!) and click <span className="text-amber-600 font-medium">edit info</span>.
+                      In the "Send mail as" section, find <strong>{emp?.professional_email}</strong>{" "}
+                      (we already added it for you!) and click{" "}
+                      <span className="text-amber-600 font-medium">edit info</span>.
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-3 items-start">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">3</span>
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">
+                      3
+                    </span>
                     <div className="leading-relaxed w-full">
-                      <p className="mb-2">Paste these exact credentials into the popup and click Save:</p>
-                      
+                      <p className="mb-2">
+                        Paste these exact credentials into the popup and click Save:
+                      </p>
+
                       <div className="rounded-lg border border-line bg-surface-muted overflow-hidden">
                         <div className="grid grid-cols-2 text-[12px] divide-x divide-line border-b border-line">
                           <div className="p-2.5 px-3">
-                            <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">SMTP Server</span>
+                            <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">
+                              SMTP Server
+                            </span>
                             <span className="font-mono font-medium">smtp.resend.com</span>
                           </div>
                           <div className="p-2.5 px-3">
-                            <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">Port</span>
+                            <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">
+                              Port
+                            </span>
                             <span className="font-mono font-medium">465</span>
                           </div>
                         </div>
                         <div className="p-2.5 px-3 border-b border-line">
-                          <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">Username</span>
+                          <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">
+                            Username
+                          </span>
                           <span className="font-mono font-medium">resend</span>
                         </div>
                         <div className="p-2.5 px-3 bg-white dark:bg-ink flex items-center justify-between">
                           <div>
-                            <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">Password</span>
-                            <span className="font-mono font-medium text-ink-3 italic">re_YourGeneratedKeyHere...</span>
+                            <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">
+                              Status
+                            </span>
+                            <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Auto-Configured in Gmail
+                            </span>
                           </div>
-                          <button 
-                            onClick={() => {
-                              navigator.clipboard.writeText("re_YourGeneratedKeyHere...");
-                              setCopied(true);
-                              setTimeout(() => setCopied(false), 2000);
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-ink text-white text-[12px] font-medium hover:bg-ink/90 transition-colors"
-                          >
-                            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                            {copied ? "Copied!" : "Copy"}
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -243,16 +271,20 @@ function InvitePage() {
             className="w-full h-11 rounded-lg bg-ink text-white text-[14px] font-medium hover:bg-ink/90 disabled:opacity-60 inline-flex items-center justify-center gap-2 whitespace-nowrap"
           >
             {redirecting || connect.isPending ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting to Google…</>
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Redirecting to Google…
+              </>
             ) : (
-              <><GoogleGlyph /> Continue with Google</>
+              <>
+                <GoogleGlyph /> Continue with Google
+              </>
             )}
           </button>
           <div className="mt-4 flex items-start gap-2 text-[12px] text-ink-3">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>
-              You will be taken to Google to sign in. Mailcoy never sees your Google password. You can
-              disconnect at any time.
+              You will be taken to Google to sign in. Mailcoy never sees your Google password. You
+              can disconnect at any time.
             </span>
           </div>
         </>

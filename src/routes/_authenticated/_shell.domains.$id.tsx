@@ -2,7 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient, queryOptions, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { getDomain, verifyDomainNow, deleteDomain } from "@/lib/domains.functions";
+import {
+  getDomain,
+  verifyDomainNow,
+  deleteDomain,
+  autoConfigureCloudflareDNS,
+} from "@/lib/domains.functions";
 import {
   PageHeader,
   Card,
@@ -296,10 +301,10 @@ function DomainDetailRoute() {
     }
   }
 
-  const activeRecords = activeTab === "required" ? requiredRecords : recommendedRecords;
   const [showShareModal, setShowShareModal] = useState(false);
   const [showVisualGuide, setShowVisualGuide] = useState(false);
   const [showConciergeModal, setShowConciergeModal] = useState(false);
+  const [showCfModal, setShowCfModal] = useState(false);
 
   const isVerified = d.verification_status === "verified";
 
@@ -330,6 +335,15 @@ function DomainDetailRoute() {
               status={d.verification_status ?? "pending"}
               className="whitespace-nowrap shrink-0"
             />
+            {!isVerified && (
+              <Button
+                onClick={() => setShowCfModal(true)}
+                className="whitespace-nowrap shrink-0 text-[12.5px] h-9 px-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold border-amber-600 shadow-sm"
+                title="Automatically configure all DNS records in 3 seconds via Cloudflare"
+              >
+                <Zap className="h-3.5 w-3.5 mr-1.5 fill-current" /> 1-Click Cloudflare Setup
+              </Button>
+            )}
             <Button
               onClick={() => setShowShareModal(true)}
               variant="ghost"
@@ -360,6 +374,16 @@ function DomainDetailRoute() {
           </div>
         }
       />
+
+      {/* 1-Click Cloudflare DNS Auto-Config Modal */}
+      {showCfModal && (
+        <CloudflareAutoConnectModal
+          domainId={d.id}
+          domainName={d.domain_name}
+          onClose={() => setShowCfModal(false)}
+          onSuccess={runVerify}
+        />
+      )}
 
       {/* Share with Webmaster Modal */}
       {showShareModal && (
@@ -1291,6 +1315,150 @@ function ConciergeModal({ domainName, onClose }: { domainName: string; onClose: 
               </Button>
             </div>
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CloudflareAutoConnectModal({
+  domainId,
+  domainName,
+  onClose,
+  onSuccess,
+}: {
+  domainId: string;
+  domainName: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const autoCf = useServerFn(autoConfigureCloudflareDNS);
+  const [token, setToken] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  async function handleAutoConfig(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await autoCf({
+        data: {
+          domainId,
+          cloudflareApiToken: token.trim(),
+        },
+      });
+      if (res.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 1500);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to auto-configure Cloudflare DNS");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="w-full max-w-lg rounded-2xl bg-surface border border-line p-6 shadow-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+              <Zap className="h-5 w-5 fill-amber-500" />
+            </div>
+            <div>
+              <h3 className="font-display text-[16px] font-bold text-ink">
+                1-Click Cloudflare DNS Setup
+              </h3>
+              <p className="text-[12px] text-ink-3">
+                Automatically write all 5 records to {domainName}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md text-ink-3 hover:text-ink hover:bg-ink/5"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {success ? (
+          <div className="p-5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] text-center space-y-2">
+            <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto" />
+            <h4 className="font-bold text-ink text-[14px]">Cloudflare DNS Configured!</h4>
+            <p className="text-[12.5px] text-ink-3">
+              All 5 records (TXT, MX 10, MX 20, SPF, DMARC) were written to Cloudflare.
+              Auto-verifying now...
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleAutoConfig} className="space-y-4 text-[13px]">
+            <p className="text-ink-2 leading-relaxed">
+              Mailcoy can instantly write your{" "}
+              <strong>TXT verification, MX routers, SPF, and DMARC</strong> records directly to your
+              Cloudflare account in seconds.
+            </p>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="font-semibold text-ink text-[12px]">Cloudflare API Token</label>
+                <a
+                  href="https://dash.cloudflare.com/profile/api-tokens"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline text-[11.5px] inline-flex items-center gap-1 font-medium"
+                >
+                  Create token on Cloudflare <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+              <input
+                type="password"
+                required
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="e.g. 7qX_... (with Zone:DNS:Edit permission)"
+                className="w-full h-10 px-3 rounded-lg border border-line bg-surface-muted focus:outline-none focus:ring-2 focus:ring-primary/20 text-[13px] font-mono text-ink"
+              />
+              <p className="text-[11.5px] text-ink-3">
+                Tip: On Cloudflare, click <em>"Create Token"</em> ➔ use the pre-made{" "}
+                <strong>"Edit zone DNS"</strong> template and select <strong>{domainName}</strong>.
+              </p>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-lg border border-danger/20 bg-danger/5 text-danger text-[12.5px]">
+                {error}
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={onClose} className="h-9 px-3">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={busy || !token.trim()}
+                className="h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+              >
+                {busy ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Configuring DNS...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-3.5 w-3.5 mr-1.5 fill-current" /> Auto-Configure DNS Now
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         )}
       </div>
     </div>

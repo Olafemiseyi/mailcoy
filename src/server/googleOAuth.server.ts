@@ -85,7 +85,9 @@ export async function sendGmailAs(opts: {
 }
 
 /** Verify a refresh token is still valid by doing a lightweight profile fetch. */
-export async function verifyGmailToken(refreshToken: string): Promise<{ email: string; valid: boolean }> {
+export async function verifyGmailToken(
+  refreshToken: string,
+): Promise<{ email: string; valid: boolean }> {
   try {
     const oauth2 = await getOAuth2Client();
     oauth2.setCredentials({ refresh_token: refreshToken });
@@ -129,17 +131,44 @@ export async function addGmailSendAsAlias(opts: {
   );
   if (existing) return "exists";
 
-  // Create the Send As alias — Google will send the verification email automatically.
-  await gmail.users.settings.sendAs.create({
-    userId: "me",
-    requestBody: {
-      sendAsEmail: opts.sendAsEmail,
-      displayName: opts.displayName,
-      replyToAddress: opts.replyToEmail ?? opts.sendAsEmail,
-      isDefault: false,
-      treatAsAlias: true,
-    },
-  });
+  // Create the Send As alias — automatically configure secure Resend SMTP
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    try {
+      await gmail.users.settings.sendAs.create({
+        userId: "me",
+        requestBody: {
+          sendAsEmail: opts.sendAsEmail,
+          displayName: opts.displayName,
+          replyToAddress: opts.replyToEmail ?? opts.sendAsEmail,
+          isDefault: false,
+          treatAsAlias: true,
+          smtpMsa: {
+            host: "smtp.resend.com",
+            port: 465,
+            securityMode: "ssl",
+            username: "resend",
+            password: resendKey,
+          },
+        },
+      });
+      return "created";
+    } catch {
+      // fallback below
+    }
+  }
+    // Fallback without direct smtpMsa if custom provider verification is needed
+    await gmail.users.settings.sendAs.create({
+      userId: "me",
+      requestBody: {
+        sendAsEmail: opts.sendAsEmail,
+        displayName: opts.displayName,
+        replyToAddress: opts.replyToEmail ?? opts.sendAsEmail,
+        isDefault: false,
+        treatAsAlias: true,
+      },
+    });
+  }
 
   return "created";
 }

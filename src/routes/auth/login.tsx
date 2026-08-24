@@ -1,20 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  AuthShell,
-  AuthField,
-  PrimaryButton,
-  Divider,
-} from "@/components/auth/AuthShell";
+import { AuthShell, AuthField, PrimaryButton, Divider } from "@/components/auth/AuthShell";
 
 export const Route = createFileRoute("/auth/login")({
   head: () => ({ meta: [{ title: "Sign in — Mailcoy" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,11 +23,20 @@ function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    // Bypass actual Supabase auth since the remote project is dead/unreachable
-    setTimeout(() => {
+    try {
+      const { data, error: authErr } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (authErr) throw authErr;
+
+      const target = search.redirect || "/dashboard";
+      navigate({ to: target as any });
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in. Please check your email and password.");
+    } finally {
       setLoading(false);
-      navigate({ to: "/dashboard" });
-    }, 500);
+    }
   }
 
   return (
@@ -38,10 +46,7 @@ function LoginPage() {
       footer={
         <>
           New here?{" "}
-          <Link
-            to="/auth/signup"
-            className="text-ink underline underline-offset-2 font-medium"
-          >
+          <Link to="/auth/signup" className="text-ink underline underline-offset-2 font-medium">
             Create an account
           </Link>
         </>
@@ -87,11 +92,7 @@ function LoginPage() {
           </p>
         )}
 
-        <PrimaryButton
-          id="login-submit"
-          type="submit"
-          disabled={loading}
-        >
+        <PrimaryButton id="login-submit" type="submit" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
         </PrimaryButton>
       </form>

@@ -52,6 +52,7 @@ import { Route as AuthenticatedShellAnalyticsRouteImport } from './routes/_authe
 import { Route as AuthenticatedShellAliasesRouteImport } from './routes/_authenticated/_shell.aliases'
 import { Route as AuthenticatedShellSettingsIndexRouteImport } from './routes/_authenticated/_shell.settings.index'
 import { Route as ApiPublicWebhooksSesRouteImport } from './routes/api/public/webhooks/ses'
+import { Route as ApiPublicWebhooksResendRouteImport } from './routes/api/public/webhooks/resend'
 import { Route as ApiPublicWebhooksPaystackRouteImport } from './routes/api/public/webhooks/paystack'
 import { Route as ApiPublicHooksVerifyDomainsRouteImport } from './routes/api/public/hooks/verify-domains'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth.google.callback'
@@ -286,6 +287,11 @@ const ApiPublicWebhooksSesRoute = ApiPublicWebhooksSesRouteImport.update({
   path: '/api/public/webhooks/ses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhooksResendRoute = ApiPublicWebhooksResendRouteImport.update({
+  id: '/api/public/webhooks/resend',
+  path: '/api/public/webhooks/resend',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksPaystackRoute =
   ApiPublicWebhooksPaystackRouteImport.update({
     id: '/api/public/webhooks/paystack',
@@ -396,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/hooks/verify-domains': typeof ApiPublicHooksVerifyDomainsRoute
   '/api/public/webhooks/paystack': typeof ApiPublicWebhooksPaystackRoute
+  '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/api/public/webhooks/ses': typeof ApiPublicWebhooksSesRoute
   '/settings/': typeof AuthenticatedShellSettingsIndexRoute
 }
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/hooks/verify-domains': typeof ApiPublicHooksVerifyDomainsRoute
   '/api/public/webhooks/paystack': typeof ApiPublicWebhooksPaystackRoute
+  '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/api/public/webhooks/ses': typeof ApiPublicWebhooksSesRoute
   '/settings': typeof AuthenticatedShellSettingsIndexRoute
 }
@@ -503,6 +511,7 @@ export interface FileRoutesById {
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/public/hooks/verify-domains': typeof ApiPublicHooksVerifyDomainsRoute
   '/api/public/webhooks/paystack': typeof ApiPublicWebhooksPaystackRoute
+  '/api/public/webhooks/resend': typeof ApiPublicWebhooksResendRoute
   '/api/public/webhooks/ses': typeof ApiPublicWebhooksSesRoute
   '/_authenticated/_shell/settings/': typeof AuthenticatedShellSettingsIndexRoute
 }
@@ -558,6 +567,7 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/public/hooks/verify-domains'
     | '/api/public/webhooks/paystack'
+    | '/api/public/webhooks/resend'
     | '/api/public/webhooks/ses'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/public/hooks/verify-domains'
     | '/api/public/webhooks/paystack'
+    | '/api/public/webhooks/resend'
     | '/api/public/webhooks/ses'
     | '/settings'
   id:
@@ -664,6 +675,7 @@ export interface FileRouteTypes {
     | '/api/auth/google/callback'
     | '/api/public/hooks/verify-domains'
     | '/api/public/webhooks/paystack'
+    | '/api/public/webhooks/resend'
     | '/api/public/webhooks/ses'
     | '/_authenticated/_shell/settings/'
   fileRoutesById: FileRoutesById
@@ -694,6 +706,7 @@ export interface RootRouteChildren {
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
   ApiPublicHooksVerifyDomainsRoute: typeof ApiPublicHooksVerifyDomainsRoute
   ApiPublicWebhooksPaystackRoute: typeof ApiPublicWebhooksPaystackRoute
+  ApiPublicWebhooksResendRoute: typeof ApiPublicWebhooksResendRoute
   ApiPublicWebhooksSesRoute: typeof ApiPublicWebhooksSesRoute
 }
 
@@ -1000,6 +1013,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksSesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/resend': {
+      id: '/api/public/webhooks/resend'
+      path: '/api/public/webhooks/resend'
+      fullPath: '/api/public/webhooks/resend'
+      preLoaderRoute: typeof ApiPublicWebhooksResendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/paystack': {
       id: '/api/public/webhooks/paystack'
       path: '/api/public/webhooks/paystack'
@@ -1222,6 +1242,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
   ApiPublicHooksVerifyDomainsRoute: ApiPublicHooksVerifyDomainsRoute,
   ApiPublicWebhooksPaystackRoute: ApiPublicWebhooksPaystackRoute,
+  ApiPublicWebhooksResendRoute: ApiPublicWebhooksResendRoute,
   ApiPublicWebhooksSesRoute: ApiPublicWebhooksSesRoute,
 }
 export const routeTree = rootRouteImport

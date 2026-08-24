@@ -285,3 +285,132 @@ async function doh(name: string, type: "TXT" | "MX"): Promise<string[]> {
     return [];
   }
 }
+
+export const autoConfigureCloudflareDNS = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        domainId: z.string(),
+        cloudflareApiToken: z.string().min(10, "Please enter a valid Cloudflare API token"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    assertAdmin(ctx.role);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: dom, error: domErr } = await supabaseAdmin
+      .from("domains")
+      .select("*")
+      .eq("id", data.domainId)
+      .eq("organization_id", ctx.organizationId)
+      .single();
+    if (domErr || !dom) throw new Error("Domain not found in your organization");
+
+    const token = data.cloudflareApiToken.trim();
+    const domainName = dom.domain_name;
+
+    // 1. Fetch Cloudflare Zone
+    const zonesRes = await fetch(
+      `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(domainName)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    const zonesData = await zonesRes.json();
+    if (!zonesData.success || !zonesData.result || zonesData.result.length === 0) {
+      throw new Error(
+        `Cloudflare zone for '${domainName}' was not found. Please ensure your Cloudflare API token has 'Zone.DNS:Edit' permission for this domain.`,
+      );
+    }
+
+    const zoneId = zonesData.result[0].id;
+
+    // 2. Desired DNS Records for Mailcoy
+    const records = [
+      {
+        type: "TXT",
+        name: domainName,
+        content: `mailcoy-verify=${dom.txt_record_value || dom.txt_token || "mailcoy-ready"}`,
+        ttl: 3600,
+        comment: "Mailcoy Domain Verification",
+      },
+      {
+        type: "MX",
+        name: domainName,
+        content: "mx1.mailcoy.com",
+        priority: 10,
+        ttl: 3600,
+        comment: "Mailcoy Primary MX Router",
+      },
+      {
+        type: "MX",
+        name: domainName,
+        content: "mx2.mailcoy.com",
+        priority: 20,
+        ttl: 3600,
+        comment: "Mailcoy Secondary MX Router",
+      },
+      {
+        type: "TXT",
+        name: domainName,
+        content: "v=spf1 include:_spf.mailcoy.com ~all",
+        ttl: 3600,
+        comment: "Mailcoy SPF Deliverability",
+      },
+      {
+        type: "TXT",
+        name: `_dmarc.${domainName}`,
+        content: "v=DMARC1; p=quarantine; rua=mailto:dmarc@mailcoy.com",
+        ttl: 3600,
+        comment: "Mailcoy DMARC Alignment",
+      },
+    ];
+
+    let createdCount = 0;
+    const errors: string[] = [];
+
+    for (const rec of records) {
+      try {
+        const createRes = await fetch(
+          `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(rec),
+          },
+        );
+        const cData = await createRes.json();
+        if (cData.success) {
+          createdCount++;
+        } else {
+          // If record already exists, it's fine
+          if (
+            cData.errors?.[0]?.code === 81057 ||
+            cData.errors?.[0]?.message?.includes("already exists")
+          ) {
+            createdCount++;
+          } else {
+            errors.push(cData.errors?.[0]?.message || "Record creation failed");
+          }
+        }
+      } catch (e: any) {
+        errors.push(e.message);
+      }
+    }
+
+    return {
+      success: true,
+      recordsConfigured: createdCount,
+      totalRecords: records.length,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  });
