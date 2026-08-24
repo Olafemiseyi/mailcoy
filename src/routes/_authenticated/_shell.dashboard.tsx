@@ -3,8 +3,20 @@ import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDashboardSummary } from "@/lib/dashboard.functions";
 import { PageHeader, Card, Button, StatusPill } from "@/components/app/AppShell";
-import { Globe, Users, ArrowUpRight, ArrowDownLeft, ShieldCheck, ArrowRight, Check, Mail, Rocket, Bot } from "lucide-react";
+import {
+  Globe,
+  Users,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ShieldCheck,
+  ArrowRight,
+  Check,
+  Mail,
+  Rocket,
+  Bot,
+} from "lucide-react";
 import { DashboardSkeleton } from "@/components/Skeleton";
+import { GlobalError } from "@/components/GlobalError";
 
 const dashOpts = queryOptions({
   queryKey: ["dashboard-summary"],
@@ -17,13 +29,7 @@ export const Route = createFileRoute("/_authenticated/_shell/dashboard")({
   loader: ({ context }: any) => context.queryClient.ensureQueryData(dashOpts),
   pendingMs: 0,
   pendingComponent: () => <DashboardSkeleton />,
-  errorComponent: ({ error, reset }) => (
-    <div className="p-6">
-      <h1 className="text-lg font-semibold mb-2">Unable to load dashboard</h1>
-      <p className="text-[13px] text-ink-3 mb-4">{error.message}</p>
-      <button onClick={reset} className="h-9 px-3 rounded-md border border-line text-[13px]">Retry</button>
-    </div>
-  ),
+  errorComponent: ({ error, reset }) => <GlobalError error={error} reset={reset} />,
   component: DashboardRoute,
 });
 
@@ -50,13 +56,21 @@ function DashboardRoute() {
           icon={Globe}
           label="Domains"
           value={data.domainsTotal.toLocaleString()}
-          sub={data.domainsTotal === 0 ? "No domains yet" : `${data.domainsVerified} verified · ${data.domainsTotal - data.domainsVerified} pending`}
+          sub={
+            data.domainsTotal === 0
+              ? "No domains yet"
+              : `${data.domainsVerified} verified · ${data.domainsTotal - data.domainsVerified} pending`
+          }
         />
         <StatCard
           icon={Users}
           label="Employees"
           value={data.employeesTotal.toLocaleString()}
-          sub={data.employeesTotal === 0 ? "No employees yet" : `${data.employeesConnected} active · ${data.employeesTotal - data.employeesConnected} pending`}
+          sub={
+            data.employeesTotal === 0
+              ? "No employees yet"
+              : `${data.employeesConnected} active · ${data.employeesTotal - data.employeesConnected} pending`
+          }
         />
         <StatCard
           icon={ArrowUpRight}
@@ -73,7 +87,9 @@ function DashboardRoute() {
           label="Deliverability"
           value={`${data.deliverabilityPct}%`}
           sub={data.bouncedToday === 0 ? "No bounces in 24h" : `${data.bouncedToday} bounced`}
-          tone={data.deliverabilityPct >= 95 ? "good" : data.deliverabilityPct >= 85 ? "warn" : "bad"}
+          tone={
+            data.deliverabilityPct >= 95 ? "good" : data.deliverabilityPct >= 85 ? "warn" : "bad"
+          }
         />
       </div>
 
@@ -134,44 +150,62 @@ function DashboardRoute() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <h3 className="font-display text-lg font-semibold">Create your workspace</h3>
-              <p className="mt-1 text-[13.5px] text-ink-3">Start with your company profile, then add domains and teammates.</p>
+              <p className="mt-1 text-[13.5px] text-ink-3">
+                Start with your company profile, then add domains and teammates.
+              </p>
             </div>
             <Link to="/onboarding" className="shrink-0">
-              <Button>Continue setup <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
+              <Button>
+                Continue setup <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
             </Link>
           </div>
         </Card>
       )}
 
-      {data.hasOrganization && setupIncomplete && (
-        <GettingStarted data={data} />
-      )}
+      {data.hasOrganization && setupIncomplete && <GettingStarted data={data} />}
 
       {data.hasOrganization && !setupIncomplete && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card className="p-0 lg:col-span-2">
             <div className="px-5 py-3 border-b border-line text-[13px] font-medium flex items-center justify-between">
               <span>Recent activity</span>
-              <Link to="/logs" className="text-[12px] text-ink-3 hover:text-ink">View all →</Link>
+              <Link to="/logs" className="text-[12px] text-ink-3 hover:text-ink">
+                View all →
+              </Link>
             </div>
             {data.recentLogs.length === 0 ? (
               <div className="p-8 text-center text-[13px] text-ink-3">No recent logs.</div>
             ) : (
               <ul className="divide-y divide-line">
-                {data.recentLogs.map((log: { id: string; subject?: string; sender: string; receiver: string; status: string; timestamp: string }) => (
-                  <li key={log.id} className="px-5 py-3 flex items-center justify-between gap-4 text-[13.5px]">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{log.subject || "(No subject)"}</div>
-                      <div className="text-[12px] text-ink-3 truncate mt-0.5">
-                        {log.sender} <span className="mx-1 opacity-50">→</span> {log.receiver}
+                {data.recentLogs.map(
+                  (log: {
+                    id: string;
+                    subject?: string;
+                    sender: string;
+                    receiver: string;
+                    status: string;
+                    timestamp: string;
+                  }) => (
+                    <li
+                      key={log.id}
+                      className="px-5 py-3 flex items-center justify-between gap-4 text-[13.5px]"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{log.subject || "(No subject)"}</div>
+                        <div className="text-[12px] text-ink-3 truncate mt-0.5">
+                          {log.sender} <span className="mx-1 opacity-50">→</span> {log.receiver}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <StatusPill status={log.status} />
-                      <time className="text-[11.5px] text-ink-3">{relativeTime(log.timestamp)}</time>
-                    </div>
-                  </li>
-                ))}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <StatusPill status={log.status} />
+                        <time className="text-[11.5px] text-ink-3">
+                          {relativeTime(log.timestamp)}
+                        </time>
+                      </div>
+                    </li>
+                  ),
+                )}
               </ul>
             )}
           </Card>
@@ -183,16 +217,26 @@ function DashboardRoute() {
 }
 
 function StatCard({
-  icon: Icon, label, value, sub, tone,
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  label: string; value: string; sub?: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: React.ReactNode;
   tone?: "good" | "warn" | "bad";
 }) {
-  const toneCls = tone === "bad" ? "text-red-600" : tone === "warn" ? "text-amber-600" : "text-ink-3";
-  const iconCls = tone === "bad" ? "text-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] bg-red-500/10" 
-                : tone === "good" ? "text-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] bg-emerald-500/10" 
-                : "text-ink-4";
+  const toneCls =
+    tone === "bad" ? "text-red-600" : tone === "warn" ? "text-amber-600" : "text-ink-3";
+  const iconCls =
+    tone === "bad"
+      ? "text-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] bg-red-500/10"
+      : tone === "good"
+        ? "text-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] bg-emerald-500/10"
+        : "text-ink-4";
 
   return (
     <Card className="group relative overflow-hidden p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 cursor-default">
@@ -200,8 +244,10 @@ function StatCard({
       <div className="relative z-10">
         <div className="flex items-center justify-between gap-2 text-ink-3 text-[11px] uppercase tracking-wider font-medium">
           <span className="whitespace-nowrap font-mono">{label}</span>
-          <div className={`p-1.5 rounded-md ${iconCls.includes('bg-') ? iconCls : 'bg-surface-muted'}`}>
-            <Icon className={`h-3.5 w-3.5 ${iconCls.includes('bg-') ? '' : iconCls}`} />
+          <div
+            className={`p-1.5 rounded-md ${iconCls.includes("bg-") ? iconCls : "bg-surface-muted"}`}
+          >
+            <Icon className={`h-3.5 w-3.5 ${iconCls.includes("bg-") ? "" : iconCls}`} />
           </div>
         </div>
         <div className="mt-3 font-display text-2xl font-bold tracking-tight text-ink">{value}</div>
@@ -211,12 +257,36 @@ function StatCard({
   );
 }
 
-function GettingStarted({ data }: { data: { domainsTotal: number; domainsVerified: number; employeesTotal: number; employeesConnected: number } }) {
+function GettingStarted({
+  data,
+}: {
+  data: {
+    domainsTotal: number;
+    domainsVerified: number;
+    employeesTotal: number;
+    employeesConnected: number;
+  };
+}) {
   const steps = [
-    { done: data.domainsTotal > 0, label: "Add your sending domain", to: "/domains", cta: "Add domain" },
+    {
+      done: data.domainsTotal > 0,
+      label: "Add your sending domain",
+      to: "/domains",
+      cta: "Add domain",
+    },
     { done: data.domainsVerified > 0, label: "Verify DNS records", to: "/domains", cta: "Verify" },
-    { done: data.employeesTotal > 0, label: "Add employees", to: "/employees", cta: "Add employee" },
-    { done: data.employeesConnected > 0, label: "Connect their Gmail", to: "/gmail", cta: "Connect Gmail" },
+    {
+      done: data.employeesTotal > 0,
+      label: "Add employees",
+      to: "/employees",
+      cta: "Add employee",
+    },
+    {
+      done: data.employeesConnected > 0,
+      label: "Connect their Gmail",
+      to: "/gmail",
+      cta: "Connect Gmail",
+    },
     { done: false, label: "Start sending business email", to: "/logs", cta: "View logs" },
   ] as const;
   const nextIdx = steps.findIndex((s) => !s.done);
@@ -226,7 +296,9 @@ function GettingStarted({ data }: { data: { domainsTotal: number; domainsVerifie
       <Card className="p-5 lg:col-span-2 flex flex-col justify-between">
         <div>
           <h3 className="font-display text-[15px] font-bold text-ink">Getting started</h3>
-          <p className="mt-1 text-[13px] text-ink-3">Complete these steps to activate your workspace email routing.</p>
+          <p className="mt-1 text-[13px] text-ink-3">
+            Complete these steps to activate your workspace email routing.
+          </p>
         </div>
         <ol className="mt-4 space-y-1.5">
           {steps.map((s, i) => (
@@ -244,7 +316,9 @@ function GettingStarted({ data }: { data: { domainsTotal: number; domainsVerifie
                 >
                   {s.done ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
-                <span className={`text-[13px] truncate ${s.done ? "text-ink-4 line-through" : "text-ink font-medium"}`}>
+                <span
+                  className={`text-[13px] truncate ${s.done ? "text-ink-4 line-through" : "text-ink font-medium"}`}
+                >
                   {s.label}
                 </span>
               </div>
@@ -266,10 +340,30 @@ function GettingStarted({ data }: { data: { domainsTotal: number; domainsVerifie
 
 function DocsCard() {
   const links = [
-    { label: "Domain setup guide", hash: "domains", icon: Globe, desc: "DNS records, SPF, DKIM, & DMARC" },
-    { label: "Gmail connection guide", hash: "gmail", icon: Mail, desc: "Link employee Google inboxes" },
-    { label: "Employee invitation guide", hash: "employees", icon: Users, desc: "Onboard staff to send/receive mail" },
-    { label: "Quickstart & Setup FAQ", hash: "quickstart", icon: Rocket, desc: "Step-by-step setup order" },
+    {
+      label: "Domain setup guide",
+      hash: "domains",
+      icon: Globe,
+      desc: "DNS records, SPF, DKIM, & DMARC",
+    },
+    {
+      label: "Gmail connection guide",
+      hash: "gmail",
+      icon: Mail,
+      desc: "Link employee Google inboxes",
+    },
+    {
+      label: "Employee invitation guide",
+      hash: "employees",
+      icon: Users,
+      desc: "Onboard staff to send/receive mail",
+    },
+    {
+      label: "Quickstart & Setup FAQ",
+      hash: "quickstart",
+      icon: Rocket,
+      desc: "Step-by-step setup order",
+    },
   ] as const;
 
   return (
@@ -313,8 +407,6 @@ function DocsCard() {
     </Card>
   );
 }
-
-
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();

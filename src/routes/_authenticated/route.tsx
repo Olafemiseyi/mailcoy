@@ -3,12 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
-    // Bypass actual Supabase auth since the remote project is dead/unreachable
-    // const { data, error } = await supabase.auth.getUser();
-    // if (error || !data.user) throw redirect({ to: "/auth/login" });
-    const user = { id: "mock-user-123", email: "demo@mailcoy.com" };
-    return { user };
+  beforeLoad: async ({ location }) => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) {
+        throw redirect({
+          to: "/auth/login",
+          search: { redirect: location.href },
+        });
+      }
+      return { user: data.session.user };
+    } catch (err: any) {
+      if (err?.to) throw err; // Re-throw TanStack redirect
+      throw redirect({
+        to: "/auth/login",
+        search: { redirect: location.href },
+      });
+    }
   },
   component: () => <Outlet />,
 });

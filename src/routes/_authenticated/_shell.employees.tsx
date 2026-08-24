@@ -41,6 +41,8 @@ const domOpts = queryOptions({
   staleTime: 30_000,
 });
 
+import { GlobalError } from "@/components/GlobalError";
+
 export const Route = createFileRoute("/_authenticated/_shell/employees")({
   head: () => ({ meta: [{ title: "Employees — Mailcoy" }] }),
   loader: async ({ context }: any) => {
@@ -51,15 +53,7 @@ export const Route = createFileRoute("/_authenticated/_shell/employees")({
   },
   pendingMs: 0,
   pendingComponent: () => <EmployeesSkeleton />,
-  errorComponent: ({ error, reset }) => (
-    <div className="p-6">
-      <h1 className="text-lg font-semibold mb-2">Unable to load employees</h1>
-      <p className="text-[13px] text-ink-3 mb-4">{error.message}</p>
-      <button onClick={reset} className="h-9 px-3 rounded-md border border-line text-[13px]">
-        Retry
-      </button>
-    </div>
-  ),
+  errorComponent: ({ error, reset }) => <GlobalError error={error} reset={reset} />,
   component: EmployeesRoute,
 });
 

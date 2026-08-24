@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Wing Gradients -->
+    <linearGradient id="leftWing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+
+    <linearGradient id="rightWing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+
+    <linearGradient id="topFlap" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+
+    <linearGradient id="coreGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow Filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Container App Icon Tile -->
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bgGrad)" filter="url(#shadow)" stroke="#1e293b" stroke-width="4" />
+
+  <!-- Inner Ambient Glow -->
+  <circle cx="256" cy="256" r="140" fill="#3b82f6" opacity="0.12" filter="url(#glow)" />
+
+  <!-- Origami Letter M / Origami Envelope Fold Geometry -->
+  <!-- Left Wing -->
+  <path d="M120 180 L256 295 L256 390 L120 280 Z" fill="url(#leftWing)" opacity="0.95" />
+
+  <!-- Right Wing -->
+  <path d="M392 180 L256 295 L256 390 L392 280 Z" fill="url(#rightWing)" />
+
+  <!-- Top Dynamic Letter M / Flap Crest -->
+  <path d="M256 125 L380 220 L256 315 L132 220 Z" fill="url(#topFlap)" />
+
+  <!-- Negative Space Cutout / Diamond Core -->
+  <path d="M256 170 L335 230 L256 285 L177 230 Z" fill="#090d16" />
+
+  <!-- Center Radiant Light Orb (Mail Routing Node) -->
+  <circle cx="256" cy="230" r="28" fill="url(#coreGlow)" filter="url(#glow)" />
+  <circle cx="256" cy="230" r="12" fill="#ffffff" />
+</svg>

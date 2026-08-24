@@ -5,13 +5,24 @@ import { useEffect } from "react";
 
 export function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
-  
+
   useEffect(() => {
     console.error("Global boundary caught error:", error);
   }, [error]);
 
   if (error?.message?.includes("NO_ORGANIZATION")) {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  const isAuthError =
+    error?.message?.toLowerCase().includes("unauthorized") ||
+    error?.message?.toLowerCase().includes("authorization header") ||
+    error?.message?.includes("JWT") ||
+    error?.message?.includes("session") ||
+    error?.message?.includes("auth");
+
+  if (isAuthError) {
+    return <Navigate to="/auth/login" replace />;
   }
 
   return (
