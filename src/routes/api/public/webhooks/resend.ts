@@ -33,8 +33,25 @@ export const Route = createFileRoute("/api/public/webhooks/resend")({
 
         const fromAddress = emailData?.from || "(Unknown sender)";
         const subject = emailData?.subject || "(No subject)";
-        const html = emailData?.html || "";
-        const text = emailData?.text || "";
+        let html = emailData?.html || "";
+        let text = emailData?.text || "";
+
+        // Resend email.received webhook sends metadata only — fetch full content if needed
+        const emailId = emailData?.email_id || emailData?.id;
+        if ((!html && !text) && emailId) {
+          try {
+            const fetchRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}`, {
+              headers: { Authorization: `Bearer ${resendApiKey}` },
+            });
+            if (fetchRes.ok) {
+              const fullEmail = await fetchRes.json();
+              html = fullEmail?.html || fullEmail?.body || "";
+              text = fullEmail?.text || "";
+            }
+          } catch (fetchErr) {
+            console.warn("[Resend Webhook] Could not fetch email body by ID:", fetchErr);
+          }
+        }
 
         if (toAddresses.length === 0) {
           return new Response(JSON.stringify({ ok: true, message: "No recipient found" }), {
