@@ -326,10 +326,9 @@ function DomainDetailRoute() {
         }
         actions={
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-            <StatusPill
-              status={d.verification_status ?? "pending"}
-              className="whitespace-nowrap shrink-0"
-            />
+            <div className="whitespace-nowrap shrink-0">
+              <StatusPill status={d.verification_status ?? "pending"} />
+            </div>
             <Button
               onClick={() => setShowShareModal(true)}
               variant="ghost"
@@ -804,7 +803,6 @@ function BimiConfigCard({
         </div>
         <StatusPill
           status={status}
-          className="whitespace-nowrap shrink-0 self-start sm:self-center"
         />
       </div>
 
