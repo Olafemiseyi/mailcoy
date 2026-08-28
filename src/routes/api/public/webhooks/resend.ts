@@ -216,12 +216,13 @@ export const Route = createFileRoute("/api/public/webhooks/resend")({
             ? [emailData.to]
             : [];
 
-        // ✅ Return 200 to Resend IMMEDIATELY — prevents timeout & retries
-        // Process the email in the background (fire-and-forget)
+        // ✅ Await the processing so Vercel does not kill the function prematurely
         if (toAddresses.length > 0) {
-          processInboundEmail(emailData, resendApiKey).catch((err) =>
-            console.error("[Mailcoy] Background processing error:", err)
-          );
+          try {
+            await processInboundEmail(emailData, resendApiKey);
+          } catch (err) {
+            console.error("[Mailcoy] Processing error:", err);
+          }
         }
 
         return new Response(
