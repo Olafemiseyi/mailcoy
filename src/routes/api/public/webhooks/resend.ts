@@ -197,6 +197,8 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
   }
 }
 
+import { waitUntil } from "@vercel/functions";
+
 export const Route = createFileRoute("/api/public/webhooks/resend")({
   server: {
     handlers: {
@@ -220,13 +222,15 @@ export const Route = createFileRoute("/api/public/webhooks/resend")({
             ? [emailData.to]
             : [];
 
-        // ✅ Await the processing so Vercel does not kill the function prematurely
+        // ✅ Background execution using Vercel waitUntil
+        // This instantly returns 200 OK so Resend doesn't timeout at 5s,
+        // but keeps the lambda alive until processInboundEmail finishes!
         if (toAddresses.length > 0) {
-          try {
-            await processInboundEmail(emailData, resendApiKey);
-          } catch (err) {
-            console.error("[Mailcoy] Processing error:", err);
-          }
+          waitUntil(
+            processInboundEmail(emailData, resendApiKey).catch((err) =>
+              console.error("[Mailcoy] Processing error:", err)
+            )
+          );
         }
 
         return new Response(
