@@ -1,11 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
 export const config = {
-  runtime: 'edge', // Edge runtime has NO cold starts, instant execution!
+  runtime: "edge",
 };
 
-export default async function handler(req: Request) {
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+export default async function handler(req: Request, ctx: any) {
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -29,33 +31,29 @@ export default async function handler(req: Request) {
       ? [emailData.to]
       : [];
 
-  if (toAddresses.length === 0) {
-    return new Response(JSON.stringify({ ok: true, count: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  // ✅ KEY FIX: use ctx.waitUntil so Vercel keeps the lambda alive
+  // after returning the 200 response. This returns to Resend in <100ms
+  // and prevents the 5s timeout that was causing all failures.
+  if (toAddresses.length > 0) {
+    ctx.waitUntil(
+      processInboundEmail(emailData, resendApiKey, supabaseUrl, supabaseKey, toAddresses)
+        .catch((err) => console.error("[Mailcoy] Processing error:", err))
+    );
   }
 
-  // Create early response promise
-  const response = new Response(
+  return new Response(
     JSON.stringify({ ok: true, count: toAddresses.length }),
     { status: 200, headers: { "Content-Type": "application/json" } }
   );
-
-  // Vercel Edge runtime allows waitUntil on the context
-  // but since we don't have the context object natively in this signature,
-  // we can just use the standard Edge Execution model where the promise
-  // runs concurrently. But actually, Vercel Edge functions support NextFetchEvent if passed as 2nd arg
-  // Or we can just await it since Edge has ZERO cold starts!
-  // If Edge has zero cold starts, the execution will ALWAYS be under 1-2 seconds anyway!
-  
-  try {
-    await processInboundEmail(emailData, resendApiKey, supabaseUrl, supabaseKey, toAddresses);
-  } catch (err) {
-    console.error("[Mailcoy] Processing error:", err);
-  }
-
-  return response;
 }
 
-async function processInboundEmail(emailData: any, resendApiKey: string, supabaseUrl: string, supabaseKey: string, toAddresses: string[]) {
+async function processInboundEmail(
+  emailData: any,
+  resendApiKey: string,
+  supabaseUrl: string,
+  supabaseKey: string,
+  toAddresses: string[]
+) {
   const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
   let html = emailData?.html || "";
@@ -63,6 +61,7 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
   let fromAddress = emailData?.from || "(Unknown sender)";
   const subject = emailData?.subject || "(No subject)";
 
+  // Fetch full email body + real sender name from Resend
   const emailId = emailData?.email_id || emailData?.id;
   if (emailId) {
     try {
@@ -74,6 +73,7 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
         const full = (await fetchRes.json()) as any;
         html = html || full?.html || "";
         text = text || full?.text || "";
+        // Resend strips display name from root `from` — headers.from has the full "Name <email>"
         if (full?.headers?.from) {
           fromAddress = full.headers.from;
         }
@@ -92,6 +92,7 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
       let targetGmail: string | null = null;
       let orgId: string | null = null;
 
+      // 1. Direct employee match
       const { data: emp } = await (supabaseAdmin
         .from("employees")
         .select("id, organization_id, full_name")
@@ -105,11 +106,11 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
           .eq("employee_id", emp.id)
           .is("revoked_at", null)
           .maybeSingle();
-
         targetGmail = (gc as any)?.google_email || null;
         orgId = emp.organization_id;
       }
 
+      // 2. Alias lookup
       if (!targetGmail) {
         const { data: alias } = await (supabaseAdmin
           .from("aliases")
@@ -129,6 +130,7 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
         }
       }
 
+      // 3. Catch-all: domain owner
       if (!targetGmail) {
         const { data: domain } = await (supabaseAdmin
           .from("domains")
@@ -163,6 +165,7 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
         continue;
       }
 
+      // Parse "Name <email>" format for display name
       const senderNameMatch = fromAddress.match(/^"?([^"<]+)"?\s*</);
       const senderDisplayName = senderNameMatch
         ? senderNameMatch[1].trim()
@@ -171,7 +174,7 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
 
       const footerHtml = `
         <div style="margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;font-family:system-ui,sans-serif;font-size:12px;color:#94a3b8;">
-          📬 Sent to <strong>${recipientEmail}</strong> · via Mailcoy · 
+          📬 Sent to <strong>${recipientEmail}</strong> · via Mailcoy ·
           <a href="mailto:${senderEmail}" style="color:#64748b;">Reply to ${senderEmail}</a>
         </div>
       `;
@@ -196,7 +199,7 @@ async function processInboundEmail(emailData: any, resendApiKey: string, supabas
         }),
       });
 
-      const fwdResult = await fwd.json() as any;
+      const fwdResult = (await fwd.json()) as any;
       console.log(`[Mailcoy] Forwarded ${recipientEmail} -> ${targetGmail} | id:`, fwdResult?.id);
 
       if (orgId) {
