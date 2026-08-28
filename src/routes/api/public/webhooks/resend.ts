@@ -13,10 +13,10 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
 
   if (toAddresses.length === 0) return;
 
-  const fromAddress = emailData?.from || "(Unknown sender)";
-  const subject = emailData?.subject || "(No subject)";
   let html = emailData?.html || "";
   let text = emailData?.text || "";
+  let fromAddress = emailData?.from || "(Unknown sender)";
+  const subject = emailData?.subject || "(No subject)";
 
   // Resend email.received webhook sends metadata only — fetch full body
   const emailId = emailData?.email_id || emailData?.id;
@@ -27,9 +27,13 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
         { headers: { Authorization: `Bearer ${resendApiKey}` } }
       );
       if (fetchRes.ok) {
-        const full = await fetchRes.json() as any;
+        const full = (await fetchRes.json()) as any;
         html = html || full?.html || "";
         text = text || full?.text || "";
+        // Overwrite fromAddress with headers.from because Resend root `from` strips the display name!
+        if (full?.headers?.from) {
+          fromAddress = full.headers.from;
+        }
       }
     } catch (e) {
       console.warn("[Mailcoy] Could not fetch email body:", e);
