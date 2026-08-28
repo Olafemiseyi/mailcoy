@@ -9,6 +9,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/gmail.compose",
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.settings.basic",
+  "https://www.googleapis.com/auth/gmail.settings.sharing",
 ];
 
 async function getOAuth2Client() {
@@ -153,7 +154,8 @@ export async function addGmailSendAsAlias(opts: {
         },
       });
       return "created";
-    } catch {
+    } catch (smtpErr) {
+      console.warn("[SendAs] smtpMsa setup error, falling back to standard alias:", smtpErr instanceof Error ? smtpErr.message : smtpErr);
       // fallback below
     }
   }
