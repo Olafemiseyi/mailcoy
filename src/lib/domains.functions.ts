@@ -283,6 +283,78 @@ async function doh(name: string, type: "TXT" | "MX"): Promise<string[]> {
   }
 }
 
+export const runDnsHealthCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: domains, error } = await supabaseAdmin
+      .from("domains")
+      .select("*")
+      .eq("organization_id", ctx.organizationId);
+
+    if (error || !domains) throw error ?? new Error("Failed to load domains");
+
+    const RESEND_MX = "inbound-smtp.us-east-1.amazonaws.com";
+    const auditResults: Array<{
+      id: string;
+      domain: string;
+      mxOk: boolean;
+      spfOk: boolean;
+      dkimOk: boolean;
+      dmarcOk: boolean;
+      isHealthy: boolean;
+    }> = [];
+
+    for (const dom of domains) {
+      const name = dom.domain_name;
+      const selector = dom.dkim_selector || "resend";
+
+      const [txtRecords, mxRecords, dkimRecords, dmarcRecords] = await Promise.all([
+        doh(name, "TXT"),
+        doh(name, "MX"),
+        doh(`${selector}._domainkey.${name}`, "TXT"),
+        doh(`_dmarc.${name}`, "TXT"),
+      ]);
+
+      const mxOk = mxRecords.some((r) => r.toLowerCase().includes(RESEND_MX));
+      const spfOk = txtRecords.some(
+        (r) =>
+          r.toLowerCase().startsWith("v=spf1") &&
+          (r.toLowerCase().includes("include:amazonses.com") ||
+            r.toLowerCase().includes("_spf.mailcoy.com")),
+      );
+      const dkimOk = dkimRecords.some((r) => r.toLowerCase().includes("v=dkim1") || r.length > 20);
+      const dmarcOk = dmarcRecords.some((r) => r.toLowerCase().startsWith("v=dmarc1"));
+
+      const isHealthy = mxOk && spfOk;
+
+      const patch = {
+        mx_status: mxOk ? "verified" : "failed",
+        spf_status: spfOk ? "verified" : "failed",
+        dkim_status: dkimOk ? "verified" : "failed",
+        dmarc_status: dmarcOk ? "verified" : "failed",
+        verification_status: isHealthy ? "verified" : "failed",
+        last_checked_at: new Date().toISOString(),
+      };
+
+      await supabaseAdmin.from("domains").update(patch as never).eq("id", dom.id);
+
+      auditResults.push({
+        id: dom.id,
+        domain: name,
+        mxOk,
+        spfOk,
+        dkimOk,
+        dmarcOk,
+        isHealthy,
+      });
+    }
+
+    return { ok: true, count: domains.length, results: auditResults };
+  });
+
 export const autoConfigureCloudflareDNS = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>

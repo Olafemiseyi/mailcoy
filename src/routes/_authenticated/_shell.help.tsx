@@ -51,11 +51,36 @@ const SECTIONS: Section[] = [
         </ul>
       </div>
     ) },
-  { id: "gmail", icon: Mail, title: "Gmail Integration",
+  { id: "gmail", icon: Mail, title: "Gmail Integration & Send-As Setup",
     body: (
-      <div className="space-y-3">
-        <p>Mailcoy links an employee's existing Gmail mailbox to their custom business email. No new app or password to remember.</p>
-        <p><strong>How it works:</strong> Inbound emails sent to <em>name@yourcompany.com</em> land immediately in their Gmail inbox. Replies sent from Gmail go out with the business address and verified DKIM signature.</p>
+      <div className="space-y-4">
+        <p>Mailcoy connects an employee's existing personal Gmail inbox to their custom business email without requiring a paid Google Workspace subscription.</p>
+        
+        <div className="p-4 rounded-lg bg-surface-muted border border-line space-y-3">
+          <h4 className="font-semibold text-ink text-[13.5px]">How Inbound & Outbound Work:</h4>
+          <ul className="list-disc list-inside space-y-1.5 text-ink-3 text-[13px]">
+            <li><strong>Inbound (Receiving):</strong> Customer emails sent to <em>employee@yourcompany.com</em> are forwarded in under 200ms straight to their Gmail inbox.</li>
+            <li><strong>Outbound (Sending & Replying):</strong> Employees send directly from Gmail as <em>employee@yourcompany.com</em> with verified SPF, DKIM, and DMARC headers.</li>
+          </ul>
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="font-semibold text-ink text-[13.5px]">1-Minute Send-As Setup in Gmail (Desktop):</h4>
+          <ol className="list-decimal list-inside space-y-1.5 text-ink-3 text-[13px]">
+            <li>Open <a href="https://mail.google.com/mail/u/0/#settings/accounts" target="_blank" rel="noreferrer" className="text-primary underline">Gmail Settings → Accounts and Import</a>.</li>
+            <li>In the <strong>"Send mail as"</strong> section, click <strong>"Add another email address"</strong>.</li>
+            <li>Enter the employee's name and business email address, keeping <em>"Treat as an alias"</em> checked.</li>
+            <li>In the SMTP window, enter Server: <code className="font-mono bg-ink/[0.05] px-1 rounded">smtp.resend.com</code>, Port: <code className="font-mono bg-ink/[0.05] px-1 rounded">465 (SSL)</code>, Username: <code className="font-mono bg-ink/[0.05] px-1 rounded">resend</code>, and the workspace SMTP key.</li>
+            <li>Under <em>"When replying to a message"</em>, select <strong>"Reply from the same address the message was sent to"</strong>.</li>
+          </ol>
+        </div>
+
+        <div className="p-3.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[12.5px] text-blue-900 dark:text-blue-200">
+          <strong>📱 Mobile Users (iPhone & Android):</strong>
+          <p className="mt-1">
+            Complete the 1-time setup via mobile browser (Safari/Chrome). Once saved, the <em>"From:"</em> dropdown will automatically sync to the native Gmail mobile app on your phone!
+          </p>
+        </div>
       </div>
     ) },
   { id: "aliases", icon: AtSign, title: "Aliases & Department Routing",

@@ -85,7 +85,9 @@ export const listAliases = createServerFn({ method: "GET" })
     const ctx = await requireOrgContext(context.supabase, context.userId);
     const { data, error } = await context.supabase
       .from("aliases")
-      .select("*")
+      .select(
+        "id, address, is_primary, employee_id, created_at, employees(id, full_name, professional_email, department, job_title)"
+      )
       .eq("organization_id", ctx.organizationId)
       .order("created_at", { ascending: false });
 

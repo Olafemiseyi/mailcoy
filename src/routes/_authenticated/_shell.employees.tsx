@@ -4,7 +4,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { listEmployees, addEmployee, deleteEmployee } from "@/lib/employees.functions";
 import { listDomains } from "@/lib/domains.functions";
-import { PageHeader, Card, Button, Input, Field, StatusPill } from "@/components/app/AppShell";
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
+  Field,
+  StatusPill,
+  CustomSelect,
+} from "@/components/app/AppShell";
 import {
   FileSpreadsheet,
   Search,
@@ -177,16 +185,21 @@ function EmployeesList() {
         title="Employees"
         subtitle="Create professional addresses. Each employee connects their own Gmail via an invite link — you never sign in for them."
         actions={
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="ghost"
               onClick={() => setOpenBulk(true)}
-              className="border border-line w-full sm:w-auto"
+              className="flex-1 sm:flex-initial h-9 sm:h-10 px-3 sm:px-4 text-[12.5px] sm:text-[13px] border border-line bg-surface hover:bg-surface-muted transition justify-center font-medium"
             >
-              <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Bulk CSV import
+              <FileSpreadsheet className="h-4 w-4 mr-1.5 text-ink-3 shrink-0" />
+              <span>Bulk import</span>
             </Button>
-            <Button onClick={() => setOpenAdd((v) => !v)} className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-1.5" /> Add employee
+            <Button
+              onClick={() => setOpenAdd((v) => !v)}
+              className="flex-1 sm:flex-initial h-9 sm:h-10 px-3.5 sm:px-5 text-[12.5px] sm:text-[13px] justify-center font-medium shadow-xs"
+            >
+              <Plus className="h-4 w-4 mr-1.5 shrink-0" />
+              <span>Add employee</span>
             </Button>
           </div>
         }
@@ -214,28 +227,28 @@ function EmployeesList() {
                 />
               </Field>
               <Field label="Professional address">
-                <div className="flex">
-                  <Input
-                    value={local}
-                    onChange={(e) => {
-                      setLocal(e.target.value.toLowerCase().replace(/\s+/g, ""));
-                      setLocalEdited(true);
-                    }}
-                    placeholder="jane.doe"
-                    required
-                    className="rounded-r-none"
-                  />
-                  <select
-                    value={dom}
-                    onChange={(e) => setDom(e.target.value)}
-                    className="h-10 border border-l-0 border-line rounded-r-md bg-surface-muted px-2 text-[13px]"
-                  >
-                    {domains.map((d: { id: string; domain_name: string }) => (
-                      <option key={d.id} value={d.domain_name}>
-                        @{d.domain_name}
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      value={local}
+                      onChange={(e) => {
+                        setLocal(e.target.value.toLowerCase().replace(/\s+/g, ""));
+                        setLocalEdited(true);
+                      }}
+                      placeholder="jane.doe"
+                      required
+                    />
+                  </div>
+                  <div className="w-full sm:w-44 shrink-0">
+                    <CustomSelect
+                      value={dom}
+                      onChange={(v) => setDom(v)}
+                      options={domains.map((d: { id: string; domain_name: string }) => ({
+                        value: d.domain_name,
+                        label: `@${d.domain_name}`,
+                      }))}
+                    />
+                  </div>
                 </div>
               </Field>
               <div className="grid grid-cols-2 gap-3">

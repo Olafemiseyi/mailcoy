@@ -182,11 +182,10 @@ function InvitePage() {
                         href="https://mail.google.com/mail/u/0/#settings/accounts"
                         target="_blank"
                         rel="noreferrer"
-                        className="font-medium text-primary hover:underline"
+                        className="font-medium text-primary hover:underline inline-flex items-center gap-1"
                       >
-                        Gmail Settings
-                      </a>{" "}
-                      (we'll open it in a new tab).
+                        Gmail Settings → Accounts and Import ↗
+                      </a>
                     </div>
                   </div>
 
@@ -195,9 +194,8 @@ function InvitePage() {
                       2
                     </span>
                     <div className="leading-relaxed">
-                      In the "Send mail as" section, find <strong>{emp?.professional_email}</strong>{" "}
-                      (we already added it for you!) and click{" "}
-                      <span className="text-amber-600 font-medium">edit info</span>.
+                      In the <strong>"Send mail as"</strong> section, click{" "}
+                      <span className="text-primary font-medium">"Add another email address"</span>.
                     </div>
                   </div>
 
@@ -207,7 +205,7 @@ function InvitePage() {
                     </span>
                     <div className="leading-relaxed w-full">
                       <p className="mb-2">
-                        Paste these exact credentials into the popup and click Save:
+                        Enter your name, <strong>{emp?.professional_email}</strong>, and enter the SMTP credentials:
                       </p>
 
                       <div className="rounded-lg border border-line bg-surface-muted overflow-hidden">
@@ -222,28 +220,23 @@ function InvitePage() {
                             <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">
                               Port
                             </span>
-                            <span className="font-mono font-medium">465</span>
+                            <span className="font-mono font-medium">465 (SSL)</span>
                           </div>
                         </div>
-                        <div className="p-2.5 px-3 border-b border-line">
+                        <div className="p-2.5 px-3">
                           <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">
                             Username
                           </span>
                           <span className="font-mono font-medium">resend</span>
                         </div>
-                        <div className="p-2.5 px-3 bg-white dark:bg-ink flex items-center justify-between">
-                          <div>
-                            <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider">
-                              Status
-                            </span>
-                            <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                              <Check className="h-3 w-3" /> Auto-Configured in Gmail
-                            </span>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-[12px] flex items-center gap-2">
+                  <Mail className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>We've also emailed these setup instructions to your Gmail inbox!</span>
                 </div>
               </div>
             )}

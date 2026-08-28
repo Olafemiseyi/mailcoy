@@ -43,7 +43,6 @@ import { Route as AuthenticatedShellSignaturesRouteImport } from './routes/_auth
 import { Route as AuthenticatedShellSettingsRouteImport } from './routes/_authenticated/_shell.settings'
 import { Route as AuthenticatedShellLogsRouteImport } from './routes/_authenticated/_shell.logs'
 import { Route as AuthenticatedShellHelpRouteImport } from './routes/_authenticated/_shell.help'
-import { Route as AuthenticatedShellGmailRouteImport } from './routes/_authenticated/_shell.gmail'
 import { Route as AuthenticatedShellEmployeesRouteImport } from './routes/_authenticated/_shell.employees'
 import { Route as AuthenticatedShellDomainsRouteImport } from './routes/_authenticated/_shell.domains'
 import { Route as AuthenticatedShellDashboardRouteImport } from './routes/_authenticated/_shell.dashboard'
@@ -235,11 +234,6 @@ const AuthenticatedShellHelpRoute = AuthenticatedShellHelpRouteImport.update({
   path: '/help',
   getParentRoute: () => AuthenticatedShellRoute,
 } as any)
-const AuthenticatedShellGmailRoute = AuthenticatedShellGmailRouteImport.update({
-  id: '/gmail',
-  path: '/gmail',
-  getParentRoute: () => AuthenticatedShellRoute,
-} as any)
 const AuthenticatedShellEmployeesRoute =
   AuthenticatedShellEmployeesRouteImport.update({
     id: '/employees',
@@ -385,7 +379,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedShellDashboardRoute
   '/domains': typeof AuthenticatedShellDomainsRouteWithChildren
   '/employees': typeof AuthenticatedShellEmployeesRouteWithChildren
-  '/gmail': typeof AuthenticatedShellGmailRoute
   '/help': typeof AuthenticatedShellHelpRoute
   '/logs': typeof AuthenticatedShellLogsRoute
   '/settings': typeof AuthenticatedShellSettingsRouteWithChildren
@@ -438,7 +431,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedShellDashboardRoute
   '/domains': typeof AuthenticatedShellDomainsRouteWithChildren
   '/employees': typeof AuthenticatedShellEmployeesRouteWithChildren
-  '/gmail': typeof AuthenticatedShellGmailRoute
   '/help': typeof AuthenticatedShellHelpRoute
   '/logs': typeof AuthenticatedShellLogsRoute
   '/signatures': typeof AuthenticatedShellSignaturesRoute
@@ -494,7 +486,6 @@ export interface FileRoutesById {
   '/_authenticated/_shell/dashboard': typeof AuthenticatedShellDashboardRoute
   '/_authenticated/_shell/domains': typeof AuthenticatedShellDomainsRouteWithChildren
   '/_authenticated/_shell/employees': typeof AuthenticatedShellEmployeesRouteWithChildren
-  '/_authenticated/_shell/gmail': typeof AuthenticatedShellGmailRoute
   '/_authenticated/_shell/help': typeof AuthenticatedShellHelpRoute
   '/_authenticated/_shell/logs': typeof AuthenticatedShellLogsRoute
   '/_authenticated/_shell/settings': typeof AuthenticatedShellSettingsRouteWithChildren
@@ -550,7 +541,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/domains'
     | '/employees'
-    | '/gmail'
     | '/help'
     | '/logs'
     | '/settings'
@@ -603,7 +593,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/domains'
     | '/employees'
-    | '/gmail'
     | '/help'
     | '/logs'
     | '/signatures'
@@ -658,7 +647,6 @@ export interface FileRouteTypes {
     | '/_authenticated/_shell/dashboard'
     | '/_authenticated/_shell/domains'
     | '/_authenticated/_shell/employees'
-    | '/_authenticated/_shell/gmail'
     | '/_authenticated/_shell/help'
     | '/_authenticated/_shell/logs'
     | '/_authenticated/_shell/settings'
@@ -950,13 +938,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedShellHelpRouteImport
       parentRoute: typeof AuthenticatedShellRoute
     }
-    '/_authenticated/_shell/gmail': {
-      id: '/_authenticated/_shell/gmail'
-      path: '/gmail'
-      fullPath: '/gmail'
-      preLoaderRoute: typeof AuthenticatedShellGmailRouteImport
-      parentRoute: typeof AuthenticatedShellRoute
-    }
     '/_authenticated/_shell/employees': {
       id: '/_authenticated/_shell/employees'
       path: '/employees'
@@ -1156,7 +1137,6 @@ interface AuthenticatedShellRouteChildren {
   AuthenticatedShellDashboardRoute: typeof AuthenticatedShellDashboardRoute
   AuthenticatedShellDomainsRoute: typeof AuthenticatedShellDomainsRouteWithChildren
   AuthenticatedShellEmployeesRoute: typeof AuthenticatedShellEmployeesRouteWithChildren
-  AuthenticatedShellGmailRoute: typeof AuthenticatedShellGmailRoute
   AuthenticatedShellHelpRoute: typeof AuthenticatedShellHelpRoute
   AuthenticatedShellLogsRoute: typeof AuthenticatedShellLogsRoute
   AuthenticatedShellSettingsRoute: typeof AuthenticatedShellSettingsRouteWithChildren
@@ -1172,7 +1152,6 @@ const AuthenticatedShellRouteChildren: AuthenticatedShellRouteChildren = {
   AuthenticatedShellDomainsRoute: AuthenticatedShellDomainsRouteWithChildren,
   AuthenticatedShellEmployeesRoute:
     AuthenticatedShellEmployeesRouteWithChildren,
-  AuthenticatedShellGmailRoute: AuthenticatedShellGmailRoute,
   AuthenticatedShellHelpRoute: AuthenticatedShellHelpRoute,
   AuthenticatedShellLogsRoute: AuthenticatedShellLogsRoute,
   AuthenticatedShellSettingsRoute: AuthenticatedShellSettingsRouteWithChildren,

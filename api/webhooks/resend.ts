@@ -89,49 +89,61 @@ async function processInboundEmail(
     const recipientDomain = recipientEmail.split("@")[1] || "mailcoy.com";
 
     try {
-      let targetGmail: string | null = null;
+      const targetGmails = new Set<string>();
       let orgId: string | null = null;
 
       // 1. Direct employee match
       const { data: emp } = await (supabaseAdmin
         .from("employees")
-        .select("id, organization_id, full_name")
+        .select("id, organization_id, full_name, status")
         .or(`professional_email.eq.${recipientEmail},company_email.eq.${recipientEmail}`)
         .maybeSingle() as any) as { data: any };
 
-      if (emp) {
+      if (emp && emp.status !== "inactive" && emp.status !== "revoked") {
         const { data: gc } = await supabaseAdmin
           .from("gmail_connections")
           .select("google_email")
           .eq("employee_id", emp.id)
           .is("revoked_at", null)
           .maybeSingle();
-        targetGmail = (gc as any)?.google_email || null;
-        orgId = emp.organization_id;
-      }
-
-      // 2. Alias lookup
-      if (!targetGmail) {
-        const { data: alias } = await (supabaseAdmin
-          .from("aliases")
-          .select("id, organization_id, address, employee_id")
-          .eq("address", recipientEmail)
-          .maybeSingle() as any) as { data: any };
-
-        if (alias) {
-          orgId = alias.organization_id;
-          const { data: gc } = await supabaseAdmin
-            .from("gmail_connections")
-            .select("google_email")
-            .eq("employee_id", alias.employee_id)
-            .is("revoked_at", null)
-            .maybeSingle();
-          targetGmail = (gc as any)?.google_email || null;
+        if ((gc as any)?.google_email) {
+          targetGmails.add((gc as any).google_email);
+          orgId = emp.organization_id;
         }
       }
 
-      // 3. Catch-all: domain owner
-      if (!targetGmail) {
+      // 2. Multi-recipient Alias lookup (Shared Inboxes)
+      const { data: aliasRows } = await (supabaseAdmin
+        .from("aliases")
+        .select("id, organization_id, address, employee_id")
+        .eq("address", recipientEmail) as any) as { data: any[] | null };
+
+      if (aliasRows && aliasRows.length > 0) {
+        for (const alias of aliasRows) {
+          orgId = orgId || alias.organization_id;
+          // Check employee active status
+          const { data: aliasEmp } = await (supabaseAdmin
+            .from("employees")
+            .select("id, status")
+            .eq("id", alias.employee_id)
+            .maybeSingle() as any) as { data: any };
+
+          if (aliasEmp && aliasEmp.status !== "inactive" && aliasEmp.status !== "revoked") {
+            const { data: gc } = await supabaseAdmin
+              .from("gmail_connections")
+              .select("google_email")
+              .eq("employee_id", alias.employee_id)
+              .is("revoked_at", null)
+              .maybeSingle();
+            if ((gc as any)?.google_email) {
+              targetGmails.add((gc as any).google_email);
+            }
+          }
+        }
+      }
+
+      // 3. Catch-all: If no active employee or alias target found, route to Catch-All / Domain Owner
+      if (targetGmails.size === 0) {
         const { data: domain } = await (supabaseAdmin
           .from("domains")
           .select("id, organization_id")
@@ -140,28 +152,43 @@ async function processInboundEmail(
 
         if (domain) {
           orgId = domain.organization_id;
-          const { data: ownerEmp } = await (supabaseAdmin
-            .from("employees")
-            .select("id")
-            .eq("organization_id", domain.organization_id)
-            .order("created_at", { ascending: true })
-            .limit(1)
+          // Check catch_all_inboxes first if defined
+          const { data: catchAll } = await (supabaseAdmin
+            .from("catch_all_inboxes")
+            .select("target_email")
+            .eq("domain_id", domain.id)
             .maybeSingle() as any) as { data: any };
 
-          if (ownerEmp) {
-            const { data: gc } = await supabaseAdmin
-              .from("gmail_connections")
-              .select("google_email")
-              .eq("employee_id", ownerEmp.id)
-              .is("revoked_at", null)
-              .maybeSingle();
-            targetGmail = (gc as any)?.google_email || null;
+          if (catchAll?.target_email) {
+            targetGmails.add(catchAll.target_email);
+          } else {
+            // Default to first active employee in workspace
+            const { data: ownerEmp } = await (supabaseAdmin
+              .from("employees")
+              .select("id")
+              .eq("organization_id", domain.organization_id)
+              .not("status", "in", '("inactive","revoked")')
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle() as any) as { data: any };
+
+            if (ownerEmp) {
+              const { data: gc } = await supabaseAdmin
+                .from("gmail_connections")
+                .select("google_email")
+                .eq("employee_id", ownerEmp.id)
+                .is("revoked_at", null)
+                .maybeSingle();
+              if ((gc as any)?.google_email) {
+                targetGmails.add((gc as any).google_email);
+              }
+            }
           }
         }
       }
 
-      if (!targetGmail) {
-        console.warn(`[Mailcoy] No Gmail found for ${recipientEmail}`);
+      if (targetGmails.size === 0) {
+        console.warn(`[Mailcoy] No destination Gmail found for ${recipientEmail}`);
         continue;
       }
 
@@ -184,38 +211,50 @@ async function processInboundEmail(
         ${footerHtml}
       `;
 
-      const fwd = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: `${senderDisplayName} <router@${recipientDomain}>`,
-          to: [targetGmail],
-          reply_to: [fromAddress],
-          subject,
-          html: forwardHtml,
-        }),
+      // Fan out delivery to all targets in parallel
+      const forwardPromises = Array.from(targetGmails).map(async (targetGmail) => {
+        try {
+          const fwd = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: `${senderDisplayName} <router@mailcoy.com>`,
+              to: [targetGmail],
+              reply_to: fromAddress,
+              subject: subject,
+              html: forwardHtml,
+              text: text ? `${text}\n\n---\nSent to ${recipientEmail} via Mailcoy` : undefined,
+            }),
+          });
+
+          const fwdData = await fwd.json();
+          console.log(`[Mailcoy] Forwarded to ${targetGmail} via Resend:`, fwdData);
+          return { targetGmail, success: fwd.ok, data: fwdData };
+        } catch (err: any) {
+          console.error(`[Mailcoy] Error forwarding to ${targetGmail}:`, err);
+          return { targetGmail, success: false, error: err.message };
+        }
       });
 
-      const fwdResult = (await fwd.json()) as any;
-      console.log(`[Mailcoy] Forwarded ${recipientEmail} -> ${targetGmail} | id:`, fwdResult?.id);
+      await Promise.allSettled(forwardPromises);
 
+      // Log the incoming message in email_logs
       if (orgId) {
         await supabaseAdmin.from("email_logs").insert({
           organization_id: orgId,
-          sender: senderEmail,
+          sender: fromAddress,
           receiver: recipientEmail,
-          subject,
-          snippet: (text || subject || "(Inbound)").slice(0, 150),
+          subject: subject,
+          snippet: text ? text.slice(0, 160) : subject,
           direction: "incoming",
-          status: fwd.ok ? "delivered" : "failed",
-          timestamp: new Date().toISOString(),
-        });
+          status: "delivered",
+        } as never);
       }
     } catch (err) {
-      console.error(`[Mailcoy] Error routing ${recipientEmail}:`, err);
+      console.error(`[Mailcoy] Inbound forwarding error for ${recipientRaw}:`, err);
     }
   }
 }

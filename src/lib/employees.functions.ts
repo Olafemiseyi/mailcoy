@@ -156,7 +156,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
         full_name: z.string().trim().min(1).max(120).optional(),
         job_title: z.string().trim().max(120).nullable().optional(),
         department: z.string().trim().max(120).nullable().optional(),
-        status: z.enum(["invited", "active", "suspended"]).optional(),
+        status: z.enum(["invited", "active", "suspended", "inactive", "offboarded"]).optional(),
       })
       .parse(data),
   )
@@ -185,6 +185,47 @@ export const updateEmployee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const offboardEmployee = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    assertAdmin(ctx.role);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Mark employee status suspended
+    const { error: empErr } = await supabaseAdmin
+      .from("employees")
+      .update({ status: "suspended" } as never)
+      .eq("organization_id", ctx.organizationId)
+      .eq("id", data.id);
+
+    if (empErr) {
+      console.error("[offboardEmployee error]", empErr);
+      throw new Error(toAppError(empErr, "Failed to offboard employee."));
+    }
+
+    // 2. Revoke active gmail connections
+    await supabaseAdmin
+      .from("gmail_connections")
+      .update({ health_status: "revoked", revoked_at: new Date().toISOString() } as never)
+      .eq("employee_id", data.id);
+
+    // 3. Revoke active invitations
+    await supabaseAdmin
+      .from("employee_invitations")
+      .update({ revoked_at: new Date().toISOString() } as never)
+      .eq("employee_id", data.id);
+
+    // 4. Delete app_user_connections
+    await supabaseAdmin
+      .from("app_user_connections")
+      .delete()
+      .eq("user_id", data.id);
+
+    return { ok: true };
+  });
+
 export const deleteEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ id: z.string() }).parse(data))
@@ -193,11 +234,19 @@ export const deleteEmployee = createServerFn({ method: "POST" })
     assertAdmin(ctx.role);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // 1. Purge app_user_connections tokens
+    await supabaseAdmin
+      .from("app_user_connections")
+      .delete()
+      .eq("user_id", data.id);
+
+    // 2. Delete employee (cascades gmail_connections, aliases, employee_invitations in DB)
     const { error } = await supabaseAdmin
       .from("employees")
       .delete()
       .eq("organization_id", ctx.organizationId)
       .eq("id", data.id);
+
     if (error) {
       console.error("[deleteEmployee error]", error);
       throw new Error(toAppError(error, "Failed to delete employee."));
@@ -270,31 +319,40 @@ export const getEmployeeDetail = createServerFn({ method: "GET" })
       .eq("employee_id", data.id)
       .maybeSingle();
 
-    // Fetch message counts using real column names
+    const allEmails = Array.from(
+      new Set(
+        [profEmail, emp.company_email, emp.professional_email, ...(aliases || []).map((a: any) => a.address)].filter(
+          Boolean
+        )
+      )
+    );
+
+    // Fetch message counts using email_logs
     const { count: sentCount } = await supabaseAdmin
-      .from("outgoing_messages")
+      .from("email_logs")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", ctx.organizationId)
-      .eq("from_addr", profEmail);
+      .in("sender", allEmails);
 
     const { count: receivedCount } = await supabaseAdmin
-      .from("incoming_messages")
+      .from("email_logs")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", ctx.organizationId)
-      .eq("to_addr", profEmail);
+      .in("receiver", allEmails);
 
     // Fetch recent messages from email_logs with subjects and snippets
+    const orFilter = allEmails.map((e) => `sender.eq.${e},receiver.eq.${e}`).join(",");
     const { data: logs } = await supabaseAdmin
       .from("email_logs")
       .select("id, sender, receiver, subject, snippet, direction, status, timestamp")
       .eq("organization_id", ctx.organizationId)
-      .or(`sender.eq.${profEmail},receiver.eq.${profEmail}`)
+      .or(orFilter)
       .order("timestamp", { ascending: false })
-      .limit(30);
+      .limit(100);
 
     const messages = (logs || []).map((m: any) => ({
       id: m.id,
-      direction: m.direction === "outgoing" ? "outbound" : "inbound",
+      direction: m.direction === "outgoing" || m.direction === "outbound" ? "outgoing" : "incoming",
       sender: m.sender,
       receiver: m.receiver,
       subject: m.subject || "(No subject)",

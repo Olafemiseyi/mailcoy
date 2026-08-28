@@ -217,54 +217,160 @@ function CatchAllRoute() {
 
 function WebmailInbox() {
   const fetchLogs = useServerFn(listEmailLogs);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
+
   const { data, isPending } = useQuery({
     queryKey: ["email-logs", "incoming"],
-    queryFn: async () => fetchLogs({ data: { limit: 50, offset: 0, direction: "incoming" } }),
+    queryFn: async () => fetchLogs({ data: { limit: 100, offset: 0, direction: "incoming" } }),
     staleTime: 5_000,
   });
 
   const rows = data?.rows ?? [];
 
   return (
-    <Card className="p-0 overflow-hidden min-h-[300px] border-line shadow-sm">
-      {isPending ? (
-        <div className="p-10 flex justify-center text-ink-3">Loading inbox...</div>
-      ) : rows.length === 0 ? (
-        <div className="py-16 text-center flex flex-col items-center justify-center bg-surface-muted/10">
-          <div className="h-12 w-12 rounded-full bg-ink/[0.04] grid place-items-center mb-3">
-            <Inbox className="h-6 w-6 text-ink-3" />
+    <>
+      <Card className="p-0 overflow-hidden min-h-[300px] border-line shadow-sm">
+        {isPending ? (
+          <div className="p-10 flex justify-center text-ink-3">Loading inbox...</div>
+        ) : rows.length === 0 ? (
+          <div className="py-16 text-center flex flex-col items-center justify-center bg-surface-muted/10">
+            <div className="h-12 w-12 rounded-full bg-ink/[0.04] grid place-items-center mb-3">
+              <Inbox className="h-6 w-6 text-ink-3" />
+            </div>
+            <h3 className="font-semibold text-ink">Inbox is empty</h3>
+            <p className="mt-1 text-[13px] text-ink-3 max-w-sm">
+              Any emails routed to your catch-all address will securely land here.
+            </p>
           </div>
-          <h3 className="font-semibold text-ink">Inbox is empty</h3>
-          <p className="mt-1 text-[13px] text-ink-3 max-w-sm">
-            Any emails routed to your catch-all address will securely land here.
-          </p>
-        </div>
-      ) : (
-        <div className="divide-y divide-line">
-          {rows.map((msg: any) => (
-            <div key={msg.id} className="p-4 hover:bg-surface-muted/20 transition group flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[14px]">
-                {(msg.sender || "U")[0].toUpperCase()}
+        ) : (
+          <>
+            <div className="divide-y divide-line">
+              {rows.slice(0, visibleCount).map((msg: any) => (
+                <div
+                  key={msg.id}
+                  onClick={() => setSelectedMessage(msg)}
+                  className="p-4 hover:bg-surface-muted/30 transition group flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer"
+                >
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[14px]">
+                    {(msg.sender || "U")[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="font-semibold text-ink text-[14px] truncate">
+                        {msg.sender}
+                      </span>
+                      <span className="text-[11px] text-ink-4 whitespace-nowrap">
+                        {new Date(msg.timestamp).toLocaleString(undefined, {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </span>
+                    </div>
+                    <div className="text-[13px] font-medium text-ink truncate mb-0.5">
+                      {msg.subject || "(No Subject)"}
+                    </div>
+                    <div className="text-[12px] text-ink-3 truncate pr-4">
+                      <span className="font-mono text-[10px] bg-ink/5 px-1 rounded mr-1">
+                        To: {msg.receiver}
+                      </span>
+                      {msg.snippet || "No preview available"}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {rows.length > visibleCount && (
+              <div className="p-3.5 border-t border-line text-center bg-ink/[0.01]">
+                <Button
+                  variant="ghost"
+                  onClick={() => setVisibleCount((prev) => prev + 15)}
+                  className="text-[12.5px] h-8 px-4 font-medium"
+                >
+                  Load more messages ({rows.length - visibleCount} remaining)
+                </Button>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <span className="font-semibold text-ink text-[14px] truncate">{msg.sender}</span>
-                  <span className="text-[11px] text-ink-4 whitespace-nowrap">
-                    {new Date(msg.timestamp).toLocaleString()}
+            )}
+          </>
+        )}
+      </Card>
+
+      {/* Message Read Modal */}
+      {selectedMessage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs overflow-y-auto overflow-x-hidden"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedMessage(null);
+          }}
+        >
+          <div className="relative w-full max-w-lg max-h-[85vh] rounded-xl overflow-hidden shadow-2xl flex flex-col border border-line bg-surface my-auto">
+            <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3.5 sm:px-5 sm:py-4 shrink-0 bg-surface">
+              <div className="min-w-0 pr-2">
+                <div className="text-[11.5px] text-ink-3 mb-1">
+                  {new Date(selectedMessage.timestamp).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </div>
+                <h2 className="font-display text-[15px] sm:text-base font-semibold leading-snug break-words text-ink">
+                  {selectedMessage.subject || "(No Subject)"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMessage(null)}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-ink-3 hover:text-ink hover:bg-ink/[0.06] transition-colors -mr-1"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 text-[13px]">
+              <div className="rounded-lg border border-line bg-ink/[0.02] p-3 space-y-1.5 font-mono text-[12px] overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2 min-w-0">
+                  <span className="text-ink-3 uppercase text-[10.5px] tracking-wider font-sans font-medium w-12 shrink-0">
+                    From:
+                  </span>
+                  <span className="text-ink font-medium break-all min-w-0">
+                    {selectedMessage.sender}
                   </span>
                 </div>
-                <div className="text-[13px] font-medium text-ink truncate mb-0.5">
-                  {msg.subject || "(No Subject)"}
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2 pt-1.5 border-t border-line/50 min-w-0">
+                  <span className="text-ink-3 uppercase text-[10.5px] tracking-wider font-sans font-medium w-12 shrink-0">
+                    To:
+                  </span>
+                  <span className="text-ink font-medium break-all min-w-0">
+                    {selectedMessage.receiver}
+                  </span>
                 </div>
-                <div className="text-[12px] text-ink-3 truncate pr-4">
-                  <span className="font-mono text-[10px] bg-ink/5 px-1 rounded mr-1">To: {msg.receiver}</span>
-                  {msg.snippet || "No preview available"}
+              </div>
+
+              <div className="min-w-0">
+                <div className="text-[11px] font-medium uppercase tracking-wider text-ink-3 mb-1.5">
+                  Message Content
+                </div>
+                <div className="rounded-lg border border-line bg-background p-3.5 text-[13px] leading-relaxed text-ink whitespace-pre-wrap break-words max-h-56 overflow-y-auto">
+                  {selectedMessage.snippet || "No message content available."}
                 </div>
               </div>
             </div>
-          ))}
+
+            <div className="px-4 py-3 sm:px-5 sm:py-3 border-t border-line bg-ink/[0.02] flex items-center justify-end shrink-0">
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedMessage(null)}
+                className="h-7 px-3 text-[12px]"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
       )}
-    </Card>
+    </>
   );
 }

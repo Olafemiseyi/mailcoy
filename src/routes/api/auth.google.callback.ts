@@ -105,13 +105,14 @@ export const Route = createFileRoute("/api/auth/google/callback")({
             .update({ accepted_at: new Date().toISOString() } as never)
             .eq("id", inv.id);
 
-          // ── Auto-configure Gmail Send As alias ──────────────────────────────
-          // Best-effort: fetch the employee's professional email + name and silently
-          // register it as a Gmail Send As alias. Google will email a one-click
-          // verification link to the professional address (which MX-routes to their
-          // Gmail inbox). Errors are swallowed — a Gmail API failure must never
-          // break the connect flow.
+          // ── Dispatch Onboarding & SMTP Setup Email to Employee ──────────────
           try {
+            const { data: orgRow } = await supabaseAdmin
+              .from("organizations")
+              .select("name")
+              .eq("id", inv.organization_id)
+              .maybeSingle();
+
             const { data: empRow } = await supabaseAdmin
               .from("employees")
               .select("professional_email, full_name")
@@ -119,16 +120,16 @@ export const Route = createFileRoute("/api/auth/google/callback")({
               .maybeSingle();
 
             if (empRow?.professional_email) {
-              const { addGmailSendAsAlias } = await import("@/server/googleOAuth.server");
-              await addGmailSendAsAlias({
-                refreshToken,
-                sendAsEmail: empRow.professional_email,
-                displayName: empRow.full_name ?? empRow.professional_email,
+              const { sendEmployeeOnboardingEmail } = await import("@/server/onboardingEmail.server");
+              await sendEmployeeOnboardingEmail({
+                toEmail: email,
+                employeeName: empRow.full_name ?? "",
+                professionalEmail: empRow.professional_email,
+                organizationName: orgRow?.name ?? "Mailcoy Workspace",
               });
             }
-          } catch (aliasErr) {
-            // Non-fatal — log but continue
-            console.warn("[SendAs] Could not register alias:", aliasErr instanceof Error ? aliasErr.message : aliasErr);
+          } catch (onboardErr) {
+            console.warn("[OnboardingEmail] Failed to dispatch onboarding email:", onboardErr);
           }
           // ────────────────────────────────────────────────────────────────────
 

@@ -38,7 +38,6 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/domains", label: "Domains", icon: Globe },
   { to: "/employees", label: "Employees", icon: Users },
-  { to: "/gmail", label: "Gmail", icon: Mail },
   { to: "/aliases", label: "Aliases", icon: AtSign },
   { to: "/signatures", label: "Signatures", icon: PenLine },
   { to: "/catch-all", label: "Catch-all", icon: Inbox },
