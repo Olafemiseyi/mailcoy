@@ -9,11 +9,21 @@ const SCOPES = [
   "https://www.googleapis.com/auth/gmail.settings.sharing",
 ];
 
+function getEnvVal(name: string): string | undefined {
+  const val =
+    process.env[name] ||
+    process.env[`VITE_${name}`] ||
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? (import.meta.env as any)[name] || (import.meta.env as any)[`VITE_${name}`]
+      : undefined);
+  return typeof val === "string" ? val.trim().replace(/^["']|["']$/g, "") : undefined;
+}
+
 async function getOAuth2Client() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId) throw new Error("GOOGLE_CLIENT_ID is not set");
-  if (!clientSecret) throw new Error("GOOGLE_CLIENT_SECRET is not set");
+  const clientId = getEnvVal("GOOGLE_CLIENT_ID");
+  const clientSecret = getEnvVal("GOOGLE_CLIENT_SECRET");
+  if (!clientId) throw new Error("GOOGLE_CLIENT_ID is not configured in environment variables.");
+  if (!clientSecret) throw new Error("GOOGLE_CLIENT_SECRET is not configured in environment variables.");
 
   // Dynamic import to avoid bundling on client
   const { google } = await import("googleapis");

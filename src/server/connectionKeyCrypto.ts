@@ -5,10 +5,18 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 function key(): Buffer {
-  const raw = process.env.APP_USER_CONNECTION_KEY_SECRET;
-  if (!raw) throw new Error("APP_USER_CONNECTION_KEY_SECRET is not set");
-  if (raw.length < 32) throw new Error("APP_USER_CONNECTION_KEY_SECRET is too short");
-  return createHash("sha256").update(raw, "utf8").digest();
+  const raw =
+    process.env.APP_USER_CONNECTION_KEY_SECRET ||
+    process.env.VITE_APP_USER_CONNECTION_KEY_SECRET ||
+    (typeof import.meta !== "undefined" && import.meta.env
+      ? (import.meta.env as any).APP_USER_CONNECTION_KEY_SECRET ||
+        (import.meta.env as any).VITE_APP_USER_CONNECTION_KEY_SECRET
+      : undefined);
+
+  const clean = typeof raw === "string" ? raw.trim().replace(/^["']|["']$/g, "") : "";
+  if (!clean) throw new Error("APP_USER_CONNECTION_KEY_SECRET is not set");
+  if (clean.length < 32) throw new Error("APP_USER_CONNECTION_KEY_SECRET is too short");
+  return createHash("sha256").update(clean, "utf8").digest();
 }
 
 export function encryptConnectionKey(plaintext: string): string {

@@ -180,7 +180,8 @@ export const startGmailByInvite = createServerFn({ method: "POST" })
     const jsonStr = JSON.stringify({ token: data.token, nonce });
     // Use btoa to avoid Vite injecting a Node.js Buffer polyfill which breaks the client
     const state = btoa(jsonStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const redirectUri = `${data.redirectOrigin}/api/auth/google/callback`;
+    const origin = data.redirectOrigin.replace(/\/+$/, "");
+    const redirectUri = `${origin}/api/auth/google/callback`;
 
     const authorizationUrl = await buildGoogleAuthUrl(redirectUri, state);
     return { authorizationUrl };
