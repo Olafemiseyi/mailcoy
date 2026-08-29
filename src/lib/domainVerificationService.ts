@@ -49,15 +49,19 @@ export const domainVerificationService = {
     // 2. MX Records Check
     try {
       const mxRecords = await dnsLookupService.resolve(domainName, 'MX');
-      // MX records usually contain priority and domain, e.g. "10 mx1.mailcoy.connect"
-      const hasMx1 = mxRecords.some(r => r.toLowerCase().includes('mx1.mailcoy.connect'));
-      const hasMx2 = mxRecords.some(r => r.toLowerCase().includes('mx2.mailcoy.connect'));
+      const hasValidMx = mxRecords.some(r => {
+        const low = r.toLowerCase();
+        return low.includes('inbound-smtp.us-east-1.amazonaws.com') ||
+               low.includes('amazonses.com') ||
+               low.includes('mailcoy.com') ||
+               low.includes('mailcoy.connect');
+      });
 
-      if (hasMx1 && hasMx2) {
+      if (hasValidMx) {
         mxVerified = true;
       } else {
         const foundStr = mxRecords.length > 0 ? mxRecords.map(r => `"${r}"`).join(', ') : 'None';
-        errors.push(`MX records missing or misconfigured. Expected: "10 mx1.mailcoy.connect" and "20 mx2.mailcoy.connect". Found: ${foundStr}`);
+        errors.push(`MX records missing or misconfigured. Expected inbound router (e.g. inbound-smtp.us-east-1.amazonaws.com or mailcoy). Found: ${foundStr}`);
       }
     } catch (e: any) {
       errors.push(`MX query failed: ${e.message}`);
@@ -67,23 +71,29 @@ export const domainVerificationService = {
     try {
       const txtRecords = await dnsLookupService.resolve(domainName, 'TXT');
       const spfRecords = txtRecords.filter(r => r.toLowerCase().startsWith('v=spf1'));
-      const matchesSpf = spfRecords.some(r => r.toLowerCase().includes('include:_spf.mailcoy.connect'));
+      const matchesSpf = spfRecords.some(r => {
+        const low = r.toLowerCase();
+        return low.includes('include:amazonses.com') ||
+               low.includes('include:resend.com') ||
+               low.includes('_spf.mailcoy.com') ||
+               low.includes('_spf.mailcoy.connect');
+      });
       
       if (matchesSpf) {
         spfVerified = true;
       } else {
         const foundStr = spfRecords.length > 0 ? spfRecords.map(r => `"${r}"`).join(', ') : 'None';
-        errors.push(`SPF record misconfigured. Expected to include "_spf.mailcoy.connect". Found SPF records: ${foundStr}`);
+        errors.push(`SPF record misconfigured. Expected to include "include:amazonses.com" or "_spf.mailcoy.com". Found SPF records: ${foundStr}`);
       }
     } catch (e: any) {
       errors.push(`SPF query failed: ${e.message}`);
     }
 
-    // 4. DKIM Check (TXT record at selector._domainkey.domain)
+    // 4. DKIM Check (TXT/CNAME record at selector._domainkey.domain)
     try {
       const dkimSubdomain = `${dkimSelector}._domainkey.${domainName}`;
       const dkimRecords = await dnsLookupService.resolve(dkimSubdomain, 'TXT');
-      const matchesDkim = dkimRecords.some(r => r.toLowerCase().includes('v=dkim1') && (r.includes('p=') || r.includes('mailcoy-key')));
+      const matchesDkim = dkimRecords.some(r => r.toLowerCase().includes('v=dkim1') || r.includes('p=') || r.includes('mailcoy'));
 
       if (matchesDkim) {
         dkimVerified = true;

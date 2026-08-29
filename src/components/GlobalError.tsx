@@ -18,8 +18,9 @@ export function GlobalError({ error, reset }: { error: Error; reset: () => void 
     error?.message?.toLowerCase().includes("unauthorized") ||
     error?.message?.toLowerCase().includes("authorization header") ||
     error?.message?.includes("JWT") ||
-    error?.message?.includes("session") ||
-    error?.message?.includes("auth");
+    error?.message?.toLowerCase().includes("invalid login credentials") ||
+    error?.message?.toLowerCase().includes("session expired") ||
+    error?.message?.toLowerCase().includes("auth session missing");
 
   if (isAuthError) {
     return <Navigate to="/auth/login" replace />;

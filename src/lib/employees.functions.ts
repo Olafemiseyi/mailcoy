@@ -341,14 +341,18 @@ export const getEmployeeDetail = createServerFn({ method: "GET" })
       .in("receiver", allEmails);
 
     // Fetch recent messages from email_logs with subjects and snippets
-    const orFilter = allEmails.map((e) => `sender.eq.${e},receiver.eq.${e}`).join(",");
-    const { data: logs } = await supabaseAdmin
-      .from("email_logs")
-      .select("id, sender, receiver, subject, snippet, direction, status, timestamp")
-      .eq("organization_id", ctx.organizationId)
-      .or(orFilter)
-      .order("timestamp", { ascending: false })
-      .limit(100);
+    let logs: any[] = [];
+    if (allEmails.length > 0) {
+      const orFilter = allEmails.map((e) => `sender.eq."${e}",receiver.eq."${e}"`).join(",");
+      const { data: logsData } = await supabaseAdmin
+        .from("email_logs")
+        .select("id, sender, receiver, subject, snippet, direction, status, timestamp")
+        .eq("organization_id", ctx.organizationId)
+        .or(orFilter)
+        .order("timestamp", { ascending: false })
+        .limit(100);
+      logs = logsData || [];
+    }
 
     const messages = (logs || []).map((m: any) => ({
       id: m.id,

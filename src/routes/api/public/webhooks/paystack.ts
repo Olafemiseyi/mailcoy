@@ -41,9 +41,23 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         const meta = (event.data?.metadata ?? {}) as { organization_id?: string; plan_code?: string; billing_interval?: "monthly" | "yearly" };
-        const orgId = meta.organization_id;
+        let orgId = meta.organization_id;
         const planCode = meta.plan_code ?? event.data?.plan?.plan_code ?? null;
         const reference = event.data?.reference ?? event.data?.subscription_code ?? event.data?.invoice_code ?? null;
+
+        // If organization_id is missing (recurring renewal event), attempt lookup via subscription_code
+        if (!orgId && event.data?.subscription_code) {
+          const { data: existingSub } = await supabaseAdmin
+            .from("subscriptions")
+            .select("organization_id, plan_code")
+            .eq("provider_reference", event.data.subscription_code)
+            .maybeSingle();
+          if (existingSub) {
+            orgId = (existingSub as any).organization_id;
+          }
+        }
+
+        const isSuccess = event.event === "charge.success" || event.event === "subscription.create";
 
         // Always record raw delivery for audit.
         await supabaseAdmin.from("billing_events").insert({
@@ -53,7 +67,7 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
           payload: event as unknown as Record<string, unknown>,
           received_at: new Date().toISOString(),
           organization_id: orgId ?? null,
-          status: "received",
+          status: isSuccess ? "success" : "received",
         } as never);
 
         if (!orgId || !reference) {

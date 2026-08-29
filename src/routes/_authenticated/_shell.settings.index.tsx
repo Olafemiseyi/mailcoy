@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { getMyOrganization, updateOrganization, uploadOrganizationLogo } from "@/lib/orgs.functions";
 import { PageHeader, Card, Button, Input, Field, CustomSelect } from "@/components/app/AppShell";
+import { Upload, Trash2, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 
 const INDUSTRIES = [
   "Real estate", "Technology / SaaS", "E-commerce / Retail", "Finance / Fintech",
@@ -87,6 +88,7 @@ function SettingsIndex() {
   const [country, setCountry] = useState(org?.country ?? "");
   const [logoUrl, setLogoUrl] = useState<string>(org?.logo_url ?? "");
   const [logoBusy, setLogoBusy] = useState(false);
+  const [logoErr, setLogoErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -109,15 +111,33 @@ function SettingsIndex() {
 
   async function onLogoFile(file: File | null) {
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoErr("File size must be under 5 MB");
+      return;
+    }
     setLogoBusy(true);
+    setLogoErr(null);
     try {
       const base64 = await fileToBase64(file);
       const res = await uploadLogo({ data: { fileName: file.name, contentType: file.type as never, base64 } });
       setLogoUrl(res.logoUrl);
       await qc.invalidateQueries({ queryKey: ["my-org"] });
-      setToast("Logo uploaded");
-      setTimeout(() => setToast(null), 1500);
-    } finally { setLogoBusy(false); }
+      setToast("Logo uploaded successfully");
+      setTimeout(() => setToast(null), 2500);
+    } catch (err: any) {
+      setLogoErr(err?.message || "Failed to upload logo. Please try another image.");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
+  function removeLogo() {
+    setLogoUrl("");
+    save({ data: { logo_url: null } }).then(() => {
+      qc.invalidateQueries({ queryKey: ["my-org"] });
+      setToast("Logo removed");
+      setTimeout(() => setToast(null), 2000);
+    });
   }
 
   if (!org) {
@@ -168,30 +188,72 @@ function SettingsIndex() {
             onChange={(val) => setCountry(val)}
           />
         </Field>
-        <Field label="Company logo" hint="Upload PNG, JPG, WEBP, GIF or SVG. No URL is required.">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <label className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md border border-line px-4 text-[13px] font-medium hover:bg-ink/[0.04]">
-              {logoBusy ? "Uploading…" : "Choose logo"}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-                className="sr-only"
-                disabled={logoBusy}
-                onChange={(e) => onLogoFile(e.currentTarget.files?.[0] ?? null)}
-              />
-            </label>
-            <span className="text-[12px] text-ink-3">The uploaded image becomes the workspace logo.</span>
-          </div>
-          {logoUrl && (
-            <div className="mt-2 flex items-center gap-2 text-[12px] text-ink-3">
-              <img src={logoUrl} alt="Logo preview" className="h-8 w-8 rounded object-cover border border-line" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              Preview
+        <Field label="Company logo" hint="Upload PNG, JPG, WEBP, GIF or SVG (max 5 MB).">
+          <div className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-line bg-surface px-4 text-[13px] font-medium hover:bg-surface-muted transition select-none">
+                {logoBusy ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin text-primary" /> Uploading…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2 text-primary" /> {logoUrl ? "Change logo" : "Choose logo"}
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                  className="sr-only"
+                  disabled={logoBusy}
+                  onChange={(e) => {
+                    const f = e.currentTarget.files?.[0] ?? null;
+                    onLogoFile(f);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              {logoUrl && (
+                <button
+                  type="button"
+                  onClick={removeLogo}
+                  className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-danger/20 bg-danger/5 px-3 text-[12.5px] font-medium text-danger hover:bg-danger/10 transition"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Remove logo
+                </button>
+              )}
             </div>
-          )}
+
+            {logoErr && (
+              <div className="text-[12px] text-danger flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {logoErr}
+              </div>
+            )}
+
+            {logoUrl && (
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-line bg-surface-muted/30">
+                <img
+                  src={logoUrl}
+                  alt="Workspace logo"
+                  className="h-12 w-12 rounded-xl object-contain bg-background border border-line p-1 shadow-xs shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="text-[13px] font-semibold text-ink">Active Workspace Logo</div>
+                  <div className="text-[11.5px] text-ink-3 truncate">
+                    Syncs to sidebar, headers, and outgoing transactional emails.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </Field>
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
-          {toast && <span className="text-[13px] text-emerald-700">{toast}</span>}
+        <div className="flex items-center gap-3 pt-2">
+          <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</Button>
+          {toast && (
+            <span className="text-[13px] text-emerald-600 font-medium flex items-center gap-1">
+              <CheckCircle2 className="h-4 w-4" /> {toast}
+            </span>
+          )}
         </div>
       </form>
     </Card>

@@ -6,18 +6,39 @@ export type Currency = "USD" | "NGN";
 export function detectUserCurrency(): Currency {
   if (typeof window === "undefined") return "USD";
   try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    // 1. Check URL query override if present (?currency=NGN or ?currency=USD)
+    const params = new URLSearchParams(window.location.search);
+    const queryCur = params.get("currency")?.toUpperCase();
+    if (queryCur === "NGN" || queryCur === "USD") return queryCur;
+
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();
     const languages = navigator.languages || [navigator.language || ""];
 
-    // Check timezone for Nigeria
-    if (tz.toLowerCase().includes("lagos") || tz.toLowerCase().includes("nigeria")) {
+    // 2. Check timezone for Nigeria / West Africa
+    if (
+      tz.includes("lagos") ||
+      tz.includes("nigeria") ||
+      tz === "africa/lagos" ||
+      tz === "africa/port_harcourt" ||
+      tz === "africa/kano" ||
+      tz === "africa/abuja"
+    ) {
       return "NGN";
     }
 
-    // Check browser languages for NG locale
-    const isNgLocale = languages.some(
-      (lang) => lang.toLowerCase() === "en-ng" || lang.toLowerCase().endsWith("-ng") || lang.toLowerCase() === "ng"
-    );
+    // 3. Check browser languages & locales for Nigeria
+    const isNgLocale = languages.some((lang) => {
+      const l = lang.toLowerCase();
+      return (
+        l === "en-ng" ||
+        l.endsWith("-ng") ||
+        l.startsWith("yo") || // Yoruba
+        l.startsWith("ig") || // Igbo
+        l.startsWith("ha") || // Hausa
+        l.startsWith("pcm")   // Nigerian Pidgin
+      );
+    });
+
     if (isNgLocale) {
       return "NGN";
     }

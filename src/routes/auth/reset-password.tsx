@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthShell, AuthField, PrimaryButton } from "@/components/auth/AuthShell";
 
@@ -15,16 +15,51 @@ function ResetPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setHasSession(!!data.session);
+      setCheckingSession(false);
+    });
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (password.length < 8) return setError("Password must be at least 8 characters");
     if (password !== confirm) return setError("Passwords do not match");
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) return setError(error.message);
     navigate({ to: "/auth/login" });
+  }
+
+  if (checkingSession) {
+    return (
+      <AuthShell title="Checking reset link…" subtitle="Verifying your password reset session.">
+        <div className="h-1 w-full bg-line rounded-full overflow-hidden">
+          <div className="h-full w-1/2 bg-primary animate-pulse" />
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (!hasSession) {
+    return (
+      <AuthShell title="Invalid or expired link" subtitle="This password reset link is invalid or has already expired.">
+        <div className="space-y-4">
+          <p className="text-[13px] text-ink-3">
+            Please request a new password reset link from the forgot password page.
+          </p>
+          <Link to="/auth/forgot-password">
+            <PrimaryButton>Request new reset link</PrimaryButton>
+          </Link>
+        </div>
+      </AuthShell>
+    );
   }
 
   return (

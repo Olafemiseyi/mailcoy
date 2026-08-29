@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { listMembers, inviteMember } from "@/lib/platform.functions";
-import { Card, Button, CustomSelect } from "@/components/app/AppShell";
-import { ShieldCheck, UserPlus, Crown, Mail, Copy, Check, X } from "lucide-react";
+import { listMembers, inviteMember, removeMember, updateMemberRole } from "@/lib/platform.functions";
+import { Card, Button, CustomSelect, ConfirmDeleteModal } from "@/components/app/AppShell";
+import { ShieldCheck, UserPlus, Crown, Mail, Copy, Check, X, Trash2 } from "lucide-react";
 
 const opts = queryOptions({
   queryKey: ["members"],
@@ -22,6 +22,8 @@ function MembersRoute() {
   const qc = useQueryClient();
   const { data } = useSuspenseQuery(opts);
   const inviteFn = useServerFn(inviteMember);
+  const removeFn = useServerFn(removeMember);
+  const updateRoleFn = useServerFn(updateMemberRole);
 
   const [openModal, setOpenModal] = useState(false);
   const [email, setEmail] = useState("");
@@ -29,20 +31,46 @@ function MembersRoute() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ message: string; inviteUrl?: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pendingDeleteMember, setPendingDeleteMember] = useState<{ userId: string; name: string } | null>(null);
+  const [actionErr, setActionErr] = useState<string | null>(null);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setBusy(true);
     setResult(null);
+    setActionErr(null);
     try {
       const res = await inviteFn({ data: { email, role } });
       setResult(res);
       await qc.invalidateQueries({ queryKey: ["members"] });
     } catch (err: any) {
-      alert(err?.message || "Failed to send invitation");
+      setActionErr(err?.message || "Failed to send invitation");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: "admin" | "member") => {
+    setActionErr(null);
+    try {
+      await updateRoleFn({ data: { userId, role: newRole } });
+      await qc.invalidateQueries({ queryKey: ["members"] });
+    } catch (err: any) {
+      setActionErr(err?.message || "Failed to update role");
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteMember) return;
+    setActionErr(null);
+    try {
+      await removeFn({ data: { userId: pendingDeleteMember.userId } });
+      await qc.invalidateQueries({ queryKey: ["members"] });
+    } catch (err: any) {
+      setActionErr(err?.message || "Failed to remove member");
+    } finally {
+      setPendingDeleteMember(null);
     }
   };
 
@@ -56,6 +84,11 @@ function MembersRoute() {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {actionErr && (
+        <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-[13px]">
+          {actionErr}
+        </div>
+      )}
       <Card className="p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-5">
           <div>
@@ -74,7 +107,7 @@ function MembersRoute() {
               setRole("admin");
               setOpenModal(true);
             }}
-            className="gap-2 shrink-0"
+            className="gap-2 shrink-0 whitespace-nowrap"
           >
             <UserPlus className="h-4 w-4" /> Invite Member
           </Button>
@@ -114,16 +147,34 @@ function MembersRoute() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[12px] font-semibold capitalize ${
-                        isOwner
-                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
-                          : "bg-surface-muted text-ink-2 border border-line"
-                      }`}
-                    >
-                      {isOwner && <Crown className="h-3.5 w-3.5 text-amber-600" />}
-                      {m.role}
-                    </span>
+                    {isOwner ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[12px] font-semibold capitalize bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                        <Crown className="h-3.5 w-3.5 text-amber-600" />
+                        Owner
+                      </span>
+                    ) : (
+                      <>
+                        <select
+                          value={m.role}
+                          disabled={m.is_current_user}
+                          onChange={(e) => handleRoleChange(m.user_id, e.target.value as any)}
+                          className="h-8 px-2.5 rounded-lg border border-line bg-surface text-ink text-[12px] font-medium outline-none cursor-pointer disabled:opacity-60"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="member">Member</option>
+                        </select>
+                        {!m.is_current_user && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingDeleteMember({ userId: m.user_id, name: displayName })}
+                            className="p-1.5 rounded-lg text-ink-3 hover:text-danger hover:bg-danger/10 transition cursor-pointer"
+                            title="Remove member from workspace"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 </li>
               );
@@ -131,6 +182,16 @@ function MembersRoute() {
           </ul>
         )}
       </Card>
+
+      {pendingDeleteMember && (
+        <ConfirmDeleteModal
+          title={`Remove ${pendingDeleteMember.name}?`}
+          description="Are you sure you want to remove this member? They will immediately lose login access to this workspace and its settings."
+          confirmLabel="Remove member"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setPendingDeleteMember(null)}
+        />
+      )}
 
       {/* Invite User Dialog Modal */}
       {openModal && (

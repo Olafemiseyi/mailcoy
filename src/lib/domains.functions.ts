@@ -220,20 +220,34 @@ export const verifyDomainNow = createServerFn({ method: "POST" })
 
     const errors: string[] = [];
 
-    const txtOk = txtRecords.some((r) => r.includes(expectedTxt));
+    const txtOk = txtRecords.some((r) => r.includes(expectedTxt) || (expectedTxt.startsWith("mailcoy-verify=") && r.includes(expectedTxt.replace("mailcoy-verify=", ""))));
     if (!txtOk) errors.push(`TXT ownership record not found (expected ${expectedTxt}).`);
 
-    // Resend inbound MX — the record customers add to receive mail through Mailcoy
-    const RESEND_MX = "inbound-smtp.us-east-1.amazonaws.com";
-    const mxOk = mxRecords.some((r) => r.toLowerCase().includes(RESEND_MX));
-    if (!mxOk) errors.push(`MX record must point to ${RESEND_MX} (Resend inbound).`);
+    // Inbound MX — points to Resend / AWS SES / Mailcoy
+    const mxOk = mxRecords.some((r) => {
+      const low = r.toLowerCase();
+      return (
+        low.includes("inbound-smtp.us-east-1.amazonaws.com") ||
+        low.includes("amazonses.com") ||
+        low.includes("mailcoy.com") ||
+        low.includes("mailcoy.connect")
+      );
+    });
+    if (!mxOk) errors.push(`MX record must point to inbound-smtp.us-east-1.amazonaws.com.`);
 
-    const spfOk = txtRecords.some(
-      (r) => r.toLowerCase().startsWith("v=spf1") && r.toLowerCase().includes("_spf.mailcoy.com"),
-    );
-    if (!spfOk) errors.push("SPF should include _spf.mailcoy.com.");
+    const spfOk = txtRecords.some((r) => {
+      const low = r.toLowerCase();
+      return (
+        low.startsWith("v=spf1") &&
+        (low.includes("include:amazonses.com") ||
+          low.includes("include:resend.com") ||
+          low.includes("_spf.mailcoy.com") ||
+          low.includes("_spf.mailcoy.connect"))
+      );
+    });
+    if (!spfOk) errors.push("SPF should include include:amazonses.com or _spf.mailcoy.com.");
 
-    const dkimOk = dkimRecords.some((r) => r.toLowerCase().includes("v=dkim1"));
+    const dkimOk = dkimRecords.some((r) => r.toLowerCase().includes("v=dkim1") || r.includes("p="));
     if (!dkimOk) errors.push(`DKIM TXT missing at ${selector}._domainkey.${name}.`);
 
     const dmarcOk = dmarcRecords.some((r) => r.toLowerCase().startsWith("v=dmarc1"));
@@ -405,7 +419,9 @@ export const autoConfigureCloudflareDNS = createServerFn({ method: "POST" })
       {
         type: "TXT",
         name: domainName,
-        content: `mailcoy-verify=${dom.txt_record_value ?? "mailcoy-ready"}`,
+        content: dom.txt_record_value?.startsWith("mailcoy-verify=")
+          ? dom.txt_record_value
+          : `mailcoy-verify=${dom.txt_record_value ?? "mailcoy-ready"}`,
         ttl: 3600,
         comment: "Mailcoy Domain Verification",
       },

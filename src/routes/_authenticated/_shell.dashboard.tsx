@@ -45,13 +45,15 @@ function DashboardRoute() {
         title="Dashboard"
         subtitle="Deliverability, team status, and recent activity at a glance."
         actions={
-          <Link to="/domains">
-            <Button variant="ghost">Add domain</Button>
+          <Link to="/domains" className="w-full sm:w-auto block">
+            <Button variant="primary" className="w-full sm:w-auto">
+              Add domain
+            </Button>
           </Link>
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <StatCard
           icon={Globe}
           label="Domains"
@@ -239,19 +241,27 @@ function StatCard({
         : "text-ink-4";
 
   return (
-    <Card className="group relative overflow-hidden p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 cursor-default">
+    <Card className="group relative overflow-hidden p-3 sm:p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/40 cursor-default min-w-0">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="relative z-10">
-        <div className="flex items-center justify-between gap-2 text-ink-3 text-[11px] uppercase tracking-wider font-medium">
-          <span className="whitespace-nowrap font-mono">{label}</span>
+      <div className="relative z-10 min-w-0">
+        <div className="flex items-center justify-between gap-1.5 min-w-0">
+          <span className="truncate text-ink-3 text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold font-mono min-w-0">
+            {label}
+          </span>
           <div
-            className={`p-1.5 rounded-md ${iconCls.includes("bg-") ? iconCls : "bg-surface-muted"}`}
+            className={`p-1.5 rounded-md shrink-0 ${iconCls.includes("bg-") ? iconCls : "bg-surface-muted"}`}
           >
-            <Icon className={`h-3.5 w-3.5 ${iconCls.includes("bg-") ? "" : iconCls}`} />
+            <Icon className={`h-3.5 w-3.5 shrink-0 ${iconCls.includes("bg-") ? "" : iconCls}`} />
           </div>
         </div>
-        <div className="mt-3 font-display text-2xl font-bold tracking-tight text-ink">{value}</div>
-        {sub && <div className={`mt-1.5 text-[11.5px] font-medium ${toneCls}`}>{sub}</div>}
+        <div className="mt-2.5 sm:mt-3 font-display text-xl sm:text-2xl font-bold tracking-tight text-ink truncate">
+          {value}
+        </div>
+        {sub && (
+          <div className={`mt-1 sm:mt-1.5 text-[11px] sm:text-[11.5px] font-medium truncate ${toneCls}`}>
+            {sub}
+          </div>
+        )}
       </div>
     </Card>
   );

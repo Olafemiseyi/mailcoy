@@ -234,7 +234,7 @@ export const overrideOrgPlan = createServerFn({ method: "POST" })
   .validator((d: unknown) =>
     z.object({
       organizationId: z.string().uuid(),
-      planCode: z.enum(["free", "starter", "pro", "enterprise"]),
+      planCode: z.enum(["free", "starter", "growth", "scale", "custom", "enterprise", "pro"]),
       status: z.enum(["active", "trialing", "canceled"]),
     }).parse(d),
   )

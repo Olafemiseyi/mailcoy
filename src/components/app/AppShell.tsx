@@ -255,18 +255,26 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile header */}
       <header className="md:hidden sticky top-0 z-30 border-b border-line bg-background/90 backdrop-blur">
-        <div className="flex h-14 items-center justify-between px-4">
-          <Link to="/dashboard" className="flex items-center gap-2 font-display font-bold text-ink">
-            <Logomark className="h-5 w-5" />
-            <span className="text-[15px]">Mailcoy</span>
-            {orgName && <span className="text-xs text-ink-4 font-normal">/ {orgName}</span>}
+        <div className="flex h-14 items-center justify-between px-4 gap-3">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2 font-display font-bold text-ink min-w-0 flex-1 overflow-hidden"
+          >
+            <Logomark className="h-5 w-5 shrink-0" />
+            <span className="text-[15px] shrink-0">Mailcoy</span>
+            {orgName && (
+              <span className="text-xs text-ink-4 font-normal truncate min-w-0 max-w-[140px] sm:max-w-[220px] whitespace-nowrap">
+                / {orgName}
+              </span>
+            )}
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <ThemeToggle />
             <button
+              type="button"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
-              className="grid h-9 w-9 place-items-center rounded-md border border-line text-ink-2"
+              className="grid h-9 w-9 place-items-center rounded-md border border-line text-ink-2 cursor-pointer"
             >
               <Menu className="h-4 w-4" />
             </button>
@@ -315,9 +323,31 @@ export function AppShell({ children }: { children: ReactNode }) {
                 );
               })}
             </nav>
+            {/* Mobile Drawer Workspace Profile Card */}
+            {orgName && (
+              <div className="mx-3 mb-2 p-2.5 rounded-xl bg-surface-muted/60 border border-line flex items-center gap-3">
+                {orgLogo ? (
+                  <img
+                    src={orgLogo}
+                    alt={orgName}
+                    className="h-9 w-9 rounded-lg object-contain bg-background border border-line p-0.5 shrink-0 shadow-2xs"
+                  />
+                ) : (
+                  <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground grid place-items-center text-sm font-bold shrink-0 shadow-2xs">
+                    {orgInitial}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold text-ink truncate">{orgName}</div>
+                  <div className="text-[11px] text-ink-3 truncate">Active Workspace</div>
+                </div>
+              </div>
+            )}
+
             <button
+              type="button"
               onClick={signOut}
-              className="m-3 flex items-center gap-3 px-3 h-11 rounded-md text-[13.5px] text-ink-3 border border-line hover:text-danger hover:bg-danger/10 transition"
+              className="mx-3 mb-3 flex items-center gap-3 px-3 h-11 rounded-xl text-[13.5px] font-medium text-ink-3 border border-line hover:text-danger hover:bg-danger/10 transition cursor-pointer"
             >
               <LogOut className="h-4 w-4" /> Sign out
             </button>
@@ -541,15 +571,25 @@ export function PageHeader({
           )}
         </div>
         {actions && (
-          <div className="flex flex-wrap items-center gap-2 shrink-0 pt-1 sm:pt-0">{actions}</div>
+          <div className="w-full sm:w-auto flex flex-wrap items-center gap-2 shrink-0 pt-1 sm:pt-0">
+            {actions}
+          </div>
         )}
       </div>
     </header>
   );
 }
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-xl border border-line bg-surface ${className}`}>{children}</div>;
+export function Card({
+  children,
+  className = "",
+  ...rest
+}: React.HTMLAttributes<HTMLDivElement> & { children?: ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-xl border border-line bg-surface ${className}`} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 export function Button({

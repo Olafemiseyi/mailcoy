@@ -64,6 +64,14 @@ export const createInvite = createServerFn({ method: "POST" })
       .eq("organization_id", ctx.organizationId).is("deleted_at", null).maybeSingle();
     if (!emp) throw new Error("Employee not found");
 
+    // Revoke any existing active invitations for this employee
+    await context.supabase
+      .from("employee_invitations")
+      .update({ revoked_at: new Date().toISOString() } as never)
+      .eq("employee_id", data.employeeId)
+      .eq("organization_id", ctx.organizationId)
+      .is("revoked_at", null);
+
     const token = randomToken();
     const { data: inv, error } = await context.supabase
       .from("employee_invitations")

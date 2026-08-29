@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient, useSuspenseQuery, queryOptions, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, Button } from "@/components/app/AppShell";
 import { X, Send, Copy, QrCode, RefreshCw, Check, Mail, MessageSquare, Link2 } from "lucide-react";
 import { createInvite, revokeInvite, listInvitesForEmployee } from "@/lib/invitations.functions";
+import QRCode from "qrcode";
 
 export type EmpRef = {
   id: string;
@@ -42,10 +43,19 @@ export function InviteModal({ employee, onClose }: { employee: EmpRef; onClose: 
 
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [sentVia, setSentVia] = useState<SendChannel | null>(null);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const url = activeInvite ? `${origin}/invite/${activeInvite.token}` : "";
+
+  useEffect(() => {
+    if (url && showQR) {
+      QRCode.toDataURL(url, { width: 200, margin: 2, color: { dark: "#0f172a", light: "#ffffff" } })
+        .then(setQrDataUrl)
+        .catch(() => setQrDataUrl(null));
+    }
+  }, [url, showQR]);
 
   async function copy() {
     if (!url) return;
@@ -185,12 +195,18 @@ export function InviteModal({ employee, onClose }: { employee: EmpRef; onClose: 
               {/* QR Code */}
               {showQR && (
                 <div className="grid place-items-center rounded-xl border border-line bg-white p-5">
-                  <img
-                    alt="Invite QR code"
-                    width={180}
-                    height={180}
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`}
-                  />
+                  {qrDataUrl ? (
+                    <img
+                      alt="Invite QR code"
+                      width={180}
+                      height={180}
+                      src={qrDataUrl}
+                    />
+                  ) : (
+                    <div className="h-[180px] w-[180px] flex items-center justify-center text-ink-3 text-xs">
+                      Generating QR...
+                    </div>
+                  )}
                   <p className="mt-2 text-[11.5px] text-ink-3">Scan with a phone camera</p>
                 </div>
               )}

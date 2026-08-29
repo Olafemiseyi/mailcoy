@@ -247,24 +247,26 @@ function DomainsList() {
       />
 
       {/* Deliverability Insurance & DNS Health Monitor Banner */}
-      <Card className="p-4 sm:p-5 mb-6 border-emerald-500/30 bg-emerald-500/[0.03]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="h-5 w-5" />
+      <Card className="p-3.5 sm:p-5 mb-6 border-emerald-500/30 bg-emerald-500/[0.03] min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+          <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="grid h-8 w-8 sm:h-9 sm:w-9 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mt-0.5">
+              <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div className="min-w-0">
-              <h3 className="font-display text-[14.5px] font-semibold text-ink flex items-center gap-2">
-                Deliverability Insurance Active
-                <span className="text-[10px] uppercase font-bold tracking-wider bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
-                  Automated Monitor
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h3 className="font-display text-[13.5px] sm:text-[14.5px] font-semibold text-ink">
+                  Deliverability Insurance Active
+                </h3>
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  Auto-Monitored
                 </span>
-              </h3>
-              <p className="text-[12.5px] text-ink-3 mt-0.5 leading-relaxed">
+              </div>
+              <p className="text-[11.5px] sm:text-[12.5px] text-ink-3 mt-1 leading-relaxed">
                 Background monitors scan your DNS records (MX, SPF, DKIM, DMARC) continuously. You will receive an instant email alert if records break at your registrar.
               </p>
               {healthStatusMessage && (
-                <p className="text-[12px] font-medium text-emerald-600 dark:text-emerald-400 mt-1">
+                <p className="text-[11.5px] sm:text-[12px] font-medium text-emerald-600 dark:text-emerald-400 mt-1">
                   ✓ {healthStatusMessage}
                 </p>
               )}
@@ -275,10 +277,10 @@ function DomainsList() {
             variant="ghost"
             onClick={handleRunHealthScan}
             disabled={scanningHealth}
-            className="h-8 px-3 text-[12px] shrink-0 border border-emerald-500/30 bg-surface hover:bg-emerald-500/10"
+            className="h-8 px-3 text-[12px] w-full sm:w-auto shrink-0 border border-emerald-500/30 bg-surface hover:bg-emerald-500/10 whitespace-nowrap justify-center"
           >
             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${scanningHealth ? "animate-spin" : ""}`} />
-            {scanningHealth ? "Scanning DNS…" : "Run Health Scan"}
+            {scanningHealth ? "Scanning…" : "Run Health Scan"}
           </Button>
         </div>
       </Card>

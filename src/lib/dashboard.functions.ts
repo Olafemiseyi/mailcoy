@@ -41,6 +41,7 @@ export const getDashboardSummary = createServerFn({ method: "GET" })
       { count: employeesConnected },
       { count: sentToday },
       { count: receivedToday },
+      { count: bouncedTodayCount },
       { data: recentLogsData },
     ] = await Promise.all([
       s.from("domains").select("*", { count: "exact", head: true }).eq("organization_id", org),
@@ -67,6 +68,12 @@ export const getDashboardSummary = createServerFn({ method: "GET" })
         .gte("received_at", since24h),
       s
         .from("email_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", org)
+        .eq("status", "bounced")
+        .gte("timestamp", since24h),
+      s
+        .from("email_logs")
         .select("id, sender, receiver, subject, status, timestamp")
         .eq("organization_id", org)
         .order("timestamp", { ascending: false })
@@ -82,16 +89,21 @@ export const getDashboardSummary = createServerFn({ method: "GET" })
       timestamp: m.timestamp,
     }));
 
+    const totalSent = sentToday || 0;
+    const bounced = bouncedTodayCount || 0;
+    const deliverabilityPct =
+      totalSent > 0 ? Math.max(0, Math.round(((totalSent - bounced) / totalSent) * 100)) : 100;
+
     return {
       hasOrganization: true,
       domainsTotal: domainsTotal || 0,
       domainsVerified: domainsVerified || 0,
       employeesTotal: employeesTotal || 0,
       employeesConnected: employeesConnected || 0,
-      sentToday: sentToday || 0,
+      sentToday: totalSent,
       receivedToday: receivedToday || 0,
-      bouncedToday: 0,
-      deliverabilityPct: 100,
+      bouncedToday: bounced,
+      deliverabilityPct,
       recentLogs,
     };
   });

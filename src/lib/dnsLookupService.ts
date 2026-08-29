@@ -99,11 +99,11 @@ export const dnsLookupService = {
    */
   async checkBlacklists(domainName: string): Promise<{ blacklisted: boolean; listedOn: string[]; totalChecked: number }> {
     const blacklists = [
-      "zen.spamhaus.org",
+      "dbl.spamhaus.org",
       "bl.spamcop.net",
       "b.barracudacentral.org",
       "dnsbl.sorbs.net",
-      "spam.dnsbl.sorbs.net"
+      "spam.dnsbl.sorbs.net",
     ];
 
     const listedOn: string[] = [];
@@ -115,9 +115,15 @@ export const dnsLookupService = {
         const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(queryName)}&type=A`);
         if (res.ok) {
           const json = await res.json();
-          // If Status is 0 and has an Answer, it is listed
-          if (json.Status === 0 && json.Answer && json.Answer.length > 0) {
-            listedOn.push(bl);
+          // If Status is 0 and has an Answer, verify it's a valid blacklist hit (not a resolver error)
+          if (json.Status === 0 && Array.isArray(json.Answer) && json.Answer.length > 0) {
+            const hasRefusal = json.Answer.some((ans: any) => {
+              const data = typeof ans.data === "string" ? ans.data.trim() : "";
+              return data.startsWith("127.255.255.") || data === "127.0.0.1" || data === "0.0.0.0";
+            });
+            if (!hasRefusal) {
+              listedOn.push(bl);
+            }
           }
         }
       } catch {

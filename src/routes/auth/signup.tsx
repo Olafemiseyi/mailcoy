@@ -8,7 +8,24 @@ import {
 } from "@/components/auth/AuthShell";
 
 export const Route = createFileRoute("/auth/signup")({
-  head: () => ({ meta: [{ title: "Create account — Mailcoy" }] }),
+  head: () => ({
+    meta: [
+      { title: "Create Your Account — Mailcoy" },
+      {
+        name: "description",
+        content: "Get started with Mailcoy and connect your custom domain to Gmail in under 5 minutes.",
+      },
+      { property: "og:title", content: "Sign Up — Mailcoy" },
+      {
+        property: "og:description",
+        content: "Professional business email on your domain via Gmail. Zero per-seat markup.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://mailcoy.com/og-image.jpg" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://mailcoy.com/og-image.jpg" },
+    ],
+  }),
   component: SignupPage,
 });
 
@@ -31,6 +48,9 @@ function SignupPage() {
       return;
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -39,11 +59,11 @@ function SignupPage() {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           emailRedirectTo: window.location.origin + "/auth/verify",
-          data: { name, full_name: name },
+          data: { name: cleanName, full_name: cleanName },
         },
       });
       setLoading(false);
@@ -55,6 +75,8 @@ function SignupPage() {
       }
       if (data?.session) {
         navigate({ to: "/onboarding" });
+      } else if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+        setError("An account with this email address already exists. Please sign in or reset your password.");
       } else {
         setSent(true);
       }

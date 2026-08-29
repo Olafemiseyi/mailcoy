@@ -1,10 +1,8 @@
-// Paystack server functions — initialize a transaction for the signed-in
-// user's organization and verify the returned reference server-side.
-// Uses PAYSTACK_SECRET_KEY (server-only).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireOrgContext, assertAdmin } from "@/server/orgContext.server";
+import { PRICING_PLANS } from "@/lib/currency";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
@@ -17,7 +15,7 @@ function requirePaystackKey(): string {
 const initSchema = z.object({
   planCode: z.string().min(3).max(64),
   interval: z.enum(["monthly", "yearly"]).default("monthly"),
-  amountKobo: z.number().int().positive().max(1_000_000_00),
+  amountKobo: z.number().int().positive().optional(),
   callbackUrl: z.string().url(),
   promoCode: z.string().trim().toUpperCase().max(32).optional(),
 });
@@ -35,8 +33,13 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
     const email = context.claims.email as string | undefined;
     if (!email) throw new Error("No email on session");
 
-    // ── Promo code validation (server-side re-check) ──────────────────────────
-    let finalAmountKobo = data.amountKobo;
+    // ── Server-authoritative plan pricing ──────────────────────────────────────
+    const plan = PRICING_PLANS.find((p) => p.code === data.planCode);
+    if (!plan || plan.code === "free") {
+      throw new Error("Invalid plan selected for checkout");
+    }
+
+    let finalAmountKobo = data.interval === "yearly" ? plan.ngnYearlyKobo : plan.ngnMonthlyKobo;
     let promoDiscountPct: number | null = null;
     let promoDuration: "once" | "forever" | null = null;
 
@@ -54,11 +57,10 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
         (!promo.expires_at || new Date(promo.expires_at) >= new Date()) &&
         (promo.max_uses === 0 || promo.current_uses < promo.max_uses)
       ) {
-        // Apply discount to this month's charge
         promoDiscountPct = promo.discount_pct as number;
         promoDuration = promo.duration as "once" | "forever";
         finalAmountKobo = Math.round(finalAmountKobo * (1 - promoDiscountPct / 100));
-        // Enforce Paystack minimum (Paystack requires at least ₦100 = 10000 kobo)
+        // Enforce Paystack minimum (at least ₦100 = 10000 kobo)
         if (finalAmountKobo < 10_000) finalAmountKobo = 10_000;
       }
     }
@@ -175,6 +177,32 @@ export const cancelSubscription = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Fetch subscription code to disable on Paystack
+    const { data: sub } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id, subscription_code, email_token")
+      .eq("organization_id", ctx.organizationId)
+      .eq("status", "active")
+      .maybeSingle() as any;
+
+    if (sub?.subscription_code && sub?.email_token) {
+      try {
+        await fetch(`${PAYSTACK_BASE}/subscription/disable`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${requirePaystackKey()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            code: sub.subscription_code,
+            token: sub.email_token,
+          }),
+        });
+      } catch (err) {
+        console.warn("[Paystack] Failed to disable subscription remotely:", err);
+      }
+    }
+
     // Update active subscriptions to canceled
     await supabaseAdmin
       .from("subscriptions")
@@ -241,16 +269,6 @@ export const getBillingOverview = createServerFn({ method: "GET" })
         } catch {}
       }
 
-      // Default mock card for preview/testing if not yet saved in DB
-      if (!card || !card.last4) {
-        card = {
-          brand: "Mastercard",
-          last4: "4242",
-          expMonth: 12,
-          expYear: 2028,
-        };
-      }
-
       // Fetch billing events
       const { data: rawEvents } = await context.supabase
         .from("billing_events")
@@ -259,38 +277,15 @@ export const getBillingOverview = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false })
         .limit(10);
 
-      let events = (rawEvents || []).map((e: any) => ({
+      const events = (rawEvents || []).map((e: any) => ({
         id: e.id,
         createdAt: e.created_at,
         reference: e.reference,
         eventType: e.event_type,
-        amountKobo: e.payload?.amount ?? 1500000,
+        amountKobo: e.payload?.amount ?? 0,
         status: e.status ?? "delivered",
         card,
       }));
-
-      if (events.length === 0) {
-        events = [
-          {
-            id: "evt-1",
-            createdAt: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-            reference: "PST_MC_9843102",
-            eventType: "charge.success",
-            amountKobo: 1500000,
-            status: "delivered",
-            card,
-          },
-          {
-            id: "evt-2",
-            createdAt: new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString(),
-            reference: "PST_MC_8721940",
-            eventType: "charge.success",
-            amountKobo: 1500000,
-            status: "delivered",
-            card,
-          },
-        ];
-      }
 
       return {
         subscription: sub || {

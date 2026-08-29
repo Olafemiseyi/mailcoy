@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveOrgContext } from "@/server/orgContext.server";
+import { requireOrgContext, resolveOrgContext, assertAdmin } from "@/server/orgContext.server";
 import { z } from "zod";
 
 const TemplateSchema = z.object({
@@ -39,8 +39,8 @@ export const saveTemplate = createServerFn({ method: "POST" })
       .parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
-    const ctx = await resolveOrgContext(context.supabase, context.userId);
-    if (!ctx) throw new Error("No org");
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    assertAdmin(ctx.role);
 
     if (data.id) {
       const { error } = await context.supabase
@@ -68,8 +68,8 @@ export const deleteTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
-    const ctx = await resolveOrgContext(context.supabase, context.userId);
-    if (!ctx) throw new Error("No org");
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    assertAdmin(ctx.role);
 
     const { error } = await context.supabase
       .from("email_templates")

@@ -1,10 +1,27 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthShell, AuthField, PrimaryButton, Divider } from "@/components/auth/AuthShell";
+import { AuthShell, AuthField, PrimaryButton } from "@/components/auth/AuthShell";
 
 export const Route = createFileRoute("/auth/login")({
-  head: () => ({ meta: [{ title: "Sign in — Mailcoy" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign in — Mailcoy" },
+      {
+        name: "description",
+        content: "Sign in to manage your company email domains, aliases, team members, and signatures on Mailcoy.",
+      },
+      { property: "og:title", content: "Sign In — Mailcoy" },
+      {
+        property: "og:description",
+        content: "Manage your business email routing, DNS authentication, and Gmail integration.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://mailcoy.com/og-image.jpg" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://mailcoy.com/og-image.jpg" },
+    ],
+  }),
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
@@ -25,12 +42,20 @@ function LoginPage() {
     setLoading(true);
     try {
       const { data, error: authErr } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
       if (authErr) throw authErr;
 
-      const target = search.redirect || "/dashboard";
+      const rawTarget = search.redirect || "/dashboard";
+      const target =
+        typeof rawTarget === "string" &&
+        rawTarget.startsWith("/") &&
+        !rawTarget.startsWith("//") &&
+        !rawTarget.includes("/auth/login")
+          ? rawTarget
+          : "/dashboard";
+
       navigate({ to: target as any });
     } catch (err: any) {
       setError(err.message || "Failed to sign in. Please check your email and password.");
@@ -71,7 +96,7 @@ function LoginPage() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="........"
+          placeholder="••••••••"
         />
 
         <div className="flex justify-end">

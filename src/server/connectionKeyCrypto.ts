@@ -5,13 +5,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 function key(): Buffer {
-  const raw =
-    process.env.APP_USER_CONNECTION_KEY_SECRET ||
-    process.env.VITE_APP_USER_CONNECTION_KEY_SECRET ||
-    (typeof import.meta !== "undefined" && import.meta.env
-      ? (import.meta.env as any).APP_USER_CONNECTION_KEY_SECRET ||
-        (import.meta.env as any).VITE_APP_USER_CONNECTION_KEY_SECRET
-      : undefined);
+  const raw = process.env.APP_USER_CONNECTION_KEY_SECRET;
 
   const clean = typeof raw === "string" ? raw.trim().replace(/^["']|["']$/g, "") : "";
   if (!clean) throw new Error("APP_USER_CONNECTION_KEY_SECRET is not set");
@@ -27,7 +21,9 @@ export function encryptConnectionKey(plaintext: string): string {
 }
 
 export function decryptConnectionKey(stored: string): string {
+  if (!stored) throw new Error("Invalid ciphertext: empty payload");
   const buf = Buffer.from(stored, "base64");
+  if (buf.length < 28) throw new Error("Invalid ciphertext: payload too short");
   const iv = buf.subarray(0, 12);
   const tag = buf.subarray(12, 28);
   const ct = buf.subarray(28);

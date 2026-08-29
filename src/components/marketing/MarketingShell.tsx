@@ -40,7 +40,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-line bg-background/85 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-line bg-background/90 backdrop-blur-xl shadow-2xs">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-5">
           <Link to="/" className="flex items-center gap-2 shrink-0">
             <Logomark />
@@ -167,102 +167,102 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         )}
       </header>
 
-      <main>{children}</main>
+      <main className="pt-14">{children}</main>
 
       <SupportChatWidget />
-      <footer className="mt-28 border-t border-line bg-surface-muted/30">
+      <footer className="mt-28 border-t border-slate-800 bg-[#090d14] text-slate-200">
         <div className="mx-auto max-w-6xl px-5 pt-16 pb-12">
           <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-5">
             {/* Brand column */}
             <div className="md:col-span-2 space-y-4">
               <div className="flex items-center gap-2.5">
                 <Logomark className="h-6 w-6 text-primary" />
-                <span className="font-display text-lg font-bold tracking-tight text-ink">
+                <span className="font-display text-lg font-bold tracking-tight text-white">
                   Mailcoy
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                  v2.4 Live
+                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                  Operational
                 </span>
               </div>
-              <p className="max-w-sm text-[13.5px] leading-relaxed text-ink-3">
+              <p className="max-w-sm text-[13.5px] leading-relaxed text-slate-400">
                 The modern business email operating system. Connect your custom domain to your team's existing Gmail inboxes with zero Google Workspace markup.
               </p>
               
               {/* Contact Email & Trust */}
-              <div className="space-y-1.5 pt-1 text-[13px] text-ink-3">
+              <div className="space-y-1.5 pt-1 text-[13px] text-slate-400">
                 <div>
-                  <span className="text-ink-4 text-[11px] uppercase tracking-wider block">Official Inquiries:</span>
-                  <a href="mailto:hello@mailcoy.com" className="font-mono text-ink hover:text-primary transition font-medium">hello@mailcoy.com</a>
+                  <span className="text-slate-500 text-[11px] uppercase tracking-wider block font-mono">Official Inquiries:</span>
+                  <a href="mailto:hello@mailcoy.com" className="font-mono text-slate-200 hover:text-primary transition font-medium">hello@mailcoy.com</a>
                 </div>
               </div>
 
               {/* Live Status Badge */}
               <Link
                 to="/status"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-line bg-surface text-[12px] text-ink-2 shadow-xs hover:border-primary/40 transition group"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-800 bg-slate-900/90 text-[12px] text-slate-300 shadow-xs hover:border-slate-700 hover:text-white transition group"
               >
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="group-hover:text-primary transition">All Systems Operational (99.99%)</span>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="group-hover:text-white transition font-mono">All Systems Operational (99.99%)</span>
               </Link>
 
               {/* Trust & Security Badges */}
-              <div className="pt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-ink-4">
-                <span className="flex items-center gap-1 font-mono">🔒 TLS 1.3 Encryption</span>
+              <div className="pt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-slate-400">
+                <span className="flex items-center gap-1 font-mono">🔒 TLS 1.3</span>
                 <span className="flex items-center gap-1 font-mono">🛡️ 100% SPF/DKIM</span>
-                <span className="flex items-center gap-1 font-mono">⚡ Sub-Second Delivery</span>
+                <span className="flex items-center gap-1 font-mono">⚡ Sub-Second Relay</span>
               </div>
             </div>
 
             {/* Product Column */}
             <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ink">
+              <h4 className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-white">
                 Product
               </h4>
               <ul className="mt-4 space-y-2.5 text-[13px]">
-                <li><Link to="/pricing" className="text-ink-3 transition-colors hover:text-primary">Pricing & Plans</Link></li>
-                <li><Link to="/auth/signup" className="text-ink-3 transition-colors hover:text-primary">Start Free Trial</Link></li>
-                <li><Link to="/auth/login" className="text-ink-3 transition-colors hover:text-primary">Customer Sign In</Link></li>
-                <li><Link to="/dashboard" className="text-ink-3 transition-colors hover:text-primary">Admin Dashboard</Link></li>
+                <li><Link to="/pricing" className="text-slate-400 transition-colors hover:text-white">Pricing & Plans</Link></li>
+                <li><Link to="/auth/signup" className="text-slate-400 transition-colors hover:text-white">Start Free Trial</Link></li>
+                <li><Link to="/auth/login" className="text-slate-400 transition-colors hover:text-white">Customer Sign In</Link></li>
+                <li><Link to="/dashboard" className="text-slate-400 transition-colors hover:text-white">Admin Dashboard</Link></li>
               </ul>
             </div>
 
             {/* Resources Column */}
             <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ink">
+              <h4 className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-white">
                 Resources
               </h4>
               <ul className="mt-4 space-y-2.5 text-[13px]">
-                <li><Link to="/docs" className="text-ink-3 transition-colors hover:text-primary">Documentation</Link></li>
-                <li><Link to="/help" className="text-ink-3 transition-colors hover:text-primary">Setup Guide & FAQs</Link></li>
-                <li><Link to="/status" className="text-ink-3 transition-colors hover:text-primary flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> System Status
+                <li><Link to="/docs" className="text-slate-400 transition-colors hover:text-white">Documentation</Link></li>
+                <li><Link to="/help" className="text-slate-400 transition-colors hover:text-white">Setup Guide & FAQs</Link></li>
+                <li><Link to="/status" className="text-slate-400 transition-colors hover:text-white flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> System Status
                 </Link></li>
-                <li><Link to="/contact" className="text-ink-3 transition-colors hover:text-primary">Help & Support</Link></li>
+                <li><Link to="/contact" className="text-slate-400 transition-colors hover:text-white">Help & Support</Link></li>
               </ul>
             </div>
 
             {/* Legal Column */}
             <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ink">
+              <h4 className="text-[11.5px] font-semibold uppercase tracking-[0.14em] text-white">
                 Legal & Trust
               </h4>
               <ul className="mt-4 space-y-2.5 text-[13px]">
-                <li><Link to="/privacy" className="text-ink-3 transition-colors hover:text-primary">Privacy Policy</Link></li>
-                <li><Link to="/terms" className="text-ink-3 transition-colors hover:text-primary">Terms of Service</Link></li>
-                <li><Link to="/about" className="text-ink-3 transition-colors hover:text-primary">About Mailcoy</Link></li>
+                <li><Link to="/privacy" className="text-slate-400 transition-colors hover:text-white">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="text-slate-400 transition-colors hover:text-white">Terms of Service</Link></li>
+                <li><Link to="/about" className="text-slate-400 transition-colors hover:text-white">About Mailcoy</Link></li>
               </ul>
             </div>
           </div>
 
           {/* Bottom Bar */}
-          <div className="mt-12 pt-8 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4 text-[12.5px] text-ink-4">
+          <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-[12.5px] text-slate-400">
             <p>© {new Date().getFullYear()} Mailcoy Technologies. All rights reserved.</p>
             <div className="flex items-center gap-6">
-              <Link to="/privacy" className="hover:text-ink transition-colors">Privacy</Link>
-              <Link to="/terms" className="hover:text-ink transition-colors">Terms</Link>
-              <Link to="/status" className="hover:text-ink transition-colors">Status</Link>
-              <Link to="/docs" className="hover:text-ink transition-colors">Docs</Link>
-              <Link to="/contact" className="hover:text-ink transition-colors">Support</Link>
+              <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link to="/status" className="hover:text-white transition-colors">Status</Link>
+              <Link to="/docs" className="hover:text-white transition-colors">Docs</Link>
+              <Link to="/contact" className="hover:text-white transition-colors">Support</Link>
             </div>
           </div>
         </div>

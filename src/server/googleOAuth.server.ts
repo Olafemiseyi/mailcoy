@@ -7,15 +7,11 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/gmail.settings.sharing",
+  "https://www.googleapis.com/auth/gmail.send",
 ];
 
 function getEnvVal(name: string): string | undefined {
-  const val =
-    process.env[name] ||
-    process.env[`VITE_${name}`] ||
-    (typeof import.meta !== "undefined" && import.meta.env
-      ? (import.meta.env as any)[name] || (import.meta.env as any)[`VITE_${name}`]
-      : undefined);
+  const val = process.env[name];
   return typeof val === "string" ? val.trim().replace(/^["']|["']$/g, "") : undefined;
 }
 

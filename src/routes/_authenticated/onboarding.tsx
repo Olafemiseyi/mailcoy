@@ -107,7 +107,7 @@ function OnboardingRoute() {
   async function submitEmployee(e: React.FormEvent) {
     e.preventDefault(); setErr(null); setBusy(true);
     try {
-      if (empName.trim() && empLocal.trim()) {
+      if (cleanDomain && empName.trim() && empLocal.trim()) {
         await addEmp({
           data: {
             full_name: empName.trim(),
@@ -310,9 +310,9 @@ function OnboardingRoute() {
                     {err && <p className="text-[13px] text-danger">{err}</p>}
 
                     <div className="flex items-center gap-2 pt-4">
-                      <Button type="submit" disabled={busy || (!empName && !empLocal)} className="flex-1">
+                      <Button type="submit" disabled={busy || (!!cleanDomain && !empName.trim() && !empLocal.trim())} className="flex-1">
                         <UserPlus className="h-4 w-4 mr-1.5" />
-                        {busy ? "Finishing…" : "Create & Finish"}
+                        {busy ? "Finishing…" : cleanDomain && empName.trim() ? "Create & Finish" : "Finish Setup"}
                       </Button>
                       <Button type="button" variant="ghost" onClick={completeOnboarding} disabled={busy}>Skip</Button>
                     </div>

@@ -17,11 +17,17 @@ export const getAnalytics = createServerFn({ method: "GET" })
 
     // Dynamic date range filter
     const now = new Date();
-    const startDate = new Date();
-    if (data.range === "today") startDate.setDate(now.getDate() - 1);
-    if (data.range === "week") startDate.setDate(now.getDate() - 7);
-    if (data.range === "month") startDate.setMonth(now.getMonth() - 1);
-    if (data.range === "year") startDate.setFullYear(now.getFullYear() - 1);
+    let startDate: Date;
+    if (data.range === "today") {
+      // Midnight 00:00:00 of current day
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    } else if (data.range === "week") {
+      startDate = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+    } else if (data.range === "month") {
+      startDate = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+    } else {
+      startDate = new Date(now.getTime() - 365 * 24 * 3600 * 1000);
+    }
 
     // Use email_logs as single source of truth — correct column names
     const { data: allLogs } = await supabaseAdmin
@@ -36,31 +42,87 @@ export const getAnalytics = createServerFn({ method: "GET" })
     const sent = sentLogs.length;
     const received = recLogs.length;
     const delivered = logs.filter((m: any) => m.status === "delivered" || m.status === "routed" || m.status === "sent").length;
-    const failed = 0;
-    const bounced = 0;
+    const failed = logs.filter((m: any) => m.status === "failed").length;
+    const bounced = logs.filter((m: any) => m.status === "bounced").length;
+    const bounceRate = sent > 0 ? Math.round((bounced / sent) * 100) : 0;
 
-    // Build time series
-    const seriesMap = new Map<string, { date: string; sent: number; received: number }>();
+    // Build labeled time series for charts
+    let series: { label: string; date: string; sent: number; received: number }[] = [];
 
-    const daysToMap = data.range === "today" ? 1 : data.range === "week" ? 7 : data.range === "month" ? 30 : 12;
-    for (let i = daysToMap; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
-      const dayStr = d.toISOString().split("T")[0];
-      seriesMap.set(dayStr, { date: dayStr, sent: 0, received: 0 });
+    if (data.range === "today") {
+      const hours = [0, 4, 8, 12, 16, 20];
+      const hourMap = new Map<number, { label: string; date: string; sent: number; received: number }>();
+      hours.forEach((h) => {
+        const period = h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`;
+        hourMap.set(h, { label: period, date: `${h}:00`, sent: 0, received: 0 });
+      });
+
+      sentLogs.forEach((m: any) => {
+        const d = new Date(m.timestamp);
+        const h = d.getHours();
+        const bucket = hours.slice().reverse().find((slot) => h >= slot) ?? 0;
+        if (hourMap.has(bucket)) hourMap.get(bucket)!.sent++;
+      });
+      recLogs.forEach((m: any) => {
+        const d = new Date(m.timestamp);
+        const h = d.getHours();
+        const bucket = hours.slice().reverse().find((slot) => h >= slot) ?? 0;
+        if (hourMap.has(bucket)) hourMap.get(bucket)!.received++;
+      });
+      series = Array.from(hourMap.values());
+    } else if (data.range === "week") {
+      const dayMap = new Map<string, { label: string; date: string; sent: number; received: number }>();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
+        const key = d.toISOString().split("T")[0];
+        const label = i === 0 ? "Today" : d.toLocaleDateString("en-US", { weekday: "short" });
+        dayMap.set(key, { label, date: key, sent: 0, received: 0 });
+      }
+      sentLogs.forEach((m: any) => {
+        const day = (m.timestamp || "").split("T")[0];
+        if (dayMap.has(day)) dayMap.get(day)!.sent++;
+      });
+      recLogs.forEach((m: any) => {
+        const day = (m.timestamp || "").split("T")[0];
+        if (dayMap.has(day)) dayMap.get(day)!.received++;
+      });
+      series = Array.from(dayMap.values());
+    } else if (data.range === "month") {
+      const dayMap = new Map<string, { label: string; date: string; sent: number; received: number }>();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
+        const key = d.toISOString().split("T")[0];
+        const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        dayMap.set(key, { label, date: key, sent: 0, received: 0 });
+      }
+      sentLogs.forEach((m: any) => {
+        const day = (m.timestamp || "").split("T")[0];
+        if (dayMap.has(day)) dayMap.get(day)!.sent++;
+      });
+      recLogs.forEach((m: any) => {
+        const day = (m.timestamp || "").split("T")[0];
+        if (dayMap.has(day)) dayMap.get(day)!.received++;
+      });
+      series = Array.from(dayMap.values());
+    } else {
+      const monthMap = new Map<string, { label: string; date: string; sent: number; received: number }>();
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        const label = d.toLocaleDateString("en-US", { month: "short" });
+        monthMap.set(key, { label, date: key, sent: 0, received: 0 });
+      }
+      sentLogs.forEach((m: any) => {
+        const ym = (m.timestamp || "").slice(0, 7);
+        if (monthMap.has(ym)) monthMap.get(ym)!.sent++;
+      });
+      recLogs.forEach((m: any) => {
+        const ym = (m.timestamp || "").slice(0, 7);
+        if (monthMap.has(ym)) monthMap.get(ym)!.received++;
+      });
+      series = Array.from(monthMap.values());
     }
 
-    sentLogs.forEach((m: any) => {
-      const day = (m.timestamp || "").split("T")[0];
-      if (!seriesMap.has(day)) seriesMap.set(day, { date: day, sent: 0, received: 0 });
-      seriesMap.get(day)!.sent++;
-    });
-    recLogs.forEach((m: any) => {
-      const day = (m.timestamp || "").split("T")[0];
-      if (!seriesMap.has(day)) seriesMap.set(day, { date: day, sent: 0, received: 0 });
-      seriesMap.get(day)!.received++;
-    });
-
-    const series = Array.from(seriesMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     const total = sent + received;
     const deliverability = total > 0 ? Math.round((delivered / total) * 100) : 100;
 
@@ -71,7 +133,7 @@ export const getAnalytics = createServerFn({ method: "GET" })
       bounced,
       failed,
       deliverability,
-      bounceRate: 0,
+      bounceRate,
       series,
       total,
     };

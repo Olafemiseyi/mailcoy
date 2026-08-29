@@ -225,7 +225,7 @@ function AdminOrgs() {
                     <div className="rounded-xl border border-line divide-y divide-line">
                       {selectedOrg.domains.map((d: any) => (
                         <div key={d.id} className="flex items-center justify-between p-3 text-[13px]">
-                          <span className="font-mono text-ink-2 truncate max-w-[180px]">{d.id}</span>
+                          <span className="font-mono text-ink font-medium truncate max-w-[180px]">{d.domain_name || d.name || d.id}</span>
                           {d.verification_status === 'verified' ? (
                             <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
                               <ShieldCheck className="h-3.5 w-3.5" /> Verified
@@ -262,9 +262,10 @@ function AdminOrgs() {
                         defaultValue={selectedOrg.plan_code || "starter"}
                         className="flex-1 h-9 rounded-md border border-line bg-background px-2.5 text-[12.5px] outline-none"
                       >
-                        <option value="free">Free (5 seats)</option>
-                        <option value="starter">Starter (25 seats)</option>
-                        <option value="pro">Pro (100 seats)</option>
+                        <option value="free">Free (1 seat, 1 domain)</option>
+                        <option value="starter">Starter Pro (5 seats, 1 domain)</option>
+                        <option value="growth">Growth (20 seats, 3 domains)</option>
+                        <option value="scale">Scale (50 seats, 10 domains)</option>
                         <option value="enterprise">Enterprise VIP (Unlimited)</option>
                       </select>
                       <button

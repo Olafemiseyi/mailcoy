@@ -60,7 +60,7 @@ export const createApiKey = createServerFn({ method: "POST" })
       .select("id, prefix, created_at, last_used_at")
       .single();
     if (error || !row) throw error ?? new Error("Failed");
-    return { ...row, full_key: full }; // only time the full key is returned
+    return { ...row, key: full, full_key: full }; // only time the full key is returned
   });
 
 export const revokeApiKey = createServerFn({ method: "POST" })
@@ -282,9 +282,82 @@ export const inviteMember = createServerFn({ method: "POST" })
 
     return {
       status: "invite_ready",
-      inviteUrl: `${process.env.APP_URL || "http://localhost:5173"}/auth/signup?invite=${encodeURIComponent(ctx.organizationId)}`,
+      inviteUrl: `${process.env.APP_URL || process.env.VITE_APP_URL || "https://mailcoy.com"}/auth/signup?invite=${encodeURIComponent(ctx.organizationId)}`,
       message: `Invitation generated for ${data.email}. Share this signup link with them.`,
     };
+  });
+
+export const removeMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    assertAdmin(ctx.role);
+
+    if (data.userId === context.userId) {
+      throw new Error("You cannot remove yourself from the workspace.");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: member } = await supabaseAdmin
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", ctx.organizationId)
+      .eq("user_id", data.userId)
+      .maybeSingle();
+
+    if (member?.role === "owner") {
+      throw new Error("Workspace owners cannot be removed.");
+    }
+
+    const { error } = await supabaseAdmin
+      .from("organization_members")
+      .delete()
+      .eq("organization_id", ctx.organizationId)
+      .eq("user_id", data.userId);
+
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const updateMemberRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        role: z.enum(["admin", "member"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    assertAdmin(ctx.role);
+
+    if (data.userId === context.userId) {
+      throw new Error("You cannot change your own role.");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: member } = await supabaseAdmin
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", ctx.organizationId)
+      .eq("user_id", data.userId)
+      .maybeSingle();
+
+    if (member?.role === "owner") {
+      throw new Error("Cannot modify the role of the workspace owner.");
+    }
+
+    const { error } = await supabaseAdmin
+      .from("organization_members")
+      .update({ role: data.role })
+      .eq("organization_id", ctx.organizationId)
+      .eq("user_id", data.userId);
+
+    if (error) throw error;
+    return { ok: true };
   });
 
 /* ---------------- PLATFORM ADMIN ---------------- */

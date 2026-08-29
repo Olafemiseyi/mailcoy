@@ -55,19 +55,10 @@ export async function resolveOrgContext(
   }
 
   const { data: members } = await query;
-
-  let member = members?.[0];
-  if (!member) {
-    // If not found by user_id, fallback to first org in DB for local development / testing
-    const { data: fallbackMembers } = await supabaseAdmin
-      .from("organization_members")
-      .select("organization_id, role")
-      .limit(1);
-    member = fallbackMembers?.[0];
-  }
+  const member = members?.[0];
 
   if (!member) {
-    return null; // No organization found
+    return null; // No organization found for this user
   }
 
   const orgId = member.organization_id;

@@ -68,30 +68,18 @@ export async function sendEmployeeOnboardingEmail(params: OnboardingEmailParams)
             ⚡ Final 1-Minute Step: Enable Sending from Gmail
           </div>
           <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0 0 16px 0;">
-            To send and reply to emails as <strong>${professionalEmail}</strong> directly from Gmail (on desktop, iPhone, and Android), add your address in Gmail settings once:
+            To send and reply to emails as <strong>${professionalEmail}</strong> directly from Gmail (on desktop, iPhone, and Android):
           </p>
 
           <ol style="margin: 0; padding-left: 20px; font-size: 13.5px; color: #334155; line-height: 1.7;">
             <li style="margin-bottom: 8px;">
-              Open <strong><a href="https://mail.google.com/mail/u/0/#settings/accounts" target="_blank" style="color: #2563eb; text-decoration: underline;">Gmail Settings → Accounts and Import</a></strong>.
+              Your 1-click Google OAuth connection has automatically authorized your Send-As alias.
             </li>
             <li style="margin-bottom: 8px;">
-              In the <em>"Send mail as"</em> section, click <strong>"Add another email address"</strong>.
-            </li>
-            <li style="margin-bottom: 12px;">
-              Enter your name (<strong>${employeeName || "Your Name"}</strong>), email (<strong>${professionalEmail}</strong>), and leave <em>"Treat as an alias"</em> checked. Click <strong>Next Step</strong>.
+              When composing a new message or replying in Gmail, tap or click the <strong>"From"</strong> line and choose <strong>${professionalEmail}</strong>.
             </li>
             <li style="margin-bottom: 8px;">
-              Fill in the SMTP configuration popup:
-              <div style="margin-top: 10px; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-size: 12px; font-family: monospace;">
-                <div style="margin-bottom: 4px;"><strong>SMTP Server:</strong> smtp.resend.com</div>
-                <div style="margin-bottom: 4px;"><strong>Port:</strong> 465 &nbsp;(Select SSL)</div>
-                <div style="margin-bottom: 4px;"><strong>Username:</strong> resend</div>
-                <div><strong>Password:</strong> ${resendApiKey}</div>
-              </div>
-            </li>
-            <li>
-              Click <strong>Add Account</strong>.
+              You can set it as your default sending address anytime in <strong><a href="https://mail.google.com/mail/u/0/#settings/accounts" target="_blank" style="color: #2563eb; text-decoration: underline;">Gmail Settings → Accounts and Import</a></strong>.
             </li>
           </ol>
         </div>

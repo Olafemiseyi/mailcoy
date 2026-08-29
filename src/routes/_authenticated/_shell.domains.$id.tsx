@@ -222,8 +222,8 @@ function DomainDetailRoute() {
     {
       key: "DKIM (Email Signing)",
       type: "TXT",
-      host: `$._domainkey`,
-      value: d.dkim_value ?? "v=DKIM1; k=rsa; p=<generated when SES is wired>",
+      host: `${d.dkim_selector || "mailcoy"}._domainkey`,
+      value: d.dkim_value ?? "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3...",
       priority: null,
       status: d.dkim_status,
       hint: "Cryptographic signature preventing email tampering",
@@ -241,7 +241,7 @@ function DomainDetailRoute() {
 
   const [autoChecking, setAutoChecking] = useState(false);
 
-  // Real-time automatic background verifier (checks every 5s until verified)
+  // Real-time automatic background verifier (checks every 12s until verified)
   useEffect(() => {
     const isFullyVerified =
       d.verification_status === "verified" &&
@@ -264,7 +264,7 @@ function DomainDetailRoute() {
       } finally {
         if (isMounted) setAutoChecking(false);
       }
-    }, 5000);
+    }, 12000);
 
     return () => {
       isMounted = false;
@@ -416,16 +416,16 @@ function DomainDetailRoute() {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 w-full sm:w-auto">
             <button
               onClick={() => setShowShareModal(true)}
-              className="px-3 py-1.5 rounded-lg border border-line bg-surface text-ink text-[12px] font-semibold hover:bg-ink/5 transition flex items-center gap-1.5"
+              className="flex-1 sm:flex-none justify-center px-3 py-1.5 rounded-lg border border-line bg-surface text-ink text-[12px] font-semibold hover:bg-ink/5 transition flex items-center gap-1.5 whitespace-nowrap"
             >
               <Send className="h-3.5 w-3.5 text-primary" /> Send to Webmaster
             </button>
             <button
               onClick={() => setShowVisualGuide(true)}
-              className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[12px] font-semibold hover:bg-emerald-500/20 transition flex items-center gap-1.5"
+              className="flex-1 sm:flex-none justify-center px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[12px] font-semibold hover:bg-emerald-500/20 transition flex items-center gap-1.5 whitespace-nowrap"
             >
               <HelpCircle className="h-3.5 w-3.5" /> Visual Guide
             </button>
@@ -439,7 +439,7 @@ function DomainDetailRoute() {
       {/* Cloudflare-Friendly DNS Records Card */}
       <Card className="p-0 mb-6 overflow-hidden">
         {/* Section Tabs */}
-        <div className="p-3 sm:p-4 border-b border-line bg-surface-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+        <div className="sticky top-14 md:top-0 z-10 p-3 sm:p-4 border-b border-line bg-surface/95 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shadow-xs">
           <div className="grid grid-cols-2 gap-1 p-1 bg-surface border border-line rounded-xl w-full sm:w-auto sm:flex sm:items-center">
             <button
               onClick={() => setActiveTab("required")}

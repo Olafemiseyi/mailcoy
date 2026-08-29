@@ -1,94 +1,84 @@
 import { Link } from "@tanstack/react-router";
-import { Eye, EyeOff, Mail, Shield, Zap } from "lucide-react";
+import { Eye, EyeOff, Mail, Shield, Zap, Lock, Sparkles, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Logomark } from "@/components/brand/Logomark";
 
-/* ─── Feature bullets shown on the right panel ─────────────────────────────── */
+/* ─── Feature bullets shown on the left panel ─────────────────────────────── */
 const FEATURES = [
-  { icon: Mail, text: "Sync every employee's Gmail in minutes" },
-  { icon: Shield, text: "Domain verification & DKIM/SPF managed for you" },
-  { icon: Zap, text: "Real-time email analytics across your whole team" },
+  { icon: Mail, text: "Connect any custom domain to existing Gmail inboxes" },
+  { icon: Shield, text: "Automated SPF, DKIM, and DMARC alignment" },
+  { icon: Zap, text: "Sub-200ms inbound forwarding with zero seat fees" },
 ];
 
 /* ─── Security & Platform Assurance ───────────────────────────────────────── */
 const PLATFORM_ASSURANCE = {
   headline: "Enterprise-Grade Reliability & Security",
-  statement: "Automated SPF, DKIM & DMARC alignment guarantees sub-second inbox delivery directly through your custom domain with 99.99% uptime.",
-  certifications: ["TLS 1.3 Encryption", "Zero Google Workspace Markup", "Always Free Tier"],
+  statement: "Google CASA-compliant token architecture ensures zero employee passwords are ever requested or stored.",
+  certifications: ["TLS 1.3 Encryption", "Zero Workspace Markup", "Free Tier Available"],
 };
 
-/* ─── Right panel ───────────────────────────────────────────────────────────── */
+/* ─── Left panel (desktop only) ───────────────────────────────────────────── */
 function AuthPanel() {
   return (
-    <div className="auth-panel relative hidden lg:flex flex-col justify-between overflow-hidden">
-      {/* Background image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/auth-panel.png')" }}
-        aria-hidden="true"
-      />
-      {/* Overlay gradient */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(160deg, rgba(10,10,20,0.55) 0%, rgba(10,10,20,0.85) 100%)",
-        }}
-        aria-hidden="true"
-      />
+    <div className="auth-panel relative hidden lg:flex flex-col justify-between overflow-hidden bg-ink text-primary-foreground p-12">
+      {/* Ambient background mesh glow */}
+      <div className="pointer-events-none absolute -top-24 -left-24 w-[450px] h-[450px] bg-primary/20 blur-[130px] rounded-full" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 w-[450px] h-[450px] bg-emerald-500/15 blur-[130px] rounded-full" />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col justify-between h-full p-10">
+      <div className="relative z-10 flex flex-col justify-between h-full">
         {/* Logo */}
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2.5 w-fit">
           <Logomark className="h-6 w-6 text-white" />
-          <span className="font-display text-[15px] font-semibold text-white tracking-tight">
+          <span className="font-display text-[17px] font-bold text-white tracking-tight">
             Mailcoy
           </span>
-        </div>
+        </Link>
 
         {/* Middle content */}
-        <div className="space-y-8">
-          <div>
-            <h2 className="font-display text-3xl font-bold text-white leading-tight">
-              Professional email,
-              <br />
+        <div className="space-y-8 my-auto py-12">
+          <div className="space-y-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-[11px] font-semibold text-white/90 uppercase tracking-widest">
+              <Sparkles className="h-3 w-3 text-amber-300" /> Modern Email OS
+            </span>
+            <h2 className="font-display text-[34px] xl:text-[40px] font-bold text-white leading-[1.1] tracking-tight">
+              Professional email, <br />
               built for modern teams.
             </h2>
-            <p className="mt-3 text-[14px] text-white/60 max-w-xs leading-relaxed">
-              One platform to route, authenticate and manage your custom domain email with existing Gmail inboxes.
+            <p className="text-[14.5px] text-white/70 max-w-sm leading-relaxed">
+              Route, authenticate, and manage your company's custom domain email using the Gmail inboxes your staff already love.
             </p>
           </div>
 
-          <ul className="space-y-3">
+          <ul className="space-y-3.5">
             {FEATURES.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-center gap-3">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/10 backdrop-blur-sm">
-                  <Icon className="h-4 w-4 text-white" />
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/10 border border-white/15 text-white shadow-2xs">
+                  <Icon className="h-4 w-4" />
                 </span>
-                <span className="text-[13px] text-white/80">{text}</span>
+                <span className="text-[13.5px] text-white/85 font-medium">{text}</span>
               </li>
             ))}
           </ul>
         </div>
 
         {/* Enterprise Security & Assurance Statement */}
-        <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-5 space-y-3">
+        <div className="rounded-2xl border border-white/15 bg-white/[0.06] backdrop-blur-md p-5 space-y-2.5 shadow-xl">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <p className="text-[12.5px] font-bold text-white tracking-tight">
               {PLATFORM_ASSURANCE.headline}
             </p>
           </div>
-          <p className="text-[13px] text-white/80 leading-relaxed">
+          <p className="text-[12.5px] text-white/75 leading-relaxed">
             {PLATFORM_ASSURANCE.statement}
           </p>
           <div className="pt-1 flex flex-wrap items-center gap-2">
             {PLATFORM_ASSURANCE.certifications.map((tag) => (
               <span
                 key={tag}
-                className="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-white/10 text-white/90 border border-white/15"
+                className="px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-medium bg-white/10 text-white/90 border border-white/15"
               >
                 {tag}
               </span>
@@ -117,33 +107,33 @@ export function AuthShell({
   return (
     <div className="auth-layout min-h-screen bg-background text-foreground">
       <div
-        className={`min-h-screen grid ${showPanel ? "lg:grid-cols-[1fr_1fr]" : ""}`}
+        className={`min-h-screen grid ${showPanel ? "lg:grid-cols-[1.1fr_1fr]" : ""}`}
       >
         {/* Left panel (desktop only) */}
         {showPanel && <AuthPanel />}
 
         {/* Right: form column */}
-        <div className="flex flex-col relative overflow-y-auto">
+        <div className="flex flex-col relative overflow-y-auto bg-background">
           {/* Mobile / top nav */}
           <header className="flex items-center justify-between px-6 py-4 border-b border-line lg:border-none sticky top-0 bg-background/80 backdrop-blur-md z-10">
             <Link
               to="/"
-              className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight"
+              className="flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight text-ink"
             >
-              <Logomark className="h-5 w-5" />
+              <Logomark className="h-5 w-5 text-primary" />
               Mailcoy
             </Link>
           </header>
 
           <main className="flex flex-1 items-center justify-center px-6 py-12">
-            <div className="w-full max-w-[400px] animate-fadeInUp">
+            <div className="w-full max-w-[400px]">
               {/* Heading */}
-              <div className="mb-8">
-                <h1 className="font-display text-[26px] font-bold tracking-tight">
+              <div className="mb-8 space-y-1.5">
+                <h1 className="font-display text-[28px] font-bold tracking-tight text-ink">
                   {title}
                 </h1>
                 {subtitle && (
-                  <p className="mt-2 text-[14px] text-ink-3 leading-relaxed">
+                  <p className="text-[14px] text-ink-3 leading-relaxed">
                     {subtitle}
                   </p>
                 )}

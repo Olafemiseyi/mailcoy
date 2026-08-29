@@ -120,7 +120,25 @@ export async function lookupRdap(domain: string): Promise<RdapResult> {
     clearTimeout(timeout);
 
     if (res.status === 404) {
-      // 404 in RDAP means domain is NOT registered (Available!)
+      // Secondary check: verify if domain has active nameservers via DoH before declaring unregistered
+      try {
+        const dohRes = await fetch(
+          `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(cleanDomain)}&type=NS`,
+          { headers: { Accept: "application/dns-json" } }
+        );
+        if (dohRes.ok) {
+          const dohJson = await dohRes.json();
+          if (dohJson.Status === 0 && Array.isArray(dohJson.Answer) && dohJson.Answer.length > 0) {
+            return {
+              ...fallbackResult,
+              isRegistered: true,
+            };
+          }
+        }
+      } catch {
+        // ignore secondary check error
+      }
+
       return {
         ...fallbackResult,
         isRegistered: false,

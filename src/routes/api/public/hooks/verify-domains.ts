@@ -49,23 +49,37 @@ export const Route = createFileRoute("/api/public/hooks/verify-domains")({
           const selector = (d as { dkim_selector: string | null }).dkim_selector ?? "mailcoy";
           const expectedTxt = (d as { txt_record_value: string | null }).txt_record_value ?? "";
 
-          const [txt, mx, dkim, dmarc] = await Promise.all([
+          const [txt, mx, dkimTxt, dkimCname, dmarc] = await Promise.all([
             doh(name, "TXT"),
             doh(name, "MX"),
             doh(`${selector}._domainkey.${name}`, "TXT"),
+            doh(`${selector}._domainkey.${name}`, "CNAME" as any),
             doh(`_dmarc.${name}`, "TXT"),
           ]);
 
-          const txtOk = txt.some((r) => r.includes(expectedTxt));
-          const mxOk = REQUIRED_MX.every((needle) =>
-            mx.some((r) => r.toLowerCase().includes(needle)),
-          );
-          const spfOk = txt.some(
-            (r) =>
-              r.toLowerCase().startsWith("v=spf1") &&
-              r.toLowerCase().includes("_spf.mailcoy.connect"),
-          );
-          const dkimOk = dkim.some((r) => r.toLowerCase().includes("v=dkim1"));
+          const txtOk = txt.some((r) => r.includes(expectedTxt) || (expectedTxt.startsWith("mailcoy-verify=") && r.includes(expectedTxt.replace("mailcoy-verify=", ""))));
+          const mxOk = mx.some((r) => {
+            const low = r.toLowerCase();
+            return (
+              low.includes("inbound-smtp.us-east-1.amazonaws.com") ||
+              low.includes("amazonses.com") ||
+              low.includes("mailcoy.com") ||
+              low.includes("mailcoy.connect")
+            );
+          });
+          const spfOk = txt.some((r) => {
+            const low = r.toLowerCase();
+            return (
+              low.startsWith("v=spf1") &&
+              (low.includes("include:amazonses.com") ||
+                low.includes("include:resend.com") ||
+                low.includes("_spf.mailcoy.com") ||
+                low.includes("_spf.mailcoy.connect"))
+            );
+          });
+          const dkimOk =
+            dkimTxt.some((r) => r.toLowerCase().includes("v=dkim1")) ||
+            dkimCname.length > 0;
           const dmarcOk = dmarc.some((r) => r.toLowerCase().startsWith("v=dmarc1"));
 
           const verified = txtOk && mxOk;

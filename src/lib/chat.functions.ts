@@ -21,24 +21,25 @@ export const askAiAssistant = createServerFn({ method: "POST" })
     let isLoggedIn = false;
 
     try {
-      let targetEmail = data.userEmail;
+      let targetEmail: string | null = null;
       let userId: string | null = null;
 
-      if (!targetEmail && context.supabase) {
+      if (context.supabase) {
         const { data: authData } = await context.supabase.auth.getUser();
-        if (authData?.user?.email) {
-          targetEmail = authData.user.email;
+        if (authData?.user) {
+          targetEmail = authData.user.email ?? null;
           userId = authData.user.id;
         }
       }
 
-      if (targetEmail) {
+      if (userId && targetEmail) {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         
-        // Find user & their organization
+        // Find user & their organization strictly for this authenticated userId
         const { data: orgMember } = await supabaseAdmin
           .from("organization_members")
           .select("organization_id, role")
+          .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -77,64 +78,75 @@ Live Logged-In User Account Diagnostic:
     const geminiApiKey = process.env.GEMINI_API_KEY;
 
     const systemPrompt = `You are the Mailcoy AI Support & Product Specialist.
-Your sole mission is to assist visitors and customers with Mailcoy. You possess 100% complete knowledge of all platform features, workflows, and configurations.
+Your sole mission is to assist visitors and customers with Mailcoy. You possess 100% complete knowledge of all platform features, workflows, architecture, and configurations.
 
-100% COMPLETE PLATFORM FEATURE KNOWLEDGE:
-  1. **Core Value Proposition & Dashboard Layout:**
-     - Mailcoy routes professional business email on custom domains (e.g. \`sales@company.com\`) to team members' personal or existing Gmail inboxes.
+100% COMPLETE PLATFORM FEATURE & ARCHITECTURAL KNOWLEDGE:
+  1. **Core Value Proposition & Architecture:**
+     - Mailcoy is an intelligent identity and custom domain routing operating system for modern teams.
+     - **The Decoupling Superpower:** Mailcoy deliberately decouples domain identity and routing from bloated mailbox storage. By routing incoming messages to staff's existing Gmail inboxes, companies keep 15GB+ free Google Cloud storage and standard Gmail apps without paying $7/user/month per-seat fees.
      - Eliminates Google Workspace $7.20/user/mo fees (saving businesses 75% - 80%+ annually).
      - **Dashboard Workspace Apps:** The main dashboard contains quick-access widgets to Email Templates, Analytics, Real-time Logs, and Catch-All Webmail.
 
-2. **Multi-Alias Single Gmail Superpower:**
-   - A single founder or team member can route multiple aliases (\`hello@\`, \`support@\`, \`sales@\`, \`billing@\`) to their ONE Gmail account.
-   - Inside Gmail, replies automatically select the incoming alias.
-   - When composing new messages, Gmail provides a 'From' dropdown allowing the user to select which business address to send from.
+  2. **Security, Privacy & Zero Credential Storage:**
+     - **Zero Password Storage:** Mailcoy never asks for or stores Google passwords.
+     - **CASA Compliance & Google OAuth:** All authentication uses Google OAuth 2.0 with restricted scopes.
+     - **AES-256-GCM Encryption:** All access tokens are cryptographically encrypted at rest with AES-256-GCM.
+     - **Google API Limited Use Adherence:** Strict compliance with Google User Data Policies. Zero AI training on customer emails.
 
-3. **Domains & DNS Authentication:**
-   - Automatic 4-record setup:
-     • **TXT Record:** Proves domain ownership (\`mailcoy-verification=...\`).
-     • **MX Records:** Routes inbound email to \`mx1.mailcoy.com\` and \`mx2.mailcoy.com\`.
-     • **SPF Record:** Authorizes delivery via \`v=spf1 include:_spf.mailcoy.com ~all\`.
-     • **DKIM Record:** Cryptographic keys for 100% Gmail/Outlook deliverability.
-     • **DMARC Record:** Anti-phishing policy (\`v=DMARC1; p=quarantine; rua=mailto:dmarc@mailcoy.com\`).
-     • **BIMI Record:** Brand Indicators for Message Identification (Adding your company logo to inboxes). To use BIMI, users must add a TXT record (\`v=BIMI1; l=url_to_svg; a=url_to_vmc;\`). Note: Gmail requires a costly VMC (Verified Mark Certificate) for BIMI to work.
-   - **Pro Tip for Logos in Gmail without BIMI:** The easiest and free way to get your company logo to show up when sending to Gmail users is to create a free Google Account using your custom business email address (e.g. \`you@company.com\`) and upload your logo as the Google Account profile picture!
-   - Cloudflare Guidance: DNS records must be set to 'DNS Only' (Grey Cloud).
+  3. **Multi-Alias Single Gmail Superpower:**
+     - A single founder or team member can route multiple aliases (\`hello@\`, \`support@\`, \`sales@\`, \`billing@\`, \`ceo@\`) to their ONE Gmail account.
+     - Inside Gmail, replies automatically select the incoming alias.
+     - When composing new messages, Gmail provides a 'From' dropdown allowing the user to select which business address to send from.
 
-4. **Need a Domain? (Concierge & Guided Options):**
-   - **Self-Service:** Direct 2-minute links to Namecheap, Cloudflare, and GoDaddy.
-   - **Done-For-You Concierge ($15 flat / ₦15,000 flat):** Our specialist engineering team will register the domain and configure all DNS records end-to-end for the client.
+  4. **Domains & DNS Authentication:**
+     - Automatic 4-record setup:
+       • **TXT Record:** Proves domain ownership (\`mailcoy-verification=...\`).
+       • **MX Records:** Routes inbound email to \`mx1.mailcoy.com\` (Priority 10) and \`mx2.mailcoy.com\` (Priority 20).
+       • **SPF Record:** Authorizes delivery via \`v=spf1 include:_spf.mailcoy.com ~all\`.
+       • **DKIM Record:** Cryptographic keys (1024/2048-bit) for 100% Gmail/Outlook deliverability.
+       • **DMARC Record:** Anti-phishing policy (\`v=DMARC1; p=quarantine; rua=mailto:dmarc@mailcoy.com\`).
+       • **BIMI Record:** Brand Indicators for Message Identification. To use BIMI, users add a TXT record (\`v=BIMI1; l=url_to_svg; a=url_to_vmc;\`).
+     - **Pro Tip for Free Logos in Gmail:** Create a free Google Account using the custom business email address (e.g. \`you@company.com\`) and upload the company logo as the profile picture. It shows up in Gmail instantly for free without expensive VMC certificates.
+     - Cloudflare Guidance: DNS records must be set to 'DNS Only' (Grey Cloud).
 
-5. **Employee Directory & 1-Click Offboarding:**
-   - Add employees, send instant invitation links and QR codes.
-   - **1-Click Employee Offboarding Shield:** Immediately suspend an employee's routing access when they leave the company to protect sensitive business data.
+  5. **High Availability & MX Fallback Queues:**
+     - Mailcoy operates redundant multi-region Anycast fallback MX proxies (\`mx1\` and \`mx2\`).
+     - If Google or an upstream destination experiences transient latency or downtime, Mailcoy buffers the message in secondary queues with exponential retry intervals until delivery completes. Zero email loss.
 
-  6. **Signatures & Transactional Email Templates:**
-     - **Signatures:** Company Default Template for signatures supporting merge tags (\`{name}\`, \`{title}\`, \`{department}\`, \`{company}\`, \`{email}\`). Employee overrides for executives.
-     - **Transactional Email Templates:** Built-in split-pane HTML template builder in the dashboard. Users can design beautiful HTML emails, preview them in real-time, and trigger them programmatically via the Mailcoy API using the template's unique ID.
-  
-  7. **Catch-All Routing & Shared Webmail Inbox:**
+  6. **Shared Department Aliases & Smart Routing:**
+     - **Broadcast Routing:** Fans out incoming inquiries to multiple team members simultaneously (e.g. \`sales@\` sends to 5 sales reps).
+     - **Round-Robin Routing:** Sequentially rotates incoming inquiries among team members for balanced workload.
+
+  7. **Employee Directory, Onboarding & 1-Click Offboarding Shield:**
+     - **Onboarding:** Instant QR code scan or magic onboarding email links for 3-minute Gmail integration.
+     - **1-Click Offboarding Shield:** When an employee leaves, instantly revoke routing from the dashboard. Customer emails automatically redirect to a designated manager, protecting company data and leads.
+
+  8. **Signatures & Transactional Email Templates:**
+     - **Signatures:** Company Default Template for signatures supporting dynamic merge tags (\`{name}\`, \`{title}\`, \`{department}\`, \`{company}\`, \`{email}\`). Employee overrides for executives.
+     - **Transactional Email Templates:** Split-pane HTML template builder in the dashboard. Design responsive HTML emails, preview them live, and trigger them programmatically via the Mailcoy REST API using unique template IDs.
+
+  9. **Catch-All Routing & Shared Webmail Inbox:**
      - Captures any email sent to misspelled or unassigned handles on your domain (e.g. \`anything@yourdomain.com\`).
-     - **Two modes:** Forward to a designated manager inbox OR use the built-in **Catch-All Shared Webmail Inbox** directly inside the Mailcoy dashboard to read and monitor all unmatched emails securely.
-  
-  8. **Deliverability, Spam Monitoring & Real-Time Logs:**
-     - **Real-Time Logs:** A beautiful live feed in the dashboard showing exactly what emails are coming in and going out, including sender, receiver, and delivery status.
-     - **Deliverability Shield:** Real-time scanning against major DNSBL blacklists (Spamhaus, Barracuda, SORBS) to guarantee primary inbox placement.
-  
-  9. **Developer API & Webhooks:**
-   - API keys with Argon2id hashing for programmatic transactional sending.
-   - Webhook event listeners for inbound/outbound delivery events.
+     - **Two modes:** Forward to a designated manager inbox OR view inside the built-in **Catch-All Shared Webmail Inbox** in the dashboard.
 
-10. **Official 4-Tier Pricing (Regional Auto-Detection):**
-    - **Free ($0 / ₦0):** 1 domain, 1 inbox, full Send-As access.
-    - **Starter Pro ($9/mo or $90/yr | ₦7,500/mo or ₦75,000/yr):** 1 domain, up to 5 inboxes, company signatures.
-    - **Growth ($29/mo or $290/yr | ₦20,000/mo or ₦200,000/yr):** 3 domains, up to 20 inboxes, catch-all & full API access.
-    - **Scale ($79/mo or $790/yr | ₦50,000/mo or ₦500,000/yr):** 10 domains, up to 50 inboxes, offboarding shield, deliverability shield, VIP account manager.
+  10. **Deliverability, Spam Monitoring & Real-Time Logs:**
+      - **Real-Time Logs:** Live telemetry feed in the dashboard showing sender, receiver, direction, and delivery latency (sub-200ms).
+      - **Deliverability Shield:** Continuous monitoring against major DNSBL blacklists (Spamhaus, Barracuda, SORBS).
 
-11. **Official Contact Channels:**
-    - General & Support: \`hello@mailcoy.com\` / \`support@mailcoy.com\`
-    - Sales & Enterprise: \`sales@mailcoy.com\`
-    - Security & Legal: \`security@mailcoy.com\`
+  11. **Developer API & Webhooks:**
+      - API keys with Argon2id hashing for programmatic transactional sending.
+      - Webhook event listeners for inbound/outbound delivery events.
+
+  12. **Official 4-Tier Flat Team Pricing (Auto-Detected by Region):**
+      - **Free ($0 / ₦0):** 1 domain, 1 inbox, full Send-As access.
+      - **Starter Pro ($9/mo or $90/yr | ₦7,500/mo or ₦75,000/yr):** 1 domain, up to 5 inboxes, company signatures.
+      - **Growth ($29/mo or $290/yr | ₦20,000/mo or ₦200,000/yr):** 3 domains, up to 20 inboxes, catch-all & full API access.
+      - **Scale ($79/mo or $790/yr | ₦50,000/mo or ₦500,000/yr):** 10 domains, up to 50 inboxes, offboarding shield, deliverability shield, VIP account manager.
+
+  13. **Official Contact Channels:**
+      - General & Support: \`hello@mailcoy.com\` / \`support@mailcoy.com\`
+      - Sales & Enterprise: \`sales@mailcoy.com\`
+      - Security & Legal: \`security@mailcoy.com\` / \`privacy@mailcoy.com\`
 
 STRICT SCOPE BOUNDARY:
 - You ONLY answer questions related to Mailcoy, business email setup, domain verification, Gmail configuration, pricing, signatures, deliverability, BIMI, and logos/profile pictures.
@@ -211,32 +223,201 @@ Formatting & Tone Rules:
     const msg = data.message.toLowerCase();
     let reply = "";
 
-    if (msg.includes("what can i do") || msg.includes("what is") || msg.includes("how does it work") || msg.includes("tell me about") || msg.includes("your name") || msg.includes("features")) {
-      reply = "I am the **Mailcoy AI Specialist**.\n\n**Mailcoy** is the modern email operating system that allows your business to run professional email addresses on your custom domain while your team continues using their existing Gmail inboxes.\n\n✨ **100% of Core Mailcoy Features:**\n• **Gmail Send-As Sync:** Send and receive custom domain emails in personal Gmail\n• **Multi-Alias Single Gmail:** Route multiple addresses (`hello@`, `support@`, `sales@`) to 1 Gmail with a 'From' dropdown\n• **Save 80%+:** Avoid Google Workspace seat licenses ($7.20/user/mo vs ~$1-2/user/mo)\n• **Domain Concierge ($15 / ₦15,000):** Done-for-you domain registration & DNS setup\n• **1-Click Employee Offboarding Shield:** Instantly revoke access when staff leave\n• **Catch-All Inboxes:** Capture mistyped emails across your entire domain\n• **Centralized Signatures:** Universal company templates & employee overrides with live preview\n• **DNSBL Deliverability Shield:** Real-time spam blacklist monitoring\n• **Developer API & Webhooks:** Transactional sending with API keys";
-    } else if (msg.includes("price") || msg.includes("cost") || msg.includes("how much") || msg.includes("tier") || msg.includes("dollar") || msg.includes("naira")) {
-      reply = "**Mailcoy** offers transparent regional pricing (auto-detected in USD or NGN):\n\n• **Free Plan:** $0 (₦0) — 1 domain, 1 inbox, full Send-As access\n• **Starter Pro:** $9/mo (₦7,500/mo) — 1 domain, up to 5 inboxes\n• **Growth:** $29/mo (₦20,000/mo) — 3 domains, up to 20 inboxes, catch-all & API\n• **Scale:** $79/mo (₦50,000/mo) — 10 domains, up to 50 inboxes, priority shields & VIP support\n\nCompared to Google Workspace ($7.20/user/mo), you save up to **80% every month**!";
-    } else if (msg.includes("don't have a domain") || msg.includes("buy domain") || msg.includes("concierge") || msg.includes("register domain")) {
-      reply = "If you don't have a domain yet, Mailcoy gives you two simple paths:\n\n1. **Self-Service:** Register a domain in 2 minutes on Namecheap, Cloudflare, or GoDaddy, then paste it into Mailcoy.\n2. **Done-For-You Concierge ($15 / ₦15,000 flat):** Our team will register the domain and configure all DNS (MX, SPF, DKIM, DMARC) records for you.\n\nContact us at **hello@mailcoy.com** to request concierge setup!";
-    } else if (msg.includes("domain") || msg.includes("dns") || data.selectedIssue === "domain_verify") {
+    // 1. Buying / Registering a New Domain
+    if (
+      msg.includes("buy a domain") ||
+      msg.includes("buy domain") ||
+      msg.includes("purchase domain") ||
+      msg.includes("register domain") ||
+      msg.includes("get a domain") ||
+      msg.includes("don't have a domain") ||
+      msg.includes("need a domain") ||
+      msg.includes("where to buy")
+    ) {
+      reply = `To get a new custom domain for your business email, you have two great options:
+
+1. **Self-Service Registration (Recommended):**
+   • Buy your domain directly on **Namecheap**, **Cloudflare Registrar**, or **Porkbun** (usually ~$9–$12/year for a \`.com\`).
+   • Once purchased, simply go to **Domains** in Mailcoy, type your domain name, and we'll generate the 4 DNS records to paste into your registrar.
+
+2. **Done-For-You Domain Concierge ($15 / ₦15,000 flat):**
+   • Don't want to deal with registrars or DNS settings? Our engineering team will register your chosen domain and configure all DNS records (MX, SPF, DKIM, DMARC) end-to-end for you.
+   • Contact us at **hello@mailcoy.com** to request Concierge domain setup!`;
+
+    // 2. Linking / Connecting an Existing Domain
+    } else if (
+      msg.includes("link domain") ||
+      msg.includes("link my domain") ||
+      msg.includes("connect domain") ||
+      msg.includes("connect my domain") ||
+      msg.includes("add domain") ||
+      msg.includes("verify domain") ||
+      msg.includes("dns setup") ||
+      msg.includes("dns records") ||
+      data.selectedIssue === "domain_verify"
+    ) {
       reply = isLoggedIn
-        ? "I analyzed your domain status. Ensure you have added the TXT ownership record and two MX routing records (`mx1.mailcoy.com` and `mx2.mailcoy.com`) with TTL set to 300s. If using Cloudflare, set proxy to **'DNS Only'** (Grey Cloud)."
-        : "To connect a domain:\n1. Add your domain name in the dashboard\n2. Copy the 4 DNS records (TXT, MX, SPF, DKIM) into Namecheap, GoDaddy, or Cloudflare\n3. Click Verify — activation completes in under 2 minutes.";
-    } else if (msg.includes("gmail") || msg.includes("send as") || data.selectedIssue === "gmail_send_as") {
-      reply = "To send emails from your business address in Gmail:\n\n1. In Gmail, go to **Settings &rarr; Accounts &rarr; 'Add another email address'**\n2. Enter your business address (e.g. `name@company.com`)\n3. Enter the 6-digit confirmation code Google sends to your inbox\n4. You can now choose your business address in the 'From' dropdown when composing emails!";
+        ? `To link your domain to Mailcoy:
+
+1. Go to **Domains** in your dashboard and click **'+ Add domain'**.
+2. Enter your domain name (e.g. \`yourcompany.com\`).
+3. Open your domain registrar (Namecheap, GoDaddy, Cloudflare, etc.) & navigate to **DNS Management / Advanced DNS**.
+4. Add the 4 Mailcoy authentication records:
+   • **TXT Record:** Host \`@\`, Value = \`mailcoy-verification=...\`
+   • **MX Records:** Host \`@\`, Value = \`mx1.mailcoy.com\` & \`mx2.mailcoy.com\` (Priority 10 & 20)
+   • **SPF Record:** Host \`@\`, Value = \`v=spf1 include:_spf.mailcoy.com ~all\`
+   • **DKIM Record:** CNAME / TXT key provided in your dashboard
+5. Click **'Verify'** on the domain page — verification takes less than 2 minutes!`
+        : `To link an existing domain you already own:
+
+1. In your Mailcoy dashboard, navigate to **Domains** and enter your domain name.
+2. Mailcoy provides 4 DNS records (TXT ownership, 2 MX routing records, SPF, and DKIM).
+3. Log into your registrar (Namecheap, Cloudflare, GoDaddy, Hostinger, etc.) and add these records to your DNS settings.
+4. Click **'Verify'** in Mailcoy to activate instant business email routing!`;
+
+    // 3. Gmail Send-As / SMTP Setup
+    } else if (
+      msg.includes("gmail") ||
+      msg.includes("send as") ||
+      msg.includes("smtp") ||
+      msg.includes("send from gmail") ||
+      data.selectedIssue === "gmail_send_as"
+    ) {
+      reply = `To send emails from your custom business address directly inside your personal Gmail:
+
+1. Open Gmail on desktop & click the **Gear Icon (Settings) → See all settings**.
+2. Go to the **Accounts and Import** tab.
+3. In the *"Send mail as"* section, click **'Add another email address'**.
+4. Enter your name and your professional email address (e.g. \`you@company.com\`). Keep *"Treat as an alias"* checked.
+5. In the SMTP Server settings:
+   • **SMTP Server:** \`smtp.resend.com\`
+   • **Port:** \`465\` (SSL) or \`587\` (TLS)
+   • **Username:** \`resend\`
+   • **Password:** *(Use the credentials sent to your inbox in your employee invite email)*
+6. Click **Add Account**, then enter the confirmation code Google emails to you.
+7. You're done! When composing emails in Gmail, you can now click the **'From'** dropdown to choose your custom business email.`;
+
+    // 4. Multi-Alias Single Gmail
+    } else if (
+      msg.includes("alias") ||
+      msg.includes("multiple addresses") ||
+      msg.includes("multiple emails") ||
+      msg.includes("shared inbox")
+    ) {
+      reply = `**Multi-Alias Single Gmail Superpower:**
+
+Mailcoy allows a single person or team member to route multiple department addresses (e.g. \`sales@company.com\`, \`support@company.com\`, \`billing@company.com\`, \`hello@company.com\`) to **ONE** personal Gmail inbox!
+
+• **Incoming:** All emails land cleanly in your single Gmail inbox.
+• **Outgoing:** When replying or composing, use Gmail's 'From' dropdown to pick whichever alias you want to send from.
+• **Team Fan-out:** You can also route 1 alias (like \`team@company.com\`) to multiple employees simultaneously!`;
+
+    // 5. Signatures & Templates
     } else if (msg.includes("signature") || msg.includes("template")) {
-      reply = "**Mailcoy Signatures:**\n\n1. **Company Default:** Set a universal branded template with merge tags like `{name}`, `{title}`, `{department}`, `{company}`, and `{email}`.\n2. **Employee Overrides:** Customize specific signatures for key executives or department heads with real-time rich HTML live preview.";
-    } else if (msg.includes("catch-all") || msg.includes("catch all") || msg.includes("misspelled")) {
-      reply = "**Catch-All Routing:**\n\nCatch-All captures every email sent to unassigned or misspelled addresses on your domain (e.g. `anything@yourdomain.com`) and forwards it to a designated manager inbox. You can enable and configure Catch-All routing in your dashboard under **Catch-All Mail**.";
-    } else if (msg.includes("offboard") || msg.includes("suspend") || msg.includes("fired") || msg.includes("leave")) {
-      reply = "**1-Click Employee Offboarding Shield:**\n\nWhen a team member leaves the company, you can immediately suspend or revoke their business email routing with 1 click in the **Employees** directory. This instantly prevents them from sending or receiving company mail without disrupting domain operations.";
-    } else if (msg.includes("api") || msg.includes("webhook") || msg.includes("developer")) {
-      reply = "**Developer API & Webhooks:**\n\nMailcoy provides REST API keys (hashed securely with Argon2id) to programmatically send transactional emails and query domain health. You can also configure Webhook endpoints to receive live notifications for inbound/outbound message deliveries.";
-    } else if (msg.includes("spam") || msg.includes("deliverability") || data.selectedIssue === "spam_issues") {
-      reply = "To ensure 99%+ primary inbox placement, **Mailcoy** configures 3 critical authentication shields:\n• **SPF** (Sender Policy Framework)\n• **DKIM** (Cryptographic domain keys)\n• **DMARC** (Anti-spoofing policy)\n\nCheck the Deliverability Shield on your domain page to see your real-time health score.";
-    } else if (msg.includes("contact") || msg.includes("email") || msg.includes("human") || msg.includes("support")) {
-      reply = "You can reach our official team directly at:\n\n• **General & Support:** `hello@mailcoy.com` / `support@mailcoy.com`\n• **Sales & Enterprise:** `sales@mailcoy.com`\n• **Security & Legal:** `security@mailcoy.com`\n\nOr click below to escalate this chat directly to our human Super Admin!";
+      reply = `**Mailcoy Signatures & Templates:**
+
+1. **Centralized Signatures:**
+   • Create a universal Company Default signature with dynamic merge tags: \`{name}\`, \`{title}\`, \`{department}\`, \`{company}\`, \`{phone}\`, \`{email}\`.
+   • Set department-level variants or individual executive overrides with instant rich-text live preview.
+
+2. **Transactional Email Templates:**
+   • Design and preview responsive HTML email templates directly inside your dashboard under **Templates**.
+   • Trigger templates programmatically via the Mailcoy REST API using template IDs.`;
+
+    // 6. Pricing & Plans
+    } else if (
+      msg.includes("price") ||
+      msg.includes("pricing") ||
+      msg.includes("cost") ||
+      msg.includes("how much") ||
+      msg.includes("plan") ||
+      msg.includes("tier") ||
+      msg.includes("naira") ||
+      msg.includes("dollar")
+    ) {
+      reply = `**Mailcoy Regional Pricing (Auto-detected in USD & NGN):**
+
+• **Free Tier ($0 / ₦0):** 1 domain, 1 inbox, full Send-As routing.
+• **Starter Pro ($9/mo or $90/yr | ₦7,500/mo or ₦75,000/yr):** 1 domain, up to 5 inboxes, company signatures.
+• **Growth ($29/mo or $290/yr | ₦20,000/mo or ₦200,000/yr):** 3 domains, up to 20 inboxes, catch-all & full API access.
+• **Scale ($79/mo or $790/yr | ₦50,000/mo or ₦500,000/yr):** 10 domains, up to 50 inboxes, offboarding shield, deliverability shield, VIP account manager.
+
+💡 Compared to Google Workspace ($7.20/user/month), Mailcoy saves businesses over **80% on email costs**!`;
+
+    // 7. Catch-All & Webmail
+    } else if (msg.includes("catch-all") || msg.includes("catch all") || msg.includes("misspelled") || msg.includes("unknown email")) {
+      reply = `**Catch-All Routing & Shared Webmail Inbox:**
+
+Catch-All ensures you never lose a business lead due to a typo or unassigned address (e.g. \`contactus@yourdomain.com\` instead of \`contact@yourdomain.com\`).
+
+• **Receive Mode:** Unmatched emails are collected into the built-in **Catch-All Shared Webmail Inbox** in your dashboard.
+• **Forward Mode:** Automatically forwards all unmatched emails to a designated manager or admin email address.
+• **Reject Mode:** Bounces unmatched messages cleanly with standard SMTP 550 codes.`;
+
+    // 8. Employee Offboarding
+    } else if (msg.includes("offboard") || msg.includes("suspend") || msg.includes("fired") || msg.includes("leave") || msg.includes("employee leaves")) {
+      reply = `**1-Click Employee Offboarding Shield:**
+
+When an employee departs your organization:
+1. Open **Employees** in your Mailcoy dashboard.
+2. Click the employee row and select **'Offboard / Suspend'**.
+3. Mailcoy immediately purges routing tokens and blocks all inbound/outbound company email access from their personal Gmail without affecting their personal inbox or disrupting the rest of your domain.`;
+
+    // 9. Deliverability & Spam
+    } else if (msg.includes("spam") || msg.includes("deliverability") || msg.includes("inbox") || data.selectedIssue === "spam_issues") {
+      reply = `**Deliverability Shield & DNSBL Monitoring:**
+
+Mailcoy configures 3 industry-standard authentication shields to guarantee 99%+ inbox placement:
+• **SPF:** Authorizes Mailcoy servers to send on your behalf.
+• **DKIM:** Cryptographically signs each message to prove it hasn't been altered in transit.
+• **DMARC:** Protects your domain from spoofing and phishing.
+
+Our automated monitors scan major DNSBL blacklists (Spamhaus, Barracuda, SORBS) continuously to keep your domain reputation pristine.`;
+
+    // 10. General Features & Overview
+    } else if (
+      msg.includes("what can i do") ||
+      msg.includes("what is") ||
+      msg.includes("how does it work") ||
+      msg.includes("tell me about") ||
+      msg.includes("features") ||
+      msg.includes("your name")
+    ) {
+      reply = `I am the **Mailcoy AI Specialist**!
+
+**Mailcoy** is the modern email operating system that lets you create professional custom domain email addresses (e.g. \`hello@yourbrand.com\`) and use them directly inside your personal Gmail inbox.
+
+✨ **Core Superpowers:**
+• **Use Personal Gmail:** Send and receive custom domain emails without switching apps.
+• **Multi-Alias Single Gmail:** Connect multiple aliases (\`sales@\`, \`support@\`, \`billing@\`) to 1 Gmail with a 'From' dropdown.
+• **Save 80%+:** Eliminate expensive $7.20/user/mo Google Workspace seat fees.
+• **Domain Concierge ($15 / ₦15,000):** Done-for-you domain registration & DNS setup.
+• **1-Click Offboarding Shield:** Revoke business email access instantly when staff leave.
+• **Catch-All Webmail:** Capture every mistyped email in a shared dashboard inbox.
+• **Universal Signatures:** Branded templates with live preview and merge tags.
+• **Developer API:** Send transactional emails programmatically with API keys.`;
+
+    // 11. Contact & Escalation
+    } else if (msg.includes("contact") || msg.includes("human") || msg.includes("support") || msg.includes("help")) {
+      reply = `You can reach our official team directly at:
+
+• **General & Support:** \`hello@mailcoy.com\` / \`support@mailcoy.com\`
+• **Sales & Enterprise:** \`sales@mailcoy.com\`
+• **Security & Legal:** \`security@mailcoy.com\`
+
+You can also click the button below to escalate this conversation directly to our platform Super Admin!`;
+
+    // 12. Friendly Default
     } else {
-      reply = "I am specifically trained to help you with **Mailcoy** business email setup, custom domains, Gmail integration, signatures, and deliverability. How can I assist with your workspace today?";
+      reply = `I am the **Mailcoy AI Specialist**. I can help you with:
+
+• **Buying a new domain** vs **Linking your existing domain**
+• **Gmail Send-As & SMTP setup**
+• **Multi-alias inboxes & team routing**
+• **Signatures, templates & catch-all mail**
+• **Plans, pricing & promo codes**
+
+What would you like to set up today?`;
     }
 
     return {
@@ -280,6 +461,9 @@ export const escalateToAdmin = createServerFn({ method: "POST" })
 
     if (resendApiKey) {
       try {
+        const escapeHtml = (str: string) =>
+          str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -290,14 +474,14 @@ export const escalateToAdmin = createServerFn({ method: "POST" })
             from: "Mailcoy Support Bot <support@mailcoy.com>",
             to: [adminEmail],
             reply_to: data.userEmail,
-            subject: `[Support Escalation] ${data.subject} (${data.userEmail})`,
+            subject: `[Support Escalation] ${data.subject.replace(/[\r\n]/g, " ")} (${data.userEmail})`,
             html: `
               <h2>New Support Escalation</h2>
-              <p><strong>User Email:</strong> ${data.userEmail}</p>
-              <p><strong>Subject:</strong> ${data.subject}</p>
+              <p><strong>User Email:</strong> ${escapeHtml(data.userEmail)}</p>
+              <p><strong>Subject:</strong> ${escapeHtml(data.subject)}</p>
               <hr />
               <h3>Conversation Transcript:</h3>
-              <pre style="background: #f4f4f5; padding: 12px; border-radius: 8px; font-size: 12px;">${data.conversationHistory}</pre>
+              <pre style="background: #f4f4f5; padding: 12px; border-radius: 8px; font-size: 12px; white-space: pre-wrap;">${escapeHtml(data.conversationHistory)}</pre>
             `,
           }),
         });

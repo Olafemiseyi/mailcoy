@@ -40,13 +40,42 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Mailcoy — Business Email via Gmail" },
-      { name: "description", content: "Mailcoy: Professional business email on your domain while your team keeps using Gmail." },
-      { name: "author", content: "Mailcoy" },
-      { property: "og:title", content: "Mailcoy — Business Email via Gmail" },
-      { property: "og:description", content: "Professional business email on your domain while your team keeps using Gmail." },
+      { title: "Mailcoy — Professional Business Email Operating System for Gmail" },
+      {
+        name: "description",
+        content:
+          "Mailcoy connects your custom domain to your team's existing Gmail inboxes with automated SPF/DKIM verification, Google OAuth 2.0 security, centralized HTML signatures, and flat team billing saving up to 80% vs Google Workspace.",
+      },
+      { name: "author", content: "Mailcoy Technologies" },
+      {
+        name: "keywords",
+        content:
+          "business email, custom domain email, gmail send as, google workspace alternative, email routing proxy, SPF DKIM DMARC, zero workspace markup, team email identity",
+      },
+      { property: "og:title", content: "Mailcoy — Professional Business Email via Gmail" },
+      {
+        property: "og:description",
+        content:
+          "Keep your familiar Gmail workflow while sending and receiving from your verified custom domain. Save 80%+ with zero seat markup.",
+      },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://mailcoy.com" },
+      { property: "og:site_name", content: "Mailcoy" },
+      { property: "og:image", content: "https://mailcoy.com/og-image.jpg" },
+      { property: "og:image:secure_url", content: "https://mailcoy.com/og-image.jpg" },
+      { property: "og:image:type", content: "image/jpeg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Mailcoy — Professional Business Email Operating System for Gmail" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:site", content: "@mailcoy" },
+      { name: "twitter:title", content: "Mailcoy — Business Email via Gmail" },
+      {
+        name: "twitter:description",
+        content: "Professional custom domain email without Google Workspace per-seat markup.",
+      },
+      { name: "twitter:image", content: "https://mailcoy.com/og-image.jpg" },
+      { name: "twitter:image:alt", content: "Mailcoy — Professional Business Email Operating System for Gmail" },
     ],
     links: [
       {
@@ -60,6 +89,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "Mailcoy",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web, Cloud, iOS, Android (via Gmail)",
+          description:
+            "Mailcoy is an intelligent email identity and domain routing platform that allows businesses to send and receive verified custom domain emails directly inside their existing Gmail inboxes without paying per-seat Google Workspace licenses.",
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "USD",
+            priceSpecification: {
+              "@type": "PriceSpecification",
+              description: "Free tier with 1 custom domain and 1 team inbox, plus flat-rate team plans from $9/month.",
+            },
+          },
+          featureList: [
+            "Custom Domain Email Verification (SPF, DKIM, DMARC)",
+            "Native Gmail Send-As Integration via Google OAuth 2.0",
+            "Centralized HTML Team Signatures",
+            "Broadcast and Round-Robin Shared Inboxes",
+            "1-Click Offboarding Deliverability Shield",
+            "Sub-200ms Inbound Edge Routing",
+          ],
+        }),
       },
     ],
   }),

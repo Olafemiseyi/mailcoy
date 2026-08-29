@@ -85,7 +85,7 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           const result = streamText({
-            model: groq("openai/gpt-oss-120b"),
+            model: groq("llama-3.3-70b-versatile"),
             system: `You are Mailcoy AI, a helpful, conversational assistant built directly into the Mailcoy dashboard. Your job is to instruct, guide, and help users understand how to manage their email infrastructure.
 
 Rules:

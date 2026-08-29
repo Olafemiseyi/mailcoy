@@ -7,9 +7,12 @@ export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
       { title: "Contact & Support — Mailcoy" },
-      { name: "description", content: "Get in touch with the Mailcoy executive and engineering team." },
       { property: "og:title", content: "Contact — Mailcoy" },
       { property: "og:description", content: "Get in touch with the Mailcoy team." },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://mailcoy.com/og-image.jpg" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://mailcoy.com/og-image.jpg" },
     ],
   }),
   component: Contact,
@@ -71,7 +74,7 @@ function Contact() {
               </label>
               <button
                 type="submit"
-                className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-[13.5px] font-semibold text-primary-foreground shadow-xs hover:bg-primary-focus transition"
+                className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-[13.5px] font-semibold text-primary-foreground shadow-xs hover:bg-primary-focus transition w-full sm:w-auto"
               >
                 <Send className="h-4 w-4" /> Send Direct Message
               </button>

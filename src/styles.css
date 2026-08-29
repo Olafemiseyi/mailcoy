@@ -236,12 +236,10 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-button,
-a[class*="btn"],
-.button,
-[role="button"] {
-  white-space: nowrap !important;
-  word-break: keep-all !important;
+.btn,
+button.btn,
+a[class*="btn"] {
+  white-space: nowrap;
 }
 
 .hero-tilt-card {
@@ -279,5 +277,9 @@ a[class*="btn"],
 
 .group:hover .group-hover\:animate-icon-pop {
   animation: icon-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+html, body {
+  overflow-x: clip;
 }
 

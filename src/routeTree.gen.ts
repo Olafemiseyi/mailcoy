@@ -13,7 +13,6 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as MockGoogleAuthRouteImport } from './routes/mock-google-auth'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AboutRouteImport } from './routes/about'
@@ -81,11 +80,6 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MockGoogleAuthRoute = MockGoogleAuthRouteImport.update({
-  id: '/mock-google-auth',
-  path: '/mock-google-auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsRoute = DocsRouteImport.update({
@@ -352,7 +346,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
-  '/mock-google-auth': typeof MockGoogleAuthRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/status': typeof StatusRoute
@@ -404,7 +397,6 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
-  '/mock-google-auth': typeof MockGoogleAuthRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/status': typeof StatusRoute
@@ -458,7 +450,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
-  '/mock-google-auth': typeof MockGoogleAuthRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/status': typeof StatusRoute
@@ -514,7 +505,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/docs'
-    | '/mock-google-auth'
     | '/pricing'
     | '/privacy'
     | '/status'
@@ -566,7 +556,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/docs'
-    | '/mock-google-auth'
     | '/pricing'
     | '/privacy'
     | '/status'
@@ -619,7 +608,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/docs'
-    | '/mock-google-auth'
     | '/pricing'
     | '/privacy'
     | '/status'
@@ -675,7 +663,6 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
   DocsRoute: typeof DocsRoute
-  MockGoogleAuthRoute: typeof MockGoogleAuthRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   StatusRoute: typeof StatusRoute
@@ -726,13 +713,6 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mock-google-auth': {
-      id: '/mock-google-auth'
-      path: '/mock-google-auth'
-      fullPath: '/mock-google-auth'
-      preLoaderRoute: typeof MockGoogleAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs': {
@@ -1202,7 +1182,6 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
   DocsRoute: DocsRoute,
-  MockGoogleAuthRoute: MockGoogleAuthRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   StatusRoute: StatusRoute,

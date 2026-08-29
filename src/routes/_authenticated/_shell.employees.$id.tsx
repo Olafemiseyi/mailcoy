@@ -194,8 +194,8 @@ function EmployeeDetailRoute() {
         <p className="text-[13px] text-ink-3 mb-4">
           Message volume over the last week based on available logs.
         </p>
-        <div className="h-40 w-full min-w-0 overflow-hidden">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <div className="h-40 w-full min-w-0">
+          <ResponsiveContainer width="100%" height={160} minWidth={0} debounce={50}>
             <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorSent" x1="0" y1="0" x2="0" y2="1">

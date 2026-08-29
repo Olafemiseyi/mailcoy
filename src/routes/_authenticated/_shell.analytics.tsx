@@ -102,30 +102,65 @@ function AnalyticsRoute() {
       </div>
 
       <Card className="p-5">
-        <div className="mb-4 text-[13.5px] font-medium">Volume over time</div>
+        <div className="mb-4 text-[13.5px] font-semibold text-ink">Volume over time</div>
         {(data?.series?.length ?? 0) === 0 ? (
           <div className="py-12 text-center text-[13px] text-ink-3">No data in this window.</div>
         ) : (
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-72 w-full min-w-0">
+            <ResponsiveContainer width="100%" height={280} minWidth={0} debounce={50}>
               <AreaChart data={data!.series} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gSent" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="gRecv" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--ink-3)" stopOpacity={0.22} />
-                    <stop offset="100%" stopColor="var(--ink-3)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-3)" }} tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--ink-3)" }} tickLine={false} axisLine={false} width={32} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--foreground)" }} labelStyle={{ color: "var(--foreground)" }} />
-                <Legend wrapperStyle={{ fontSize: 11, color: "var(--ink-3)" }} />
-                <Area type="monotone" dataKey="sent" name="Sent" stroke="var(--primary)" strokeWidth={2} fill="url(#gSent)" />
-                <Area type="monotone" dataKey="received" name="Received" stroke="var(--ink-3)" strokeOpacity={0.9} strokeWidth={2} fill="url(#gRecv)" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: "var(--ink-3)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: "var(--ink-3)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={32}
+                />
+                <Tooltip
+                  contentStyle={{
+                    fontSize: 12,
+                    borderRadius: 10,
+                    border: "1px solid var(--line)",
+                    background: "var(--surface)",
+                    color: "var(--foreground)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}
+                  labelStyle={{ color: "var(--foreground)", fontWeight: 600, marginBottom: 4 }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12, color: "var(--ink-3)", paddingTop: 8 }} />
+                <Area
+                  type="monotone"
+                  dataKey="sent"
+                  name="Sent"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fill="url(#gSent)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="received"
+                  name="Received"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  fill="url(#gRecv)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>

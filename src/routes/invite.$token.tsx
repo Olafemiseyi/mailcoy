@@ -21,7 +21,38 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/invite/$token")({
-  head: () => ({ meta: [{ title: "Connect Gmail — Mailcoy" }] }),
+  head: () => ({
+    meta: [
+      { title: "Connect Your Gmail Inbox — Mailcoy" },
+      {
+        name: "description",
+        content:
+          "You've been invited to connect your Gmail inbox to send and receive verified custom domain email via Mailcoy.",
+      },
+      { property: "og:title", content: "Team Email Invitation — Mailcoy" },
+      {
+        property: "og:description",
+        content:
+          "1-Click connect your existing Gmail inbox to send and receive verified business email on your company domain.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Mailcoy" },
+      { property: "og:image", content: "https://mailcoy.com/og-image.jpg" },
+      { property: "og:image:secure_url", content: "https://mailcoy.com/og-image.jpg" },
+      { property: "og:image:type", content: "image/jpeg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Connect Gmail — Mailcoy" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Team Email Invitation — Mailcoy" },
+      {
+        name: "twitter:description",
+        content:
+          "Connect your Gmail inbox in 1 click to start sending and receiving company emails with verified SPF/DKIM.",
+      },
+      { name: "twitter:image", content: "https://mailcoy.com/og-image.jpg" },
+    ],
+  }),
   validateSearch: (search: Record<string, unknown>) => ({
     error: typeof search.error === "string" ? search.error : undefined,
   }),

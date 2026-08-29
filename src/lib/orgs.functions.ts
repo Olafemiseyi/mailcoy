@@ -59,10 +59,12 @@ export const createOrganization = createServerFn({ method: "POST" })
     const existing = await resolveOrgContext(context.supabase, context.userId);
     if (existing) return { id: existing.organizationId, alreadyExists: true as const };
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     const baseSlug = slugify(data.name);
     let slug = baseSlug;
     for (let i = 1; i < 20; i++) {
-      const { data: taken } = await context.supabase
+      const { data: taken } = await supabaseAdmin
         .from("organizations")
         .select("id")
         .ilike("slug", slug)
@@ -71,7 +73,7 @@ export const createOrganization = createServerFn({ method: "POST" })
       slug = `${baseSlug}-${i}`;
     }
 
-    const { data: org, error } = await context.supabase
+    const { data: org, error } = await supabaseAdmin
       .from("organizations")
       .insert({
         name: data.name,
@@ -87,25 +89,43 @@ export const createOrganization = createServerFn({ method: "POST" })
       .single();
     if (error || !org) throw error ?? new Error("Failed to create organization");
 
+    const orgId = (org as { id: string }).id;
+
     // Add creator as owner. RLS: has_org_role uses this table, so bootstrap via service role.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: memberErr } = await supabaseAdmin
       .from("organization_members")
       .insert({
-        organization_id: (org as { id: string }).id,
+        organization_id: orgId,
         user_id: context.userId,
         role: "owner",
       } as never);
     if (memberErr) throw memberErr;
 
+    // Initialize default organization settings
+    await supabaseAdmin.from("settings").insert({
+      organization_id: orgId,
+      catchall_mode: "receive",
+      dkim_enabled: true,
+      routing_active: true,
+    } as never);
+
+    // Initialize default free subscription
+    await supabaseAdmin.from("subscriptions").insert({
+      organization_id: orgId,
+      plan: "free",
+      plan_code: "free",
+      status: "active",
+      amount_kobo: 0,
+    } as never);
+
     await supabaseAdmin.from("activity_logs").insert({
-      organization_id: (org as { id: string }).id,
+      organization_id: orgId,
       actor_user_id: context.userId,
       action: "organization.created",
       meta: { name: data.name },
     } as never);
 
-    return { id: (org as { id: string }).id, alreadyExists: false as const };
+    return { id: orgId, alreadyExists: false as const };
   });
 
 export const setOnboardingStep = createServerFn({ method: "POST" })
@@ -181,22 +201,45 @@ export const uploadOrganizationLogo = createServerFn({ method: "POST" })
     const safeName = data.fileName
       .toLowerCase()
       .replace(/[^a-z0-9._-]+/g, "-")
-      .slice(0, 80);
     const path = `logos/${ctx.organizationId}/${Date.now()}-${safeName || `logo.${ext}`}`;
     const bytes = Buffer.from(data.base64, "base64");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Ensure bucket exists
+    try {
+      const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+      if (!buckets?.some((b) => b.name === "brand-assets" || b.id === "brand-assets")) {
+        await supabaseAdmin.storage.createBucket("brand-assets", {
+          public: true,
+          fileSizeLimit: 5242880,
+          allowedMimeTypes: [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif",
+            "image/svg+xml",
+          ],
+        });
+      }
+    } catch {
+      // Ignore if bucket exists or list fails
+    }
+
     const { error: uploadError } = await supabaseAdmin.storage
       .from("brand-assets")
       .upload(path, bytes, { contentType: data.contentType, upsert: true });
     if (uploadError) throw uploadError;
-    const { data: signed, error: signError } = await supabaseAdmin.storage
+
+    const { data: publicData } = supabaseAdmin.storage
       .from("brand-assets")
-      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-    if (signError || !signed?.signedUrl) throw signError ?? new Error("Logo upload failed");
+      .getPublicUrl(path);
+
+    const logoUrl = publicData.publicUrl;
+
     const { error: updateError } = await supabaseAdmin
       .from("organizations")
-      .update({ logo_url: signed.signedUrl, updated_at: new Date().toISOString() } as never)
+      .update({ logo_url: logoUrl, updated_at: new Date().toISOString() } as never)
       .eq("id", ctx.organizationId);
     if (updateError) throw updateError;
-    return { logoUrl: signed.signedUrl };
+    return { logoUrl };
   });

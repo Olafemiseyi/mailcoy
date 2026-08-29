@@ -45,7 +45,8 @@ function ApiKeysRoute() {
       await qc.invalidateQueries({ queryKey: ["api-keys"] });
       setOpenCreateModal(false);
       setName("");
-      setRevealKey((r as { key: string }).key);
+      const generatedKey = (r as any)?.key || (r as any)?.full_key || (r as any)?.full;
+      setRevealKey(generatedKey);
     } catch (err: any) {
       setError(err?.message || "Failed to generate API key");
     } finally {
