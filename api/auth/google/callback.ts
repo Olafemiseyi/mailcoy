@@ -27,26 +27,23 @@ function buildInviteErrorUrl(origin: string, stateRaw: string | null, msg: strin
   return `${origin}/?error=${encodeURIComponent(msg)}`;
 }
 
-export default async function handler(req: Request) {
-  const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  const stateRaw = url.searchParams.get("state");
-  const errorParam = url.searchParams.get("error");
-  const origin = url.origin;
+export default async function handler(req: any, res: any) {
+  const code = req.query.code as string | undefined;
+  const stateRaw = req.query.state as string | undefined;
+  const errorParam = req.query.error as string | undefined;
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const origin = `${protocol}://${host}`;
 
   // 1. Check for user cancellation or errors
   if (errorParam) {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: buildInviteErrorUrl(origin, stateRaw, "Google sign-in was denied.") },
-    });
+    res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Google sign-in was denied."));
+    return res.status(302).send("");
   }
 
   if (!code || !stateRaw) {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: buildInviteErrorUrl(origin, stateRaw, "Invalid callback parameters.") },
-    });
+    res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Invalid callback parameters."));
+    return res.status(302).send("");
   }
 
   // 2. Decode state to retrieve invite token
@@ -55,10 +52,8 @@ export default async function handler(req: Request) {
     state = JSON.parse(Buffer.from(stateRaw, "base64url").toString("utf8"));
     if (!state.token || !state.nonce) throw new Error("bad state");
   } catch {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: buildInviteErrorUrl(origin, stateRaw, "Invalid state parameter.") },
-    });
+    res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Invalid state parameter."));
+    return res.status(302).send("");
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim().replace(/^["']|["']$/g, "");
@@ -76,10 +71,8 @@ export default async function handler(req: Request) {
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseKey: !!supabaseKey,
     });
-    return new Response(null, {
-      status: 302,
-      headers: { Location: buildInviteErrorUrl(origin, stateRaw, "Server configuration error.") },
-    });
+    res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Server configuration error."));
+    return res.status(302).send("");
   }
 
   const redirectUri = `${origin}/api/auth/google/callback`;
@@ -101,10 +94,8 @@ export default async function handler(req: Request) {
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text();
       console.error("[GoogleCallback] Token exchange error:", errBody);
-      return new Response(null, {
-        status: 302,
-        headers: { Location: buildInviteErrorUrl(origin, stateRaw, "Google authorization exchange failed.") },
-      });
+      res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Google authorization exchange failed."));
+      return res.status(302).send("");
     }
 
     const tokenData = (await tokenRes.json()) as {
@@ -115,16 +106,8 @@ export default async function handler(req: Request) {
 
     if (!tokenData.refresh_token) {
       console.warn("[GoogleCallback] No refresh token returned by Google.");
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: buildInviteErrorUrl(
-            origin,
-            stateRaw,
-            "Google did not return a refresh token. Please re-authorize with consent.",
-          ),
-        },
-      });
+      res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Google did not return a refresh token. Please re-authorize with consent."));
+      return res.status(302).send("");
     }
 
     // 4. Fetch Google profile email
@@ -146,17 +129,13 @@ export default async function handler(req: Request) {
       .maybeSingle();
 
     if (invErr || !inv) {
-      return new Response(null, {
-        status: 302,
-        headers: { Location: buildInviteErrorUrl(origin, stateRaw, "Invitation record not found.") },
-      });
+      res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Invitation record not found."));
+      return res.status(302).send("");
     }
 
     if (inv.revoked_at || new Date(inv.expires_at) < new Date()) {
-      return new Response(null, {
-        status: 302,
-        headers: { Location: buildInviteErrorUrl(origin, stateRaw, "Invitation has expired or been revoked.") },
-      });
+      res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, "Invitation has expired or been revoked."));
+      return res.status(302).send("");
     }
 
     // 6. Encrypt refresh token & store in app_user_connections
@@ -249,16 +228,12 @@ export default async function handler(req: Request) {
     }
 
     // 11. Success redirect to invite confirmation page
-    return new Response(null, {
-      status: 302,
-      headers: { Location: `${origin}/invite/${state.token}` },
-    });
+    res.setHeader("Location", `${origin}/invite/${state.token}`);
+    return res.status(302).send("");
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Authentication processing failed";
     console.error("[GoogleCallback] Fatal error:", err);
-    return new Response(null, {
-      status: 302,
-      headers: { Location: buildInviteErrorUrl(origin, stateRaw, msg) },
-    });
+    res.setHeader("Location", buildInviteErrorUrl(origin, stateRaw || null, msg));
+    return res.status(302).send("");
   }
 }

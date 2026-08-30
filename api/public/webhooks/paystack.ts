@@ -3,21 +3,25 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export default async function handler(req: Request) {
+export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return res.status(405).send("Method not allowed");
   }
 
   const secret = process.env.PAYSTACK_SECRET_KEY;
-  if (!secret) return new Response("Server not configured", { status: 500 });
+  if (!secret) return res.status(500).send("Server not configured");
 
-  const signature = req.headers.get("x-paystack-signature") ?? "";
-  const raw = await req.text();
+  const signature = req.headers["x-paystack-signature"] ?? "";
+  
+  // In Vercel Node.js Serverless, req.body is already parsed into an object or string depending on Content-Type.
+  // We need the raw body for HMAC verification. If body-parser has already parsed it, we need to stringify it.
+  const raw = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+  
   const expected = createHmac("sha512", secret).update(raw).digest("hex");
-  const a = Buffer.from(signature);
+  const a = Buffer.from(signature as string);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
-    return new Response("Invalid signature", { status: 401 });
+    return res.status(401).send("Invalid signature");
   }
 
   let event: {
@@ -36,13 +40,13 @@ export default async function handler(req: Request) {
   try {
     event = JSON.parse(raw);
   } catch {
-    return new Response("Bad JSON", { status: 400 });
+    return res.status(400).send("Bad JSON");
   }
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseKey) {
-    return new Response("Supabase not configured", { status: 500 });
+    return res.status(500).send("Supabase not configured");
   }
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
@@ -80,7 +84,7 @@ export default async function handler(req: Request) {
   } as never);
 
   if (!orgId || !reference) {
-    return new Response("ok", { status: 200 });
+    return res.status(200).send("ok");
   }
 
   let status: string | null = null;
@@ -118,5 +122,5 @@ export default async function handler(req: Request) {
     );
   }
 
-  return new Response("ok", { status: 200 });
+  return res.status(200).send("ok");
 }
