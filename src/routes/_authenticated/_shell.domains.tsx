@@ -25,7 +25,6 @@ import {
   Trash2,
   Globe,
   HelpCircle,
-  Sparkles,
   CheckCircle2,
   ArrowUpRight,
   X,
@@ -473,7 +472,7 @@ function DomainsList() {
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.03] p-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                    <Sparkles className="h-3 w-3 shrink-0" /> Option B · Concierge
+                    <ShieldCheck className="h-3 w-3 shrink-0" /> Option B · Concierge
                   </span>
                   <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
                     {currency === "NGN" ? "₦15,000 flat" : "$15 flat"}

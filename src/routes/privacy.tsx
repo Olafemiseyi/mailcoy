@@ -12,7 +12,6 @@ import {
   AlertTriangle,
   ArrowRight,
   ExternalLink,
-  Sparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/privacy")({
@@ -109,11 +108,11 @@ function PrivacyPolicy() {
           <div className="space-y-8">
             {/* Section 1 */}
             <article className="p-6 sm:p-8 rounded-3xl border border-line bg-surface space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 1
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Information We Collect & Process
                 </h2>
               </div>
@@ -142,11 +141,11 @@ function PrivacyPolicy() {
 
             {/* Section 2: Google API Limited Use Policy */}
             <article className="p-6 sm:p-8 rounded-3xl border border-primary/30 bg-primary/[0.02] space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 2
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Google User Data & Restricted Scopes Disclosure
                 </h2>
               </div>
@@ -189,11 +188,11 @@ function PrivacyPolicy() {
 
             {/* Section 3: Third Party Processors */}
             <article className="p-6 sm:p-8 rounded-3xl border border-line bg-surface space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 3
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Infrastructure & Sub-Processors
                 </h2>
               </div>
@@ -237,11 +236,11 @@ function PrivacyPolicy() {
 
             {/* Section 4: Data Rights & Contact */}
             <article className="p-6 sm:p-8 rounded-3xl border border-line bg-surface space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 4
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Your Data Rights & Inquiries
                 </h2>
               </div>
@@ -253,7 +252,7 @@ function PrivacyPolicy() {
                   href="mailto:privacy@mailcoy.com"
                   className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-[13px] font-semibold hover:opacity-95 transition shadow-2xs w-full sm:w-auto text-center whitespace-nowrap"
                 >
-                  Email Data Protection Officer (privacy@mailcoy.com)
+                  Email Data Protection Officer
                 </a>
                 <Link
                   to="/contact"

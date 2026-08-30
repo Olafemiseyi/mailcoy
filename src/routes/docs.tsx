@@ -16,7 +16,7 @@ import {
   Rocket,
   ShieldCheck,
   Bot,
-  Sparkles,
+  BookOpen,
   Copy,
   Check,
   CheckCircle2,
@@ -697,7 +697,7 @@ function Docs() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/80 px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary shadow-2xs">
-                <Sparkles className="h-3 w-3" />
+                <BookOpen className="h-3 w-3" />
                 <span>Knowledge Base</span>
               </div>
               <h1 className="font-display text-[32px] sm:text-[40px] font-bold text-ink tracking-tight">

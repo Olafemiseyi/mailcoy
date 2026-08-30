@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { listAliases, createAlias, deleteAlias, updateAliasEmployee } from "@/lib/analytics.functions";
 import { listEmployees } from "@/lib/employees.functions";
 import { PageHeader, Card, Button, Input, Field, CustomSelect, ConfirmDeleteModal } from "@/components/app/AppShell";
-import { Plus, Trash2, Sparkles, X, Search, Pencil, Check, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Lightbulb, X, Search, Pencil, Check, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const aliasesOpts = queryOptions({ queryKey: ["aliases"], queryFn: async () => listAliases(), staleTime: 20_000 });
@@ -267,7 +267,7 @@ function AliasesRoute() {
             className="w-full flex items-center justify-between gap-2 px-3.5 sm:px-5 py-3 border-b border-emerald-500/20 hover:bg-emerald-500/[0.03] transition-colors text-left"
           >
             <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
-              <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <Lightbulb className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="text-[12.5px] sm:text-[13px] font-medium text-emerald-700 dark:text-emerald-300 truncate">
                 <span className="sm:hidden">Suggested inboxes</span>
                 <span className="hidden sm:inline">

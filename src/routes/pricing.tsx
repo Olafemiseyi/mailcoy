@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Sparkles, ArrowRight, ShieldCheck, Zap, HelpCircle } from "lucide-react";
+import { Check, Tag, Star, ArrowRight, ShieldCheck, Zap, HelpCircle } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { detectUserCurrency, Currency, PRICING_PLANS } from "@/lib/currency";
 
@@ -133,7 +133,7 @@ function PricingPage() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1 text-[11.5px] font-semibold uppercase tracking-widest text-primary shadow-2xs">
-            <Sparkles className="h-3.5 w-3.5" />
+            <Tag className="h-3.5 w-3.5" />
             <span>Flat Team Billing</span>
           </div>
           <h1 className="font-display text-[32px] sm:text-[44px] md:text-[54px] font-bold text-ink leading-[1.1] tracking-tight">
@@ -189,7 +189,7 @@ function PricingPage() {
               >
                 {p.highlight && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary-foreground shadow-sm flex items-center gap-1">
-                    <Sparkles className="h-3 w-3" /> Most Popular
+                    <Star className="h-3 w-3 fill-current" /> Most Popular
                   </span>
                 )}
 

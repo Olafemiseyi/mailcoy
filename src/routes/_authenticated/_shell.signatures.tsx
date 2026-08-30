@@ -13,7 +13,7 @@ import {
   ConfirmDeleteModal,
   CustomSelect,
 } from "@/components/app/AppShell";
-import { Trash2, Plus, User, Building2, Check, Sparkles, Sun, Moon, Copy } from "lucide-react";
+import { Trash2, Plus, User, Building2, Check, Eye, Sun, Moon, Copy } from "lucide-react";
 
 const opts = queryOptions({
   queryKey: ["signatures"],
@@ -568,7 +568,7 @@ function PreviewCard({
   const header = (
     <div className="flex flex-wrap items-center justify-between gap-2 mb-2 font-mono min-w-0">
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-ink-3">
-        <Sparkles className="h-3 w-3 text-primary shrink-0" /> {title}
+        <Eye className="h-3 w-3 text-primary shrink-0" /> {title}
       </div>
       <div className="flex items-center gap-2">
         <button

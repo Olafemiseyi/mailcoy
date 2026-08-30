@@ -4,14 +4,9 @@ import {
   FileText,
   ShieldCheck,
   Zap,
-  Users,
   CreditCard,
   Radio,
-  HelpCircle,
-  Sparkles,
   CheckCircle2,
-  AlertTriangle,
-  ArrowRight,
 } from "lucide-react";
 
 export const Route = createFileRoute("/terms")({
@@ -108,11 +103,11 @@ function TermsOfService() {
           <div className="space-y-8">
             {/* Section 1 */}
             <article className="p-6 sm:p-8 rounded-3xl border border-line bg-surface space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 1
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Acceptance & Scope of Platform
                 </h2>
               </div>
@@ -123,11 +118,11 @@ function TermsOfService() {
 
             {/* Section 2 */}
             <article className="p-6 sm:p-8 rounded-3xl border border-line bg-surface space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 2
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Acceptable Use & Anti-Spam Governance
                 </h2>
               </div>
@@ -155,11 +150,11 @@ function TermsOfService() {
 
             {/* Section 3 */}
             <article className="p-6 sm:p-8 rounded-3xl border border-line bg-surface space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 3
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Subscription Billing, Currency & Cancellations
                 </h2>
               </div>
@@ -184,11 +179,11 @@ function TermsOfService() {
 
             {/* Section 4 */}
             <article className="p-6 sm:p-8 rounded-3xl border border-line bg-surface space-y-4 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex flex-col items-start sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="font-mono text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 whitespace-nowrap">
                   Section 4
                 </span>
-                <h2 className="font-display text-[20px] font-bold text-ink">
+                <h2 className="font-display text-[19px] sm:text-[20px] font-bold text-ink">
                   Service Level Agreement (SLA) & Resilience
                 </h2>
               </div>
@@ -198,13 +193,13 @@ function TermsOfService() {
               <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
                 <Link
                   to="/status"
-                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-[13px] font-semibold hover:opacity-95 transition shadow-2xs w-full sm:w-auto text-center whitespace-nowrap"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-[13px] font-semibold hover:opacity-95 transition shadow-2xs w-full sm:w-auto text-center leading-snug"
                 >
                   View Real-Time System Status &rarr;
                 </Link>
                 <Link
                   to="/contact"
-                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-line bg-surface text-ink text-[13px] font-semibold hover:bg-surface-muted transition w-full sm:w-auto text-center whitespace-nowrap"
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-line bg-surface text-ink text-[13px] font-semibold hover:bg-surface-muted transition w-full sm:w-auto text-center leading-snug"
                 >
                   Contact Legal Department &rarr;
                 </Link>
