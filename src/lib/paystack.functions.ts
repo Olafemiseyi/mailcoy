@@ -140,13 +140,31 @@ export const verifyPaystackReference = createServerFn({ method: "POST" })
           plan: "growth",
           plan_code: "growth",
           status: "active",
-          amount_kobo: 1200000,
+          amount_kobo: 2000000,
           billing_interval: "monthly",
           current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
           updated_at: new Date().toISOString(),
         } as never,
         { onConflict: "organization_id" },
       );
+
+      // Record invoice/receipt in billing history
+      await supabaseAdmin.from("billing_events").insert({
+        organization_id: ctx.organizationId,
+        provider: "paystack",
+        event_type: "charge.success",
+        reference: data.reference,
+        status: "success",
+        payload: {
+          amount: 2000000,
+          currency: "NGN",
+          plan: "Growth",
+          plan_code: "growth",
+          status: "success",
+          paid_at: new Date().toISOString(),
+        },
+      } as never);
+
       return { ok: true as const, status: "success" };
     }
 
@@ -306,10 +324,10 @@ export const getBillingOverview = createServerFn({ method: "GET" })
         } catch {}
       }
 
-      // Fetch billing events
-      const { data: rawEvents } = await context.supabase
+      // Fetch billing events count & initial batch
+      const { data: rawEvents, count: totalEventsCount } = await context.supabase
         .from("billing_events")
-        .select("id, event_type, created_at, reference, status, payload")
+        .select("id, event_type, created_at, reference, status, payload", { count: "exact" })
         .eq("organization_id", ctx.organizationId)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -320,7 +338,7 @@ export const getBillingOverview = createServerFn({ method: "GET" })
         reference: e.reference,
         eventType: e.event_type,
         amountKobo: e.payload?.amount ?? 0,
-        status: e.status ?? "delivered",
+        status: e.status ?? "success",
         card,
       }));
 
@@ -338,6 +356,7 @@ export const getBillingOverview = createServerFn({ method: "GET" })
         },
         card,
         events,
+        totalEventsCount: totalEventsCount ?? events.length,
         usage: {
           employees: employees || 0,
           domains: domains || 0,
@@ -345,3 +364,38 @@ export const getBillingOverview = createServerFn({ method: "GET" })
       };
     },
   );
+
+export const listBillingEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        limit: z.number().int().min(5).max(50).default(10),
+        offset: z.number().int().min(0).default(0),
+      })
+      .parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { data: rawEvents, count } = await context.supabase
+      .from("billing_events")
+      .select("id, event_type, created_at, reference, status, payload", { count: "exact" })
+      .eq("organization_id", ctx.organizationId)
+      .order("created_at", { ascending: false })
+      .range(data.offset, data.offset + data.limit - 1);
+
+    const events = (rawEvents || []).map((e: any) => ({
+      id: e.id,
+      createdAt: e.created_at,
+      reference: e.reference,
+      eventType: e.event_type,
+      amountKobo: e.payload?.amount ?? 0,
+      status: e.status ?? "success",
+    }));
+
+    return {
+      events,
+      totalCount: count ?? 0,
+      hasMore: data.offset + (rawEvents?.length ?? 0) < (count ?? 0),
+    };
+  });

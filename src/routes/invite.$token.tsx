@@ -18,6 +18,7 @@ import {
   Smartphone,
   Laptop,
   Check,
+  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/invite/$token")({
@@ -55,6 +56,7 @@ export const Route = createFileRoute("/invite/$token")({
   }),
   validateSearch: (search: Record<string, unknown>) => ({
     error: typeof search.error === "string" ? search.error : undefined,
+    qa: search.qa === "true" || search.test === "true" || search.qa === true || search.test === true ? true : undefined,
   }),
   component: InvitePage,
 });
@@ -82,6 +84,17 @@ function InvitePage() {
         data: { token, redirectOrigin: window.location.origin },
       });
       // Full-page redirect to Google's consent screen
+      window.location.href = authorizationUrl;
+    },
+    onError: () => setRedirecting(false),
+  });
+
+  const mockConnect = useMutation({
+    mutationFn: async () => {
+      setRedirecting(true);
+      const { authorizationUrl } = await start({
+        data: { token, redirectOrigin: window.location.origin, mock: true },
+      });
       window.location.href = authorizationUrl;
     },
     onError: () => setRedirecting(false),
@@ -130,7 +143,9 @@ function InvitePage() {
   } | null;
   const gmail = res.gmail as { google_email: string; connected_at: string } | null;
   const smtpPassword = res.smtpPassword as string | undefined;
+  const hasGoogleKeys = (res as any)?.hasGoogleKeys ?? false;
   const alreadyDone = !!gmail;
+  const showSandbox = Boolean(search.qa || !hasGoogleKeys);
 
   return (
     <Shell>
@@ -311,7 +326,7 @@ function InvitePage() {
           <button
             type="button"
             onClick={() => connect.mutate()}
-            disabled={redirecting || connect.isPending}
+            disabled={redirecting || connect.isPending || mockConnect.isPending}
             className="w-full h-11 rounded-lg bg-ink text-white text-[13.5px] sm:text-[14px] font-medium hover:bg-ink/90 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
           >
             {redirecting || connect.isPending ? (
@@ -326,6 +341,28 @@ function InvitePage() {
               </>
             )}
           </button>
+
+          {showSandbox && (
+            <button
+              type="button"
+              onClick={() => mockConnect.mutate()}
+              disabled={redirecting || connect.isPending || mockConnect.isPending}
+              className="w-full mt-2.5 h-10 rounded-lg border border-primary/30 bg-primary/5 text-primary text-[12.5px] sm:text-[13px] font-medium hover:bg-primary/10 disabled:opacity-60 inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              {mockConnect.isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                  <span>Connecting Sandbox…</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="h-3.5 w-3.5 shrink-0" />
+                  <span>⚡ Instant Connect (QA & Sandbox Mode)</span>
+                </>
+              )}
+            </button>
+          )}
+
           <div className="mt-3.5 sm:mt-4 flex items-start gap-2 text-[11.5px] sm:text-[12px] text-ink-3 leading-relaxed">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 mt-0.5 text-ink-2" />
             <span>

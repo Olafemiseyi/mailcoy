@@ -9,6 +9,7 @@ import {
   verifyPaystackReference,
   getBillingOverview,
   cancelSubscription,
+  listBillingEvents,
 } from "@/lib/paystack.functions";
 import { validatePromoCode, type PromoValidation } from "@/lib/promo.functions";
 import { detectUserCurrency, Currency, PRICING_PLANS } from "@/lib/currency";
@@ -31,6 +32,33 @@ function BillingPage() {
   const init = useServerFn(initPaystackCheckout);
   const verify = useServerFn(verifyPaystackReference);
   const cancel = useServerFn(cancelSubscription);
+  const fetchMoreEvents = useServerFn(listBillingEvents);
+  const [allEvents, setAllEvents] = useState<any[]>(data.events || []);
+  const [totalEvents, setTotalEvents] = useState<number>(
+    (data as any).totalEventsCount || data.events.length,
+  );
+  const [loadingMoreEvents, setLoadingMoreEvents] = useState(false);
+
+  useEffect(() => {
+    setAllEvents(data.events || []);
+    setTotalEvents((data as any).totalEventsCount || data.events.length);
+  }, [data.events, (data as any).totalEventsCount]);
+
+  async function handleLoadMoreEvents() {
+    setLoadingMoreEvents(true);
+    try {
+      const res = await fetchMoreEvents({
+        data: { offset: allEvents.length, limit: 10 },
+      });
+      setAllEvents((prev) => [...prev, ...(res.events || [])]);
+      setTotalEvents(res.totalCount);
+    } catch (e) {
+      console.error("Failed to load more billing events:", e);
+    } finally {
+      setLoadingMoreEvents(false);
+    }
+  }
+
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
@@ -469,7 +497,7 @@ function BillingPage() {
           <ReceiptText className="h-4 w-4 text-ink-3" />
           <h3 className="font-display text-[15px] font-semibold">Payment history</h3>
         </div>
-        {data.events.length === 0 ? (
+        {allEvents.length === 0 ? (
           <div className="p-8 text-center text-[13px] text-ink-3">No payment records yet.</div>
         ) : (
           <div className="overflow-x-auto">
@@ -483,43 +511,43 @@ function BillingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {data.events.map(
-                  (e: {
-                    id: string;
-                    createdAt: string;
-                    reference: string | null;
-                    eventType: string;
-                    amountKobo: number | null;
-                    status: string | null;
-                    card: {
-                      brand: string | null;
-                      last4: string | null;
-                      expMonth: string | null;
-                      expYear: string | null;
-                    };
-                  }) => (
-                    <tr key={e.id}>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        {new Date(e.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-5 py-3 font-mono text-[12px] text-ink-3">
-                        {e.reference ?? e.eventType}
-                      </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
-                        {e.amountKobo
-                          ? currency === "NGN"
-                            ? `₦${(e.amountKobo / 100).toLocaleString()}`
-                            : `$${Math.round(e.amountKobo / 100 / 1300)}`
-                          : "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <StatusPill status={e.status ?? "unknown"} />
-                      </td>
-                    </tr>
-                  ),
-                )}
+                {allEvents.map((e: any) => (
+                  <tr key={e.id}>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      {new Date(e.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-5 py-3 font-mono text-[12px] text-ink-3">
+                      {e.reference ?? e.eventType}
+                    </td>
+                    <td className="px-5 py-3 whitespace-nowrap font-medium">
+                      {e.amountKobo
+                        ? currency === "NGN"
+                          ? `₦${(e.amountKobo / 100).toLocaleString()}`
+                          : `$${Math.round(e.amountKobo / 100 / 1300)}`
+                        : "—"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <StatusPill status={e.status ?? "success"} />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+            {allEvents.length < totalEvents && (
+              <div className="p-3.5 bg-surface-muted/30 border-t border-line text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadMoreEvents}
+                  disabled={loadingMoreEvents}
+                  className="text-xs"
+                >
+                  {loadingMoreEvents
+                    ? "Loading more…"
+                    : `Load More Transactions (${allEvents.length} of ${totalEvents})`}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

@@ -151,6 +151,10 @@ export const getInviteByToken = createServerFn({ method: "GET" })
       supabaseAdmin.from("gmail_connections").select("google_email, connected_at, health_status, revoked_at").eq("employee_id", inv.employee_id).is("revoked_at", null).maybeSingle(),
     ]);
 
+    const hasGoogleKeys = Boolean(
+      process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
+    );
+
     return {
       ok: true as const,
       invite: { id: inv.id, expiresAt: inv.expires_at, acceptedAt: inv.accepted_at },
@@ -158,14 +162,16 @@ export const getInviteByToken = createServerFn({ method: "GET" })
       organization: org,
       gmail,
       smtpPassword: process.env.RESEND_API_KEY || "(Not configured in backend)",
+      hasGoogleKeys,
     };
   });
 
 export const startGmailByInvite = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       token: z.string().min(10),
       redirectOrigin: z.string().url(),
+      mock: z.boolean().optional(),
     }).parse(d)
   )
   .handler(async ({ data }) => {
@@ -173,8 +179,6 @@ export const startGmailByInvite = createServerFn({ method: "POST" })
     if (!inv || inv.revoked_at || new Date(inv.expires_at) < new Date()) {
       throw new Error("Invite is no longer valid");
     }
-
-    const { buildGoogleAuthUrl } = await import("@/server/googleOAuth.server");
 
     // Encode the invite token + a random nonce into the state param
     const nonce = crypto.randomUUID();
@@ -184,6 +188,13 @@ export const startGmailByInvite = createServerFn({ method: "POST" })
     const origin = data.redirectOrigin.replace(/\/+$/, "");
     const redirectUri = `${origin}/api/auth/google/callback`;
 
+    const hasGoogleKeys = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+    if (data.mock || !hasGoogleKeys) {
+      const mockCallbackUrl = `${redirectUri}?code=mock_oauth_code_${Date.now()}&state=${state}`;
+      return { authorizationUrl: mockCallbackUrl, isMock: true };
+    }
+
+    const { buildGoogleAuthUrl } = await import("@/server/googleOAuth.server");
     const authorizationUrl = await buildGoogleAuthUrl(redirectUri, state);
-    return { authorizationUrl };
+    return { authorizationUrl, isMock: false };
   });
