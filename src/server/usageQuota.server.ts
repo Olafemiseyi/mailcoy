@@ -7,7 +7,7 @@
 import {
   sendQuotaWarningEmail,
   sendQuotaExceededEmail,
-} from "./billingLifecycleEmail.server";
+} from "./billingLifecycleEmail.server.ts";
 
 export interface QuotaCheckResult {
   allowed: boolean;
@@ -28,7 +28,7 @@ export async function checkAndEnforceEmailQuota(
   targetEmail: string,
   isOwnerOrPrimary: boolean = true
 ): Promise<QuotaCheckResult> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { supabaseAdmin } = await import("../integrations/supabase/client.server.ts");
 
   try {
     // 1. Fetch organization details & active subscription

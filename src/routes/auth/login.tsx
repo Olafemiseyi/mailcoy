@@ -39,10 +39,18 @@ function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailPattern.test(cleanEmail)) {
+      setError("Please enter a valid work email address (e.g. name@company.com).");
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error: authErr } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
       });
       if (authErr) throw authErr;

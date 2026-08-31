@@ -21,8 +21,20 @@ function ForgotPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const cleanEmail = email.trim().toLowerCase();
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailPattern.test(cleanEmail)) {
+      setError("Please enter a valid email address (e.g. name@company.com).");
+      return;
+    }
+    if (cleanEmail.length > 254) {
+      setError("Email address is too long (maximum 254 characters).");
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: window.location.origin + "/auth/reset-password",
     });
     setLoading(false);

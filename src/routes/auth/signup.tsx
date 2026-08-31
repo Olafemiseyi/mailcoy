@@ -43,16 +43,42 @@ function SignupPage() {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match. Please re-enter your password.");
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Full name validation & anti-XSS injection defense
+    if (!cleanName || cleanName.length < 2) {
+      setError("Please enter your full name (at least 2 characters).");
+      return;
+    }
+    if (cleanName.length > 80) {
+      setError("Full name is too long (maximum 80 characters).");
+      return;
+    }
+    const xssPattern = /<[^>]*>|[<>"'`]|javascript:|onerror|onload|script|eval\(|alert\(/i;
+    if (xssPattern.test(cleanName)) {
+      setError("Invalid full name. Script tags, HTML elements, and special injection characters are not permitted.");
       return;
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name.trim();
+    // 2. Email format validation
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailPattern.test(cleanEmail)) {
+      setError("Please enter a valid work email address (e.g. name@company.com).");
+      return;
+    }
+    if (cleanEmail.length > 254) {
+      setError("Email address is too long (maximum 254 characters).");
+      return;
+    }
 
+    // 3. Password matching & length
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match. Please re-enter your password.");
       return;
     }
 
@@ -73,12 +99,23 @@ function SignupPage() {
         }
         return setError(error.message);
       }
+
       if (data?.session) {
         navigate({ to: "/onboarding" });
-      } else if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
-        setError("An account with this email address already exists. Please sign in or reset your password.");
-      } else {
-        setSent(true);
+      } else if (data?.user) {
+        // Attempt immediate login for instant onboarding access
+        const { data: signInData } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (signInData?.session) {
+          navigate({ to: "/onboarding" });
+        } else if (!data.user.identities || data.user.identities.length === 0) {
+          setError("An account with this email address already exists. Please sign in or reset your password.");
+        } else {
+          setSent(true);
+        }
       }
     } catch {
       setLoading(false);
