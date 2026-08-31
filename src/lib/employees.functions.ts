@@ -61,11 +61,25 @@ export const listEmployees = createServerFn({ method: "GET" })
 
 export const addEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => addSchema.parse(data))
+  .validator((data: unknown) => addSchema.parse(data))
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Enforce Plan Seat Limits Before Creation
+    const { count: empCount, error: countErr } = await supabaseAdmin
+      .from("employees")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId);
+
+    if (countErr) throw countErr;
+
+    if ((empCount ?? 0) >= ctx.subscription.maxEmployees) {
+      throw new Error(
+        `Your current plan (${ctx.subscription.plan}) allows up to ${ctx.subscription.maxEmployees} team member(s). Please upgrade your plan in Settings → Billing to add more team members.`,
+      );
+    }
 
     const profEmail = `${data.local_part}@${data.domain}`;
     const { data: row, error } = await supabaseAdmin
@@ -95,7 +109,7 @@ export const addEmployee = createServerFn({ method: "POST" })
 
 export const bulkAddEmployees = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         domain: z.string().trim().toLowerCase().min(3).max(253),
@@ -121,6 +135,18 @@ export const bulkAddEmployees = createServerFn({ method: "POST" })
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Enforce Plan Seat Limits Before Bulk Creation
+    const { count: currentCount } = await supabaseAdmin
+      .from("employees")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId);
+
+    if ((currentCount ?? 0) + data.rows.length > ctx.subscription.maxEmployees) {
+      throw new Error(
+        `Adding ${data.rows.length} member(s) exceeds your plan limit (${ctx.subscription.maxEmployees} seats on ${ctx.subscription.plan}). Please upgrade in Settings → Billing.`,
+      );
+    }
 
     const inserts = data.rows.map((r: { local_part: string; full_name: string }) => {
       const email = `${r.local_part}@${data.domain}`;

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient, queryOptions, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { getDomain, verifyDomainNow, deleteDomain } from "@/lib/domains.functions";
+import { getDomain, verifyDomainNow, deleteDomain, detectRegistrarFn } from "@/lib/domains.functions";
 import {
   PageHeader,
   Card,
@@ -77,21 +77,35 @@ type RegistrarInfo = {
 } | null;
 
 function useRegistrarDetect(domainName: string) {
+  const detectReg = useServerFn(detectRegistrarFn);
   return useQuery({
     queryKey: ["registrar", domainName],
     queryFn: async (): Promise<{ registrar: RegistrarInfo; nsRecords: string[] }> => {
-      const res = await fetch(`/api/registrar-detect?domain=${encodeURIComponent(domainName)}`);
-      if (!res.ok) throw new Error("Failed to detect registrar");
-      const json = await res.json();
-      // API returns 'nameservers', normalise to 'nsRecords' for the component
-      return {
-        registrar: json.registrar ?? null,
-        nsRecords: Array.isArray(json.nameservers)
-          ? json.nameservers
-          : Array.isArray(json.nsRecords)
-            ? json.nsRecords
-            : [],
-      };
+      try {
+        const json = await detectReg({ data: { domain: domainName } });
+        return {
+          registrar: json.registrar ?? null,
+          nsRecords: Array.isArray(json.nameservers)
+            ? json.nameservers
+            : Array.isArray(json.nsRecords)
+              ? json.nsRecords
+              : [],
+        };
+      } catch {
+        const res = await fetch(`/api/registrar-detect?domain=${encodeURIComponent(domainName)}`).catch(() => null);
+        if (res?.ok) {
+          const json = await res.json();
+          return {
+            registrar: json.registrar ?? null,
+            nsRecords: Array.isArray(json.nameservers)
+              ? json.nameservers
+              : Array.isArray(json.nsRecords)
+                ? json.nsRecords
+                : [],
+          };
+        }
+        return { registrar: null, nsRecords: [] };
+      }
     },
     staleTime: 5 * 60_000, // cache for 5 min — NS records rarely change
     retry: 1,

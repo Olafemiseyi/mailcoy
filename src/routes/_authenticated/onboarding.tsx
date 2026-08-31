@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { createOrganization, setOnboardingStep } from "@/lib/orgs.functions";
-import { addDomain } from "@/lib/domains.functions";
+import { addDomain, detectRegistrarFn } from "@/lib/domains.functions";
 import { addEmployee } from "@/lib/employees.functions";
 import { Card, Button, Input, Field } from "@/components/app/AppShell";
 import { Logomark } from "@/components/brand/Logomark";
@@ -50,6 +50,7 @@ function OnboardingRoute() {
   const addDom = useServerFn(addDomain);
   const addEmp = useServerFn(addEmployee);
   const finish = useServerFn(setOnboardingStep);
+  const detectReg = useServerFn(detectRegistrarFn);
 
   const [step, setStep] = useState<Step>("org");
   const [busy, setBusy] = useState(false);
@@ -74,9 +75,14 @@ function OnboardingRoute() {
   const { data: registrarData, isLoading: detectingRegistrar } = useQuery({
     queryKey: ["registrar-detect", cleanDomain],
     queryFn: async (): Promise<RegistrarDetectResult> => {
-      const res = await fetch(`/api/registrar-detect?domain=${encodeURIComponent(cleanDomain)}`);
-      if (!res.ok) throw new Error("Failed to detect registrar");
-      return res.json();
+      try {
+        const res = await detectReg({ data: { domain: cleanDomain } });
+        return res as unknown as RegistrarDetectResult;
+      } catch {
+        const res = await fetch(`/api/registrar-detect?domain=${encodeURIComponent(cleanDomain)}`).catch(() => null);
+        if (res?.ok) return res.json();
+        return { registrar: null, nsRecords: [] };
+      }
     },
     enabled: isValidDomainCandidate,
     staleTime: 5 * 60_000,
