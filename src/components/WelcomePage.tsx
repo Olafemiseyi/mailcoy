@@ -1,16 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { motion } from 'motion/react';
-import { 
-  Globe, 
-  Plus, 
-  Trash2, 
-  ArrowRight, 
-  ArrowLeft, 
-  Mail, 
-  Check, 
-  Sparkles,
-  Loader2
-} from 'lucide-react';
+import { Globe, Plus, Trash2, ArrowRight, ArrowLeft, Mail, Check, Loader2, Zap } from "lucide-react";
 
 interface WelcomePageProps {
   userName: string;
@@ -262,7 +252,7 @@ export default function WelcomePage({
               >
                 <div className="space-y-2">
                   <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
-                    <Sparkles className="h-5 w-5" />
+                    <Zap className="h-5 w-5" />
                   </div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">
                     Create Team Emails

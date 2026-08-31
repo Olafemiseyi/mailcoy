@@ -1,17 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { motion } from 'motion/react';
-import { 
-  HelpCircle, 
-  Search, 
-  ChevronDown, 
-  MessageSquare, 
-  FileText, 
-  Activity, 
-  Send,
-  Sparkles,
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react';
+import { HelpCircle, Search, ChevronDown, MessageSquare, FileText, Activity, Send, CheckCircle2, AlertCircle, Zap } from "lucide-react";
 
 interface FAQItem {
   question: string;
@@ -298,7 +287,7 @@ export default function SupportPage() {
 
           {/* Quick SLA / Security Notice */}
           <div className="p-4 border border-slate-150 dark:border-zinc-850 rounded-xl bg-slate-50/50 dark:bg-zinc-950/25 flex items-start gap-3">
-            <Sparkles className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+            <Zap className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
             <div className="space-y-0.5 text-left">
               <span className="text-[10px] font-bold text-slate-700 dark:text-zinc-300 block">SLA Response Commitment</span>
               <p className="text-[10px] text-slate-400 dark:text-zinc-500 leading-relaxed font-medium">

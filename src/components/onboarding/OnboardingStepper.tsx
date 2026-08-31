@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Copy, Loader2, Mail, Shield, Users, Globe, Sparkles } from "lucide-react";
+import { Check, Copy, Loader2, Mail, Shield, Users, Globe, Building } from "lucide-react";
 
 type Status = "idle" | "pending" | "ok" | "fail";
 type StepId = "org" | "domain" | "verify" | "invite" | "gmail" | "ready";
 
 const STEPS: { id: StepId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "org", label: "Organization", icon: Sparkles },
+  { id: "org", label: "Organization", icon: Building },
   { id: "domain", label: "Domain", icon: Globe },
   { id: "verify", label: "Verify DNS", icon: Shield },
   { id: "invite", label: "Invite team", icon: Users },

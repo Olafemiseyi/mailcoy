@@ -1,7 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { dbService } from '../lib/supabaseClient';
-import { Mail, Lock, ArrowRight, Building, User, ArrowLeft, Loader2, Chrome, Eye, EyeOff, Sparkles, Shield } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Building, User, ArrowLeft, Loader2, Chrome, Eye, EyeOff, Shield, Zap } from "lucide-react";
 
 interface AuthPageProps {
   onSignUpSuccess: (name: string, email: string, companyName: string, password?: string) => void;
@@ -222,7 +222,7 @@ export default function AuthPage({
               {[
                 { icon: Mail, text: "Sync every employee's Gmail in minutes" },
                 { icon: Shield, text: "Domain verification & DKIM/SPF managed for you" },
-                { icon: Sparkles, text: "Real-time email analytics across your whole team" },
+                { icon: Zap, text: "Real-time email analytics across your whole team" },
               ].map(({ icon: Icon, text }, i) => (
                 <li key={i} className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
@@ -503,7 +503,7 @@ export default function AuthPage({
                   }}
                   className="w-full py-2.5 border border-emerald-150 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded-xl hover:bg-emerald-50/60 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Sparkles className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                  <Zap className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                   <span>Autofill Demo Credentials</span>
                 </button>
 

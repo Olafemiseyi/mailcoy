@@ -7,7 +7,7 @@ import { addDomain } from "@/lib/domains.functions";
 import { addEmployee } from "@/lib/employees.functions";
 import { Card, Button, Input, Field } from "@/components/app/AppShell";
 import { Logomark } from "@/components/brand/Logomark";
-import { Check, Globe, Sparkles, ChevronRight, UserPlus } from "lucide-react";
+import { Check, Globe, ChevronRight, UserPlus, Zap } from "lucide-react";
 import { motion } from "motion/react";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
@@ -233,7 +233,7 @@ function OnboardingRoute() {
                             />
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5 font-medium text-ink">
-                                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                                <Zap className="h-3.5 w-3.5 text-blue-600" />
                                 <span>Detected: <strong className="text-blue-600 dark:text-blue-400">{registrarData.registrar.name}</strong></span>
                               </div>
                               <p className="text-[12px] text-ink-3 truncate">

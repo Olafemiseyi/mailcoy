@@ -3,17 +3,7 @@ import { motion } from 'motion/react';
 import { Domain, User } from '../types';
 import { dbService } from '../lib/supabaseClient';
 import { SettingsSkeleton } from './Skeleton';
-import { 
-  User as UserIcon, 
-  Globe, 
-  Shield, 
-  CreditCard,
-  Loader2,
-  Laptop,
-  AlertTriangle,
-  Sparkles,
-  Check
-} from 'lucide-react';
+import { User as UserIcon, Globe, Shield, CreditCard, Loader2, Laptop, AlertTriangle, Check, Zap } from "lucide-react";
 
 interface SettingsPageProps {
   user: User;

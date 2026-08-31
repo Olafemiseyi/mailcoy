@@ -210,12 +210,72 @@ export default async function handler(req: any, res: any) {
               to: [googleEmail],
               subject,
               html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #0f172a;">
-                  <h2>Welcome to your business address, ${firstName}!</h2>
-                  <p>Your professional address <strong>${empRow.professional_email}</strong> is now connected to this Gmail inbox.</p>
-                  <p>Inbound emails sent to <strong>${empRow.professional_email}</strong> will arrive directly in your inbox.</p>
-                  <div style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <strong>Next Step:</strong> When composing in Gmail, tap the "From" line and select <strong>${empRow.professional_email}</strong> to send as your business address.
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                  <!-- Header -->
+                  <div style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+                    <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: #0f172a;">Mailcoy</h1>
+                  </div>
+                  
+                  <!-- Body -->
+                  <div style="padding: 32px;">
+                    <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 20px; font-weight: 600; color: #0f172a;">Welcome to your business address, ${firstName}!</h2>
+                    
+                    <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #475569;">
+                      Your professional address <strong style="color: #0f172a;">${empRow.professional_email}</strong> is now securely connected to this Gmail inbox.
+                    </p>
+                    
+                    <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #475569;">
+                      Inbound emails sent to your business address will arrive directly in your inbox. To reply or send new messages from this address, you need to configure your Gmail "Send-as" settings.
+                    </p>
+                    
+                    <!-- Setup Box -->
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
+                      <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="background-color: #0f172a; color: #ffffff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-right: 12px;">1</div>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #0f172a;">Open Gmail Settings</h3>
+                      </div>
+                      <p style="margin: 0 0 24px 36px; font-size: 14px; color: #475569;">Go to <strong>Settings (⚙️)</strong> → <strong>See all settings</strong> → <strong>Accounts and Import</strong>.</p>
+                      
+                      <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="background-color: #0f172a; color: #ffffff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-right: 12px;">2</div>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #0f172a;">Add your address</h3>
+                      </div>
+                      <p style="margin: 0 0 24px 36px; font-size: 14px; color: #475569;">In the "Send mail as" section, click <strong>"Add another email address"</strong>. Enter your name and <strong>${empRow.professional_email}</strong>.</p>
+                      
+                      <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="background-color: #0f172a; color: #ffffff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-right: 12px;">3</div>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #0f172a;">Enter SMTP Credentials</h3>
+                      </div>
+                      <p style="margin: 0 0 12px 36px; font-size: 14px; color: #475569;">When prompted, enter the following secure routing details:</p>
+                      
+                      <div style="margin-left: 36px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                          <tr>
+                            <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b; width: 100px;">SMTP Server</td>
+                            <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #0f172a; font-weight: 600;">smtp.resend.com</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b;">Port</td>
+                            <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #0f172a; font-weight: 600;">465 (SSL)</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #64748b;">Username</td>
+                            <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-family: monospace; color: #0f172a; font-weight: 600;">resend</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 12px 16px; color: #64748b;">Password</td>
+                            <td style="padding: 12px 16px; font-family: monospace; color: #0f172a; font-weight: 600; word-break: break-all;">${resendApiKey}</td>
+                          </tr>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Footer -->
+                  <div style="background-color: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; font-size: 12px; color: #64748b;">
+                      Secured by Mailcoy • Modern email routing
+                    </p>
                   </div>
                 </div>
               `,

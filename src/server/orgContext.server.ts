@@ -40,22 +40,54 @@ export async function resolveOrgContext(
   preferredOrgId?: string | null,
 ): Promise<OrgContext | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { getRequest } = await import("@tanstack/react-start/server");
+
+  let actualPreferredOrgId = preferredOrgId;
+  if (!actualPreferredOrgId) {
+    try {
+      const req = getRequest();
+      const cookieHeader = req?.headers?.get("cookie") || "";
+      const match = cookieHeader.match(/mailcoy_impersonating_org_id=([^;]+)/);
+      if (match) actualPreferredOrgId = match[1];
+    } catch {
+      // Ignore errors if outside request context
+    }
+  }
+
+  let isSuperAdminImpersonating = false;
+  if (actualPreferredOrgId) {
+    // If an impersonation cookie is set, verify if they are a platform admin.
+    const { data: isAdmin } = await supabaseAdmin.rpc("is_platform_admin", { _user_id: userId });
+    if (isAdmin) {
+      isSuperAdminImpersonating = true;
+    }
+  }
 
   // First, find the user's organization membership using supabaseAdmin to bypass RLS
   let query = supabaseAdmin.from("organization_members").select("organization_id, role");
 
-  if (userId) {
-    query = query.eq("user_id", userId);
-  }
-
-  if (preferredOrgId) {
-    query = query.eq("organization_id", preferredOrgId);
+  if (actualPreferredOrgId) {
+    query = query.eq("organization_id", actualPreferredOrgId);
+    // If they are a super admin in ghost mode, don't restrict to their own membership records.
+    // We just want to get ANY member to verify the org exists and get a role (defaulting to owner).
+    if (!isSuperAdminImpersonating && userId) {
+      query = query.eq("user_id", userId);
+    }
   } else {
+    if (userId) query = query.eq("user_id", userId);
     query = query.limit(1);
   }
 
   const { data: members } = await query;
-  const member = members?.[0];
+  let member = members?.[0];
+
+  // If super admin impersonating an empty org with zero members (edge case), fake the membership
+  if (isSuperAdminImpersonating && !member) {
+    member = { organization_id: actualPreferredOrgId, role: "owner" } as any;
+  } else if (isSuperAdminImpersonating) {
+    // Elevate super admin to owner role in the UI for the impersonated org
+    member = { ...member, role: "owner" };
+  }
 
   if (!member) {
     return null; // No organization found for this user

@@ -21,25 +21,7 @@ import {
   INITIAL_EMPLOYEES, 
   INITIAL_EMAIL_LOGS 
 } from './lib/initialState';
-import { 
-  Sparkles, 
-  ArrowRight, 
-  Eye, 
-  MonitorPlay,
-  Search,
-  Bell,
-  Menu,
-  X,
-  LayoutDashboard,
-  Users,
-  Mail,
-  Settings,
-  Plus,
-  HelpCircle,
-  CreditCard,
-  Check,
-  Loader2
-} from 'lucide-react';
+import { ArrowRight, Eye, MonitorPlay, Search, Bell, Menu, X, LayoutDashboard, Users, Mail, Settings, Plus, HelpCircle, CreditCard, Check, Loader2, Zap } from "lucide-react";
 
 export default function App() {
   // Main states

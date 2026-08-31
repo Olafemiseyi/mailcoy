@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { MarketingShell } from "./MarketingShell";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Zap } from "lucide-react";
 
 export function MarketingPage({
   eyebrow,
@@ -23,7 +23,7 @@ export function MarketingPage({
         <div className="relative z-10 mx-auto max-w-4xl px-5 pt-12 pb-8 md:pt-20">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/80 px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary shadow-2xs">
-              <Sparkles className="h-3 w-3" />
+              <Zap className="h-3 w-3" />
               <span>{eyebrow}</span>
             </div>
             <h1 className="font-display text-[36px] sm:text-[48px] font-bold text-ink leading-[1.08] tracking-tight">

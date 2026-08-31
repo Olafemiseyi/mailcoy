@@ -10,29 +10,7 @@ import {
   StatusPill,
   ConfirmDeleteModal,
 } from "@/components/app/AppShell";
-import {
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  ArrowLeft,
-  Trash2,
-  Copy,
-  ExternalLink,
-  Check,
-  Award,
-  Sparkles,
-  ShieldCheck,
-  Info,
-  Share2,
-  Send,
-  MessageSquare,
-  LifeBuoy,
-  X,
-  ChevronRight,
-  Globe,
-  HelpCircle,
-  Zap,
-} from "lucide-react";
+import { CheckCircle2, AlertCircle, RefreshCw, ArrowLeft, Trash2, Copy, ExternalLink, Check, Award, ShieldCheck, Info, Share2, Send, MessageSquare, LifeBuoy, X, ChevronRight, Globe, HelpCircle, Zap } from "lucide-react";
 import { DeliverabilityTester } from "@/components/DeliverabilityTester";
 import { Skeleton } from "@/components/Skeleton";
 import { friendlyError } from "@/lib/errors";
@@ -405,7 +383,7 @@ function DomainDetailRoute() {
       <Card className="mb-6 p-4 border-emerald-500/20 bg-emerald-500/[0.03]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-2.5">
-            <Sparkles className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+            <Zap className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
               <h4 className="text-[13.5px] font-semibold text-ink">
                 Not sure how to add these yourself?
@@ -809,7 +787,7 @@ function BimiConfigCard({
       {/* Startup Zero-Cost Logo Guide */}
       <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-3.5 sm:p-4 text-[13px]">
         <div className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400 mb-1.5">
-          <Sparkles className="h-4 w-4 shrink-0" />
+          <Zap className="h-4 w-4 shrink-0" />
           <span className="text-[13px] font-semibold">
             Starting out? Show your logo for $0 on Gmail & Yahoo
           </span>

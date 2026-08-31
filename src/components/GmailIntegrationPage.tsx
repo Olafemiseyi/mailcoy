@@ -1,15 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { 
-  Mail, 
-  Check, 
-  ShieldCheck, 
-  Layers, 
-  ExternalLink,
-  ChevronRight,
-  Info,
-  Sparkles
-} from 'lucide-react';
+import { Mail, Check, ShieldCheck, Layers, ExternalLink, ChevronRight, Info, Zap } from "lucide-react";
 
 interface GmailIntegrationPageProps {
   onNavigate?: (page: 'landing' | 'auth' | 'welcome' | 'verify' | 'dashboard' | 'employees' | 'gmail' | 'settings') => void;

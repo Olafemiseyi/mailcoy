@@ -1,15 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import {
-  MessageSquare,
-  X,
-  Send,
-  Bot,
-  Sparkles,
-  AlertCircle,
-  ArrowUpRight,
-  CheckCircle2,
-  User,
-} from "lucide-react";
+import { MessageSquare, X, Send, Bot, AlertCircle, ArrowUpRight, CheckCircle2, User, Zap } from "lucide-react";
 import { Card, Button } from "@/components/app/AppShell";
 import { useServerFn } from "@tanstack/react-start";
 import { askAiAssistant, escalateToAdmin } from "@/lib/chat.functions";
@@ -94,7 +84,7 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
     return "Composing response...";
   }
 
-  async function handleSend(customText?: string) {
+  async function handleSend(customText?: string, explicitIssueId?: string) {
     const query = customText || input;
     if (!query.trim()) return;
 
@@ -109,9 +99,13 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
         data: {
           message: query,
           userEmail: userEmail || undefined,
-          selectedIssue: selectedIssue || undefined,
+          selectedIssue: explicitIssueId || (customText ? undefined : (selectedIssue || undefined)),
+          history: messages.map(m => ({ role: m.role === 'system' ? 'assistant' : m.role, content: m.content })),
         },
       });
+
+      setSelectedIssue(null);
+
 
       setMessages([...newMsgs, { role: "assistant", content: res.reply }]);
     } catch {
@@ -129,12 +123,23 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
   }
 
   async function handleEscalate() {
+    let emailToUse = userEmail;
+
+    if (!emailToUse) {
+      const prompted = window.prompt("Please enter your email address so our Super Admin can reply to you:");
+      if (!prompted || !prompted.trim().includes("@")) {
+        alert("A valid email address is required to create a ticket.");
+        return;
+      }
+      emailToUse = prompted.trim();
+    }
+
     setEscalating(true);
     try {
       const transcript = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
       await escalate({
         data: {
-          userEmail: userEmail || "customer@mailcoy.com",
+          userEmail: emailToUse,
           subject: selectedIssue ? `Support Request: ${selectedIssue}` : "Support Chat Escalation",
           conversationHistory: transcript,
         },
@@ -176,7 +181,7 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
           <div className="px-4 py-3.5 bg-primary text-primary-foreground flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-white/20 grid place-items-center">
-                <Sparkles className="h-4 w-4" />
+                <Zap className="h-4 w-4" />
               </div>
               <div>
                 <h3 className="font-display text-[14.5px] font-semibold">Mailcoy AI Specialist</h3>
@@ -235,7 +240,7 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
                     key={issue.id}
                     onClick={() => {
                       setSelectedIssue(issue.id);
-                      handleSend(`I need help with: ${issue.label}`);
+                      handleSend(`I need help with: ${issue.label}`, issue.id);
                     }}
                     className="w-full text-left p-2 rounded-lg border border-line bg-surface hover:bg-ink/[0.03] text-[12.5px] text-ink transition flex items-center justify-between"
                   >

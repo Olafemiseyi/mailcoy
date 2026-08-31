@@ -2,14 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Domain } from '../types';
 import { dbService } from '../lib/supabaseClient';
-import { 
-  Copy, 
-  Check, 
-  RefreshCw, 
-  CheckCircle2, 
-  Info, 
-  Sparkles
-} from 'lucide-react';
+import { Copy, Check, RefreshCw, CheckCircle2, Info, Zap } from "lucide-react";
 
 interface VerifyPageProps {
   domain: Domain;
@@ -300,7 +293,7 @@ export default function VerifyPage({ domain, onVerifySuccess, onBack }: VerifyPa
                   onClick={handleForceVerifyDemo}
                   className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shrink-0 cursor-pointer transition-colors"
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Zap className="h-4 w-4" />
                   Bypass (Demo Mode)
                 </button>
               )}
@@ -366,7 +359,7 @@ export default function VerifyPage({ domain, onVerifySuccess, onBack }: VerifyPa
                     animate={{ opacity: 1 }}
                     className="text-green-400 font-semibold flex items-center gap-2 pt-1 animate-pulse text-xs"
                   >
-                    <Sparkles className="h-4 w-4 text-emerald-400" />
+                    <Zap className="h-4 w-4 text-emerald-400" />
                     <span>Domain status: active. Launching management dashboard...</span>
                   </motion.div>
                 )}

@@ -371,6 +371,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 onClick={() => {
                   localStorage.removeItem("mailcoy_impersonating_org_id");
                   localStorage.removeItem("mailcoy_impersonating_org_name");
+                  document.cookie = "mailcoy_impersonating_org_id=; path=/; max-age=0";
                   window.location.href = "/admin/organizations";
                 }}
                 className="px-2.5 py-1 bg-amber-950 text-amber-100 rounded text-[11.5px] font-semibold hover:bg-black transition"

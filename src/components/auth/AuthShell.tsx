@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Eye, EyeOff, Mail, Shield, Zap, Lock, Sparkles, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Shield, Zap, Lock, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Logomark } from "@/components/brand/Logomark";
@@ -40,7 +40,7 @@ function AuthPanel() {
         <div className="space-y-8 my-auto py-12">
           <div className="space-y-3">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-[11px] font-semibold text-white/90 uppercase tracking-widest">
-              <Sparkles className="h-3 w-3 text-amber-300" /> Modern Email OS
+              <Zap className="h-3 w-3 text-amber-300" /> Modern Email OS
             </span>
             <h2 className="font-display text-[34px] xl:text-[40px] font-bold text-white leading-[1.1] tracking-tight">
               Professional email, <br />

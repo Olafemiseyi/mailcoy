@@ -129,6 +129,7 @@ function InvitePage() {
     department?: string | null;
   } | null;
   const gmail = res.gmail as { google_email: string; connected_at: string } | null;
+  const smtpPassword = res.smtpPassword as string | undefined;
   const alreadyDone = !!gmail;
 
   return (
@@ -245,13 +246,36 @@ function InvitePage() {
                           </span>
                         </div>
                       </div>
-                      <div className="p-2.5 px-3">
+                      <div className="p-2.5 px-3 border-b border-line">
                         <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider font-medium">
                           Username
                         </span>
                         <span className="font-mono font-medium text-[12px] text-ink">
                           resend
                         </span>
+                      </div>
+                      <div className="p-2.5 px-3">
+                        <span className="text-ink-3 block mb-0.5 text-[10px] uppercase tracking-wider font-medium">
+                          Password
+                        </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono font-medium text-[12px] text-ink truncate">
+                            {smtpPassword || "(Ask your workspace admin)"}
+                          </span>
+                          {smtpPassword && (
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(smtpPassword);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                              }}
+                              className="text-ink-3 hover:text-ink transition shrink-0"
+                              title="Copy password"
+                            >
+                              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -1,23 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Employee, EmailLog } from '../types';
-import { 
-  Activity, 
-  AlertTriangle, 
-  CheckCircle2, 
-  ShieldAlert, 
-  RefreshCw, 
-  Sliders, 
-  Sparkles, 
-  Play, 
-  Ban, 
-  X,
-  Gauge,
-  ExternalLink,
-  MailWarning,
-  Flame,
-  ArrowUpRight
-} from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, ShieldAlert, RefreshCw, Sliders, Play, Ban, X, Gauge, ExternalLink, MailWarning, Flame, ArrowUpRight, Zap } from "lucide-react";
 
 interface EmailHealthMonitorProps {
   employees: Employee[];
@@ -446,7 +430,7 @@ export default function EmailHealthMonitor({
         <div className="bg-emerald-900/5 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30 rounded-xl p-5 flex flex-col justify-between space-y-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <Zap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <h3 className="text-xs font-bold text-emerald-950 dark:text-emerald-350 uppercase tracking-wide">
                 SMTP Relay Event Simulator
               </h3>

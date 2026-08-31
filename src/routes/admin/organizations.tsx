@@ -312,6 +312,7 @@ function AdminOrgs() {
                   onClick={() => {
                     localStorage.setItem("mailcoy_impersonating_org_id", selectedOrg.id);
                     localStorage.setItem("mailcoy_impersonating_org_name", selectedOrg.name);
+                    document.cookie = `mailcoy_impersonating_org_id=${selectedOrg.id}; path=/; max-age=86400`;
                     window.location.href = "/dashboard";
                   }}
                   className="w-full py-2.5 rounded-lg border border-line bg-white dark:bg-zinc-900 text-ink text-[13px] font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"

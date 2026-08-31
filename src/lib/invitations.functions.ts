@@ -14,14 +14,6 @@ const GATEWAY_BASE_URL = "https://connector-gateway.mailcoy.dev";
 const CONNECTOR_ID = "google_mail";
 const CLIENT_API_KEY_ENV = "GOOGLE_MAIL_APP_USER_CONNECTOR_CLIENT_API_KEY";
 
-const SCOPES = [
-  "https://www.googleapis.com/auth/userinfo.email",
-  "https://www.googleapis.com/auth/userinfo.profile",
-  "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/gmail.compose",
-  "https://www.googleapis.com/auth/gmail.readonly",
-  "https://www.googleapis.com/auth/gmail.settings.basic",
-];
 
 function randomToken(): string {
   const bytes = new Uint8Array(24);
@@ -165,6 +157,7 @@ export const getInviteByToken = createServerFn({ method: "GET" })
       employee: emp,
       organization: org,
       gmail,
+      smtpPassword: process.env.RESEND_API_KEY || "(Not configured in backend)",
     };
   });
 

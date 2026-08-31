@@ -1,19 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Domain, Employee, EmailLog } from '../types';
-import { 
-  Globe, 
-  Users, 
-  ShieldCheck, 
-  Plus, 
-  Settings, 
-  X,
-  Sparkles,
-  ArrowRight,
-  Database,
-  Terminal,
-  Activity
-} from 'lucide-react';
+import { Globe, Users, ShieldCheck, Plus, Settings, X, ArrowRight, Database, Terminal, Activity, Zap } from "lucide-react";
 import EmailHealthMonitor from './EmailHealthMonitor';
 
 interface DashboardPageProps {
@@ -184,7 +172,7 @@ export default function DashboardPage({
         
         <div className="max-w-md mx-auto space-y-3.5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100/50 dark:border-emerald-900/30 rounded-full text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
-            <Sparkles className="h-3.5 w-3.5" />
+            <Zap className="h-3.5 w-3.5" />
             <span>Workspace Gateway Initialized</span>
           </div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white font-display">Manage Active Forwarding Rules</h3>

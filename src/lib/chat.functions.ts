@@ -430,7 +430,6 @@ What would you like to set up today?`;
  * Escalates an unresolved chat issue directly to the Super Admin via email and database ticket
  */
 export const escalateToAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>
     z.object({
       userEmail: z.string().email(),
@@ -438,22 +437,30 @@ export const escalateToAdmin = createServerFn({ method: "POST" })
       conversationHistory: z.string(),
     }).parse(d),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }: any) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1. Insert support ticket into activity logs / tickets
-    await supabaseAdmin.from("activity_logs").insert({
-      organization_id: "00000000-0000-0000-0000-000000000000",
-      actor_user_id: context.userId,
-      action: "support.ticket_escalated",
-      target_type: "support",
-      meta: {
-        userEmail: data.userEmail,
-        subject: data.subject,
-        history: data.conversationHistory,
-        timestamp: new Date().toISOString(),
-      },
-    } as never);
+    let userId = null;
+    if (context?.supabase) {
+      const { data: authData } = await context.supabase.auth.getUser();
+      if (authData?.user) userId = authData.user.id;
+    }
+
+    // 1. Insert support ticket into activity logs / tickets if logged in
+    if (userId) {
+      await supabaseAdmin.from("activity_logs").insert({
+        organization_id: "00000000-0000-0000-0000-000000000000",
+        actor_user_id: userId,
+        action: "support.ticket_escalated",
+        target_type: "support",
+        meta: {
+          userEmail: data.userEmail,
+          subject: data.subject,
+          history: data.conversationHistory,
+          timestamp: new Date().toISOString(),
+        },
+      } as never);
+    }
 
     // 2. Dispatch email notification to admin via Resend
     const resendApiKey = process.env.RESEND_API_KEY;

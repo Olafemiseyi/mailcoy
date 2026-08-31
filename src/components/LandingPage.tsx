@@ -1,21 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { 
-  Mail, 
-  ArrowRight, 
-  ShieldCheck, 
-  Globe, 
-  Users, 
-  Check, 
-  Sparkles, 
-  Lock, 
-  Zap, 
-  ArrowLeft, 
-  BookOpen, 
-  Fingerprint,
-  Menu,
-  X
-} from 'lucide-react';
+import { Mail, ArrowRight, ShieldCheck, Globe, Users, Check, Lock, Zap, ArrowLeft, BookOpen, Fingerprint, Menu, X } from "lucide-react";
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -352,7 +337,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                 {/* Copy (Headline, Explanation, CTA) */}
                 <div className="lg:col-span-7 space-y-8 text-left">
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/45 border border-emerald-100/60 dark:border-emerald-900/40 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 rounded-full tracking-wide">
-                    <Sparkles className="h-3 w-3" />
+                    <Zap className="h-3 w-3" />
                     <span>Zero Migration Email Layer</span>
                   </div>
 
@@ -498,7 +483,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                   <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
                   
                   <span className="inline-flex items-center gap-1 text-[9px] font-bold tracking-widest text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-zinc-800 border border-emerald-100/50 dark:border-zinc-700 px-3 py-1 rounded-full w-fit mx-auto">
-                    <Sparkles className="h-3 w-3" />
+                    <Zap className="h-3 w-3" />
                     <span>UNLIMITED ROUTING MAPS</span>
                   </span>
                   

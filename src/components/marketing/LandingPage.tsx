@@ -1,28 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  ArrowUpRight,
-  Check,
-  Zap,
-  ShieldCheck,
-  Mail,
-  TrendingDown,
-  Sparkles,
-  Users,
-  Lock,
-  PenLine,
-  Inbox,
-  Radio,
-  Copy,
-  ChevronDown,
-  Terminal,
-  Globe,
-  Server,
-  ArrowRight,
-  CheckCircle2,
-  HelpCircle,
-  Plus,
-} from "lucide-react";
+import { ArrowUpRight, Check, Zap, ShieldCheck, Mail, TrendingDown, Users, Lock, PenLine, Inbox, Radio, Copy, ChevronDown, Terminal, Globe, Server, ArrowRight, CheckCircle2, HelpCircle, Plus } from "lucide-react";
 import { MarketingShell } from "./MarketingShell";
 import { detectUserCurrency, type Currency } from "@/lib/currency";
 
@@ -255,7 +233,7 @@ function InteractiveSimulator() {
     <section className="mx-auto max-w-6xl px-5 py-24">
       <div className="text-center max-w-2xl mx-auto mb-14">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3.5 py-1 text-[11.5px] font-semibold text-primary uppercase tracking-widest mb-3">
-          <Sparkles className="h-3.5 w-3.5" /> Interactive Architecture
+          <Zap className="h-3.5 w-3.5" /> Interactive Architecture
         </span>
         <h2 className="font-display text-[32px] font-bold tracking-tight sm:text-[44px] text-ink leading-tight">
           How Mailcoy Works Under the Hood
