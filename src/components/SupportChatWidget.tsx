@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { MessageSquare, X, Send, Bot, AlertCircle, ArrowUpRight, CheckCircle2, User, Zap } from "lucide-react";
 import { Card, Button } from "@/components/app/AppShell";
 import { useServerFn } from "@tanstack/react-start";
@@ -301,64 +303,84 @@ export function SupportChatWidget({ userEmail }: { userEmail?: string }) {
 }
 
 function FormattedMessage({ content }: { content: string }) {
-  const lines = content.split("\n");
-
   return (
-    <div className="space-y-1 text-[12.5px] leading-relaxed">
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return <div key={i} className="h-1.5" />;
-
-        // Bullet point
-        if (trimmed.startsWith("* ") || trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
-          const text = trimmed.replace(/^[\*\-•]\s*/, "");
-          return (
-            <div key={i} className="flex gap-2 items-start pl-1">
-              <span className="text-primary font-bold">•</span>
-              <span className="flex-1">{renderInlineFormatting(text)}</span>
+    <div className="text-[12.5px] leading-relaxed text-ink">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-[13.5px] font-bold text-ink mt-3 mb-1 first:mt-0">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-[13px] font-bold text-ink mt-2.5 mb-1 first:mt-0">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-[12.5px] font-bold text-ink mt-2 mb-0.5 first:mt-0">
+              {children}
+            </h3>
+          ),
+          hr: () => <hr className="my-2 border-line/60" />,
+          p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>,
+          ul: ({ children }) => (
+            <ul className="my-1.5 space-y-1 pl-4 list-disc marker:text-primary">
+              {children}
+            </ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="my-1.5 space-y-1 pl-4 list-decimal marker:text-primary font-medium">
+              {children}
+            </ol>
+          ),
+          li: ({ children }) => <li className="leading-relaxed pl-0.5 font-normal">{children}</li>,
+          table: ({ children }) => (
+            <div className="my-2 overflow-x-auto rounded-lg border border-line bg-background shadow-xs">
+              <table className="w-full text-[11.5px] text-left border-collapse">
+                {children}
+              </table>
             </div>
-          );
-        }
-
-        // Numbered list
-        const numMatch = trimmed.match(/^(\d+)\.\s*(.*)$/);
-        if (numMatch) {
-          return (
-            <div key={i} className="flex gap-2 items-start pl-1">
-              <span className="font-semibold text-primary">{numMatch[1]}.</span>
-              <span className="flex-1">{renderInlineFormatting(numMatch[2])}</span>
-            </div>
-          );
-        }
-
-        return <div key={i}>{renderInlineFormatting(line)}</div>;
-      })}
+          ),
+          thead: ({ children }) => (
+            <thead className="bg-surface-muted border-b border-line text-ink font-semibold">
+              {children}
+            </thead>
+          ),
+          tbody: ({ children }) => (
+            <tbody className="divide-y divide-line">{children}</tbody>
+          ),
+          tr: ({ children }) => (
+            <tr className="hover:bg-ink/[0.02] transition-colors">{children}</tr>
+          ),
+          th: ({ children }) => (
+            <th className="px-2.5 py-1.5 font-semibold text-ink whitespace-nowrap">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="px-2.5 py-1.5 text-ink-2 font-mono text-[11px] whitespace-nowrap">
+              {children}
+            </td>
+          ),
+          code: ({ children }) => (
+            <code className="px-1.5 py-0.5 rounded bg-ink/[0.06] font-mono text-[11.5px] text-ink font-medium">
+              {children}
+            </code>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-semibold text-ink">{children}</strong>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="my-1.5 rounded-r-lg border-l-2 border-primary bg-primary/5 px-2.5 py-1 text-[12px] text-ink-2 italic">
+              {children}
+            </blockquote>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
-}
-
-function renderInlineFormatting(text: string) {
-  // Regex to split by **bold** or `code`
-  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
-
-  return parts.map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={index} className="font-semibold text-ink">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    if (part.startsWith("`") && part.endsWith("`")) {
-      return (
-        <code
-          key={index}
-          className="px-1 py-0.5 rounded bg-ink/[0.06] font-mono text-[11.5px] text-ink"
-        >
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return part;
-  });
 }

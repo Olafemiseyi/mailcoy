@@ -84,9 +84,12 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
       };
     }
 
+    const separator = data.callbackUrl.includes("?") ? "&" : "?";
+    const callbackWithParams = `${data.callbackUrl}${separator}plan_code=${encodeURIComponent(data.planCode)}&interval=${encodeURIComponent(data.interval)}`;
+
     const payload: Record<string, unknown> = {
       email,
-      callback_url: data.callbackUrl,
+      callback_url: callbackWithParams,
       metadata: {
         organization_id: ctx.organizationId,
         plan_code: data.planCode,
@@ -127,22 +130,39 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
 
 export const verifyPaystackReference = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ reference: z.string().min(3) }).parse(d))
+  .validator((d: unknown) =>
+    z
+      .object({
+        reference: z.string().min(3),
+        planCode: z.string().optional(),
+        interval: z.enum(["monthly", "yearly"]).optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     const paystackKey = process.env.PAYSTACK_SECRET_KEY;
+    const planCode = data.planCode || "growth";
+    const selectedPlan =
+      PRICING_PLANS.find((p) => p.code.toLowerCase() === planCode.toLowerCase()) ??
+      PRICING_PLANS.find((p) => p.code === "growth")!;
+    const periodDays = data.interval === "yearly" ? 365 : 30;
+    const amountKobo =
+      data.interval === "yearly" ? selectedPlan.ngnYearlyKobo : selectedPlan.ngnMonthlyKobo;
 
     if (!paystackKey || data.reference.startsWith("test_trx_")) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin.from("subscriptions").upsert(
         {
           organization_id: ctx.organizationId,
-          plan: "growth",
-          plan_code: "growth",
+          plan: selectedPlan.name,
+          plan_code: selectedPlan.code,
           status: "active",
-          amount_kobo: 2000000,
-          billing_interval: "monthly",
-          current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
+          amount_kobo: amountKobo,
+          billing_interval: data.interval || "monthly",
+          max_employees: selectedPlan.limits.employees,
+          max_domains: selectedPlan.limits.domains,
+          current_period_end: new Date(Date.now() + periodDays * 86400000).toISOString(),
           updated_at: new Date().toISOString(),
         } as never,
         { onConflict: "organization_id" },
@@ -156,10 +176,11 @@ export const verifyPaystackReference = createServerFn({ method: "POST" })
         reference: data.reference,
         status: "success",
         payload: {
-          amount: 2000000,
+          amount: amountKobo,
           currency: "NGN",
-          plan: "Growth",
-          plan_code: "growth",
+          plan: selectedPlan.name,
+          plan_code: selectedPlan.code,
+          interval: data.interval || "monthly",
           status: "success",
           paid_at: new Date().toISOString(),
         },
@@ -195,24 +216,59 @@ export const verifyPaystackReference = createServerFn({ method: "POST" })
       promo_duration?: string;
     };
     const orgId = meta.organization_id ?? ctx.organizationId;
-    const periodDays = meta.billing_interval === "yearly" ? 365 : 30;
+
+    // Resolve plan with robust fallbacks
+    const rawPlanCode = (meta.plan_code || data.planCode || "").toLowerCase();
+    let plan = PRICING_PLANS.find((p) => p.code.toLowerCase() === rawPlanCode);
+
+    if (!plan && body.data?.amount) {
+      plan = PRICING_PLANS.find(
+        (p) => p.ngnMonthlyKobo === body.data!.amount || p.ngnYearlyKobo === body.data!.amount,
+      );
+    }
+    if (!plan) {
+      plan = PRICING_PLANS.find((p) => p.code === "starter")!;
+    }
+
+    const interval =
+      meta.billing_interval ||
+      data.interval ||
+      (plan.ngnYearlyKobo === body.data?.amount ? "yearly" : "monthly");
+    const livePeriodDays = interval === "yearly" ? 365 : 30;
+
+    // Save Card details if authorization was returned
+    const auth = (body.data as any).authorization;
+    let cardData: any = null;
+    if (auth && auth.last4) {
+      cardData = {
+        brand: auth.brand || auth.card_type || "Card",
+        last4: auth.last4,
+        expMonth: Number(auth.exp_month),
+        expYear: Number(auth.exp_year),
+      };
+    }
+
     await supabaseAdmin.from("subscriptions").upsert(
       {
         organization_id: orgId,
         provider: "paystack",
         provider_reference: body.data.reference,
-        plan: meta.plan_code ?? "Paystack",
-        plan_code: meta.plan_code ?? null,
+        plan: plan.name,
+        plan_code: plan.code,
         status: "active",
         amount_kobo: body.data.amount,
-        current_period_end: new Date(Date.now() + periodDays * 24 * 3600 * 1000).toISOString(),
+        max_employees: plan.limits.employees,
+        max_domains: plan.limits.domains,
+        billing_interval: interval,
+        ...(cardData ? { billing_card: cardData } : {}),
+        current_period_end: new Date(Date.now() + livePeriodDays * 24 * 3600 * 1000).toISOString(),
         updated_at: new Date().toISOString(),
         // Persist promo info so we can apply discount on future renewals if duration=forever
         promo_code: meta.promo_code ?? null,
         promo_discount_pct: meta.promo_discount_pct ?? null,
         promo_duration: meta.promo_duration ?? null,
       } as never,
-      { onConflict: "provider_reference" },
+      { onConflict: "organization_id" },
     );
 
     // Atomically redeem the promo code (increment uses, insert redemption row)
@@ -268,6 +324,82 @@ export const cancelSubscription = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const reactivateSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    if (ctx.role !== "owner" && ctx.role !== "admin") throw new Error("FORBIDDEN");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin
+      .from("subscriptions")
+      .update({
+        status: "active",
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("organization_id", ctx.organizationId);
+
+    return { ok: true };
+  });
+
+export const scheduleDowngrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        targetPlanCode: z.string().min(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    if (ctx.role !== "owner" && ctx.role !== "admin") throw new Error("FORBIDDEN");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Fetch current subscription
+    const { data: sub } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id, current_period_end, plan_code")
+      .eq("organization_id", ctx.organizationId)
+      .maybeSingle() as any;
+
+    const scheduledDate =
+      sub?.current_period_end || new Date(Date.now() + 30 * 86400000).toISOString();
+
+    await supabaseAdmin
+      .from("subscriptions")
+      .update({
+        scheduled_plan_code: data.targetPlanCode.toLowerCase(),
+        scheduled_downgrade_at: scheduledDate,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("organization_id", ctx.organizationId);
+
+    return { ok: true, scheduledDate };
+  });
+
+export const cancelScheduledDowngrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    if (ctx.role !== "owner" && ctx.role !== "admin") throw new Error("FORBIDDEN");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin
+      .from("subscriptions")
+      .update({
+        scheduled_plan_code: null,
+        scheduled_downgrade_at: null,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("organization_id", ctx.organizationId);
+
+    return { ok: true };
+  });
+
 export type BillingCard = {
   last4: string;
   brand: string;
@@ -285,15 +417,18 @@ export const getBillingOverview = createServerFn({ method: "GET" })
       card: BillingCard;
       events: any[];
       usage: { employees: number; domains: number };
+      totalEventsCount: number;
+      scheduledPlan: { planCode: string; planName: string; downgradeAt: string | null } | null;
     }> => {
       const ctx = await requireOrgContext(context.supabase, context.userId);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
       // Fetch subscription
-      const { data: sub } = await context.supabase
+      const { data: sub } = await supabaseAdmin
         .from("subscriptions")
         .select("*")
         .eq("organization_id", ctx.organizationId)
-        .maybeSingle();
+        .maybeSingle() as any;
 
       // Fetch usage counts
       const { count: employees } = await context.supabase
@@ -325,7 +460,7 @@ export const getBillingOverview = createServerFn({ method: "GET" })
       }
 
       // Fetch billing events count & initial batch
-      const { data: rawEvents, count: totalEventsCount } = await context.supabase
+      const { data: rawEvents, count: totalEventsCount } = await supabaseAdmin
         .from("billing_events")
         .select("id, event_type, created_at, reference, status, payload", { count: "exact" })
         .eq("organization_id", ctx.organizationId)
@@ -342,6 +477,17 @@ export const getBillingOverview = createServerFn({ method: "GET" })
         card,
       }));
 
+      const scheduledPlan = sub?.scheduled_plan_code
+        ? {
+            planCode: sub.scheduled_plan_code,
+            planName:
+              PRICING_PLANS.find(
+                (p) => p.code.toLowerCase() === sub.scheduled_plan_code.toLowerCase(),
+              )?.name ?? sub.scheduled_plan_code,
+            downgradeAt: sub.scheduled_downgrade_at || sub.current_period_end,
+          }
+        : null;
+
       return {
         subscription: sub || {
           plan: ctx.subscription.plan,
@@ -357,6 +503,7 @@ export const getBillingOverview = createServerFn({ method: "GET" })
         card,
         events,
         totalEventsCount: totalEventsCount ?? events.length,
+        scheduledPlan,
         usage: {
           employees: employees || 0,
           domains: domains || 0,
@@ -377,7 +524,8 @@ export const listBillingEvents = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
-    const { data: rawEvents, count } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rawEvents, count } = await supabaseAdmin
       .from("billing_events")
       .select("id, event_type, created_at, reference, status, payload", { count: "exact" })
       .eq("organization_id", ctx.organizationId)

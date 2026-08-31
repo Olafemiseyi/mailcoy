@@ -9,7 +9,10 @@ import {
   verifyPaystackReference,
   getBillingOverview,
   cancelSubscription,
+  reactivateSubscription,
   listBillingEvents,
+  scheduleDowngrade,
+  cancelScheduledDowngrade,
 } from "@/lib/paystack.functions";
 import { validatePromoCode, type PromoValidation } from "@/lib/promo.functions";
 import { detectUserCurrency, Currency, PRICING_PLANS } from "@/lib/currency";
@@ -26,13 +29,21 @@ export const Route = createFileRoute("/_authenticated/_shell/settings/billing")(
   component: BillingPage,
 });
 
+const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, growth: 2, scale: 3 };
+
 function BillingPage() {
   const qc = useQueryClient();
   const { data } = useSuspenseQuery(billingOpts);
   const init = useServerFn(initPaystackCheckout);
   const verify = useServerFn(verifyPaystackReference);
   const cancel = useServerFn(cancelSubscription);
+  const reactivateFn = useServerFn(reactivateSubscription);
   const fetchMoreEvents = useServerFn(listBillingEvents);
+  const scheduleDowngradeFn = useServerFn(scheduleDowngrade);
+  const cancelDowngradeFn = useServerFn(cancelScheduledDowngrade);
+
+  const [downgradeTarget, setDowngradeTarget] = useState<(typeof PRICING_PLANS)[0] | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [allEvents, setAllEvents] = useState<any[]>(data.events || []);
   const [totalEvents, setTotalEvents] = useState<number>(
     (data as any).totalEventsCount || data.events.length,
@@ -98,7 +109,23 @@ function BillingPage() {
   }, []);
 
   const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+
+  // Auto-apply promo from URL if ?promo=CODE is present
+  useEffect(() => {
+    const promoFromUrl = params?.get("promo");
+    if (promoFromUrl && !promoResult && !promoChecking) {
+      setPromoInput(promoFromUrl.toUpperCase());
+      setPromoChecking(true);
+      validateFn({ data: { code: promoFromUrl.trim().toUpperCase() } })
+        .then((res) => setPromoResult(res))
+        .catch(() => setPromoResult({ valid: false, message: "Invalid promo code in URL" }))
+        .finally(() => setPromoChecking(false));
+    }
+  }, [params, promoResult, promoChecking, validateFn]);
+
   const returnedRef = params?.get("reference") ?? params?.get("trxref");
+  const planCodeParam = params?.get("plan_code") ?? undefined;
+  const intervalParam = (params?.get("interval") as "monthly" | "yearly") ?? undefined;
   const [verifyState, setVerifyState] = useState<"idle" | "checking" | "ok" | "fail">(
     returnedRef ? "checking" : "idle",
   );
@@ -106,18 +133,24 @@ function BillingPage() {
   useEffect(() => {
     if (!returnedRef || verifyState !== "checking") return;
     let alive = true;
-    verify({ data: { reference: returnedRef } })
+    verify({ data: { reference: returnedRef, planCode: planCodeParam, interval: intervalParam } })
       .then(async (r) => {
-        if (alive) setVerifyState(r.ok ? "ok" : "fail");
-        await qc.invalidateQueries({ queryKey: ["billing-overview"] });
+        if (alive) {
+          setVerifyState(r.ok ? "ok" : "fail");
+          if (typeof window !== "undefined") {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+          await qc.refetchQueries({ queryKey: ["billing-overview"] });
+        }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[Billing] verify error:", err);
         if (alive) setVerifyState("fail");
       });
     return () => {
       alive = false;
     };
-  }, [returnedRef, verify, verifyState, qc]);
+  }, [returnedRef, verify, verifyState, qc, planCodeParam, intervalParam]);
 
   async function subscribe(planCode: string, amountKobo: number) {
     setErr(null);
@@ -140,27 +173,106 @@ function BillingPage() {
     }
   }
 
-  async function handleCancel() {
-    if (!confirm("Are you sure you want to cancel your subscription? This cannot be undone."))
-      return;
+  async function handleConfirmCancel() {
     setBusy("cancel");
     setErr(null);
     try {
       await cancel();
-      await qc.invalidateQueries({ queryKey: ["billing-overview"] });
+      setShowCancelModal(false);
+      await qc.refetchQueries({ queryKey: ["billing-overview"] });
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to cancel");
+      setErr(e instanceof Error ? e.message : "Failed to cancel subscription");
     } finally {
       setBusy(null);
     }
   }
 
-  const currentPlanCode = data.subscription?.plan_code ?? "free";
-  const currentPlan = PRICING_PLANS.find((p) => p.code === currentPlanCode) ?? PRICING_PLANS[0];
+  async function handleConfirmDowngrade() {
+    if (!downgradeTarget) return;
+    setBusy(downgradeTarget.code);
+    setErr(null);
+    try {
+      await scheduleDowngradeFn({ data: { targetPlanCode: downgradeTarget.code } });
+      setDowngradeTarget(null);
+      await qc.refetchQueries({ queryKey: ["billing-overview"] });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to schedule downgrade");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleCancelScheduledDowngrade() {
+    setBusy("cancel-downgrade");
+    setErr(null);
+    try {
+      await cancelDowngradeFn();
+      await qc.refetchQueries({ queryKey: ["billing-overview"] });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to cancel scheduled downgrade");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleReactivate() {
+    setBusy("reactivate");
+    setErr(null);
+    try {
+      await reactivateFn();
+      await qc.refetchQueries({ queryKey: ["billing-overview"] });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to reactivate subscription");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const currentPlanCode =
+    data.subscription?.plan_code ?? data.subscription?.plan?.toLowerCase() ?? "free";
+  const currentPlan =
+    PRICING_PLANS.find(
+      (p) =>
+        p.code.toLowerCase() === currentPlanCode.toLowerCase() ||
+        p.name.toLowerCase() === currentPlanCode.toLowerCase(),
+    ) ?? PRICING_PLANS[0];
+  const limits = currentPlan?.limits ?? { employees: 1, domains: 1 };
   const { employees: empCount, domains: domCount } = data.usage;
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {/* Scheduled Downgrade Notice Banner */}
+      {data.scheduledPlan && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-[14px] font-semibold text-amber-900 dark:text-amber-200">
+                Scheduled Downgrade to {data.scheduledPlan.planName}
+              </h4>
+              <p className="text-[13px] text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+                Your workspace will switch to <strong>{data.scheduledPlan.planName}</strong> at the
+                end of your current billing period on{" "}
+                <strong>
+                  {data.scheduledPlan.downgradeAt
+                    ? new Date(data.scheduledPlan.downgradeAt).toLocaleDateString()
+                    : "renewal"}
+                </strong>
+                . You will retain all current plan benefits until that date.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={handleCancelScheduledDowngrade}
+            disabled={busy === "cancel-downgrade"}
+            className="shrink-0 whitespace-nowrap border border-amber-600/30 text-amber-950 dark:text-amber-100 bg-amber-500/20 hover:bg-amber-500/30 font-medium"
+          >
+            {busy === "cancel-downgrade" ? "Canceling…" : "Keep Current Plan"}
+          </Button>
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -184,38 +296,39 @@ function BillingPage() {
                 {data.subscription?.plan ?? (currentPlan ? currentPlan.name : "Free")}
               </div>
               <div className="text-[11.5px] text-ink-3 mt-0.5 font-mono">
-                Max {currentPlan.limits.domains} domains · {currentPlan.limits.employees} staff
+                Max {limits.domains} domains · {limits.employees} staff
               </div>
             </div>
             <div className="rounded-xl border border-line bg-background p-3.5 flex flex-col justify-between">
               <div className="text-[11px] uppercase tracking-wider text-ink-4">Status</div>
               <div className="mt-1">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold whitespace-nowrap ${
-                    data.subscription?.status === "active"
-                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                      : "bg-primary/10 text-primary border border-primary/20"
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                      data.subscription?.status === "active"
-                        ? "bg-emerald-500"
-                        : "bg-primary animate-pulse"
-                    }`}
-                  />
-                  {data.subscription?.status === "active" ? "Active" : "Free Mode"}
-                </span>
+                {data.subscription?.status === "active" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold whitespace-nowrap bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0 bg-emerald-500" />
+                    Active
+                  </span>
+                ) : data.subscription?.status === "canceled" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold whitespace-nowrap bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0 bg-amber-500" />
+                    Canceled
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[12px] font-semibold whitespace-nowrap bg-ink/[0.06] text-ink-3 border border-line">
+                    Free Tier
+                  </span>
+                )}
               </div>
               <div className="text-[11.5px] text-ink-3 mt-1 whitespace-nowrap">
                 {data.subscription?.status === "active"
                   ? "Auto-renews enabled"
-                  : "Full access unlocked"}
+                  : data.subscription?.status === "canceled"
+                    ? "Auto-renew disabled"
+                    : "Always free"}
               </div>
             </div>
             <div className="rounded-xl border border-line bg-background p-3.5 flex flex-col justify-between">
               <div className="text-[11px] uppercase tracking-wider text-ink-4">
-                Next Billing Date
+                {data.subscription?.status === "canceled" ? "Access Expires" : "Next Billing Date"}
               </div>
               <div className="mt-1 text-[14px] font-semibold text-ink">
                 {data.subscription?.current_period_end
@@ -224,17 +337,26 @@ function BillingPage() {
               </div>
               {data.subscription?.status === "active" && (
                 <button
-                  onClick={handleCancel}
+                  onClick={() => setShowCancelModal(true)}
                   disabled={busy === "cancel"}
                   className="mt-1 text-[11.5px] text-danger hover:underline text-left font-medium disabled:opacity-50"
                 >
                   {busy === "cancel" ? "Canceling…" : "Cancel subscription"}
                 </button>
               )}
+              {data.subscription?.status === "canceled" && data.subscription?.plan_code !== "free" && (
+                <button
+                  onClick={handleReactivate}
+                  disabled={busy === "reactivate"}
+                  className="mt-1 text-[11.5px] text-primary hover:underline text-left font-medium disabled:opacity-50"
+                >
+                  {busy === "reactivate" ? "Reactivating…" : "Reactivate subscription"}
+                </button>
+              )}
             </div>
           </div>
 
-          {(empCount > currentPlan.limits.employees || domCount > currentPlan.limits.domains) && (
+          {(empCount > limits.employees || domCount > limits.domains) && (
             <div className="mt-5 rounded-lg border border-danger/20 bg-danger/5 p-4">
               <h3 className="text-[14px] font-semibold text-danger">Plan limits exceeded</h3>
               <p className="mt-1 text-[13px] text-danger/80">
@@ -473,20 +595,61 @@ function BillingPage() {
                   </div>
                 )}
               </div>
-              <Button
-                variant={isActive ? "ghost" : "primary"}
-                onClick={() => subscribe(p.code, discountedAmountKobo)}
-                disabled={busy !== null || isActive || p.code === "free"}
-                className="mt-5 w-full"
-              >
-                {busy === p.code
-                  ? "Redirecting…"
-                  : isActive
-                    ? "Current plan"
-                    : p.code === "free"
-                      ? "Default Plan"
-                      : "Subscribe"}
-              </Button>
+              {(() => {
+                const planRank = PLAN_RANK[p.code.toLowerCase()] ?? 0;
+                const currentRank = PLAN_RANK[currentPlanCode.toLowerCase()] ?? 0;
+                const isScheduled =
+                  data.scheduledPlan?.planCode.toLowerCase() === p.code.toLowerCase();
+
+                if (isActive) {
+                  return (
+                    <Button variant="ghost" disabled className="mt-5 w-full opacity-60">
+                      Current plan
+                    </Button>
+                  );
+                }
+
+                if (isScheduled) {
+                  return (
+                    <Button
+                      variant="ghost"
+                      onClick={handleCancelScheduledDowngrade}
+                      disabled={busy === "cancel-downgrade"}
+                      className="mt-5 w-full text-ink hover:bg-ink/[0.06]"
+                    >
+                      {busy === "cancel-downgrade" ? "Canceling…" : "Cancel downgrade"}
+                    </Button>
+                  );
+                }
+
+                if (planRank < currentRank) {
+                  return (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setDowngradeTarget(p)}
+                      disabled={busy !== null}
+                      className="mt-5 w-full text-ink hover:bg-ink/[0.06]"
+                    >
+                      Downgrade
+                    </Button>
+                  );
+                }
+
+                return (
+                  <Button
+                    variant="primary"
+                    onClick={() => subscribe(p.code, discountedAmountKobo)}
+                    disabled={busy !== null || p.code === "free"}
+                    className="mt-5 w-full"
+                  >
+                    {busy === p.code
+                      ? "Redirecting…"
+                      : p.code === "free"
+                        ? "Default Plan"
+                        : "Subscribe"}
+                  </Button>
+                );
+              })()}
             </Card>
           );
         })}
@@ -551,6 +714,141 @@ function BillingPage() {
           </div>
         )}
       </Card>
+
+      {/* Downgrade Confirmation Modal */}
+      {downgradeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-semibold text-ink">
+                Downgrade to {downgradeTarget.name}?
+              </h3>
+              <button
+                onClick={() => setDowngradeTarget(null)}
+                className="p-1 rounded-md text-ink-3 hover:text-ink hover:bg-surface-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-[13.5px] text-ink-2 leading-relaxed">
+              Your subscription will remain active on <strong>{currentPlan.name}</strong> until the
+              end of your prepaid billing period on{" "}
+              <strong>
+                {data.subscription?.current_period_end
+                  ? new Date(data.subscription.current_period_end).toLocaleDateString()
+                  : "renewal"}
+              </strong>
+              . On that date, your plan will automatically switch to{" "}
+              <strong>{downgradeTarget.name}</strong>.
+            </p>
+
+            <div className="rounded-xl border border-line bg-surface-muted p-3.5 space-y-2 text-[12.5px]">
+              <div className="font-medium text-ink">Target Plan Limits:</div>
+              <div className="flex justify-between text-ink-3">
+                <span>Employee Inboxes</span>
+                <span className="font-semibold text-ink">
+                  Up to {downgradeTarget.limits.employees}
+                </span>
+              </div>
+              <div className="flex justify-between text-ink-3">
+                <span>Domains</span>
+                <span className="font-semibold text-ink">
+                  Up to {downgradeTarget.limits.domains}
+                </span>
+              </div>
+            </div>
+
+            {(empCount > downgradeTarget.limits.employees ||
+              domCount > downgradeTarget.limits.domains) && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-[12.5px] text-amber-800 dark:text-amber-300">
+                ⚠️ You currently have <strong>{empCount} employees</strong> and{" "}
+                <strong>{domCount} domains</strong>. Please ensure you adjust your workspace usage
+                before the scheduled switch date.
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDowngradeTarget(null)}
+                disabled={busy !== null}
+                className="w-full sm:w-auto"
+              >
+                Keep Current Plan
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmDowngrade}
+                disabled={busy !== null}
+                className="w-full sm:w-auto"
+              >
+                {busy === downgradeTarget.code ? "Scheduling…" : "Confirm Downgrade"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Subscription Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-danger">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <h3 className="font-display text-lg font-semibold text-ink">
+                  Cancel Subscription?
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="p-1 rounded-md text-ink-3 hover:text-ink hover:bg-surface-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="text-[13.5px] text-ink-2 leading-relaxed">
+              Are you sure you want to cancel your <strong>{currentPlan.name}</strong> subscription?
+            </p>
+
+            <div className="rounded-xl border border-line bg-surface-muted p-3.5 space-y-2 text-[12.5px] text-ink-3">
+              <div>
+                • Your workspace benefits will remain active until{" "}
+                <strong className="text-ink">
+                  {data.subscription?.current_period_end
+                    ? new Date(data.subscription.current_period_end).toLocaleDateString()
+                    : "the end of your billing period"}
+                </strong>
+                .
+              </div>
+              <div>
+                • After that date, auto-renewal will be turned off and your workspace will revert to the Free tier (1 domain, 1 staff).
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setShowCancelModal(false)}
+                disabled={busy !== null}
+                className="w-full sm:w-auto"
+              >
+                Keep Subscription
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmCancel}
+                disabled={busy !== null}
+                className="w-full sm:w-auto"
+              >
+                {busy === "cancel" ? "Canceling…" : "Yes, Cancel Subscription"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

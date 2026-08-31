@@ -158,42 +158,57 @@ Live User & Workspace Context:
 ${accountContext}
 
 Formatting & Tone Rules:
-- Write like a polished SaaS specialist (clear, concise, direct, helpful, and friendly).
-- Use **bold text** for important features.
-- Use numbered lists (1., 2., 3.) when explaining sequential setup steps.
-- Use bullet points (* or -) when listing features.
+- Write like a polished, modern SaaS specialist (clean, concise, direct, helpful, and scannable).
+- Use **bold text** for key terms and UI buttons.
+- Present step-by-step guides using clean numbered lists (1., 2., 3.).
+- Use bullet points (• or -) when listing features or benefits.
+- When explaining DNS records, format them as clean, bulleted entries with inline code tags (e.g. • **TXT Record**: Host \`@\`, Value \`mailcoy-verification=...\`) so they are easy to copy and read on mobile.
+- NEVER output raw horizontal divider rules (like "---") between every section.
+- NEVER output messy markdown tables with excessive pipes ("|") in chat bubbles.
+- Keep paragraphs short and conversational.
 - If the issue requires human super-admin intervention, offer: "Would you like me to escalate this ticket directly to our platform super admin?"`;
 
-    // 1. Primary Engine: Groq (Llama 3.3 70B Versatile - Ultra Fast & 14,400 daily requests)
+    // 1. Primary Engine: Groq (High-Intelligence Flagship 120B & 27B LLMs)
     if (groqApiKey) {
-      try {
-        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${groqApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: systemPrompt },
-              ...(data.history || []),
-              { role: "user", content: data.message },
-            ],
-            temperature: 0.5,
-            max_tokens: 800,
-          }),
-        });
+      const groqModels = [
+        "openai/gpt-oss-120b",
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-20b",
+        "groq/compound",
+      ];
 
-        if (groqRes.ok) {
-          const gJson = await groqRes.json();
-          const reply = gJson?.choices?.[0]?.message?.content;
-          if (reply) return { reply, canEscalate: true };
-        } else {
-          console.warn("Groq API returned error status:", groqRes.status);
+      for (const model of groqModels) {
+        try {
+          const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${groqApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: "system", content: systemPrompt },
+                ...(data.history || []),
+                { role: "user", content: data.message },
+              ],
+              temperature: 0.5,
+              max_tokens: 1200,
+            }),
+          });
+
+          if (groqRes.ok) {
+            const gJson = await groqRes.json();
+            const reply = gJson?.choices?.[0]?.message?.content;
+            if (reply && reply.trim().length > 0) {
+              return { reply: reply.trim(), canEscalate: true };
+            }
+          } else {
+            console.warn(`Groq API returned error status ${groqRes.status} for model ${model}`);
+          }
+        } catch (err) {
+          console.warn(`Groq AI fetch error with model ${model}:`, err);
         }
-      } catch (err) {
-        console.warn("Groq AI fetch error:", err);
       }
     }
 
