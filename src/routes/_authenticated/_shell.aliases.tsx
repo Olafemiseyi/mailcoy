@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient, queryOptions, useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
-import { listAliases, createAlias, deleteAlias, updateAliasEmployee } from "@/lib/analytics.functions";
+import { listAliases, createAlias, deleteAlias, updateAliasEmployee, getAliasSuggestionsFn } from "@/lib/analytics.functions";
 import { listEmployees } from "@/lib/employees.functions";
 import { PageHeader, Card, Button, Input, Field, CustomSelect, ConfirmDeleteModal } from "@/components/app/AppShell";
 import { Plus, Trash2, Lightbulb, X, Search, Pencil, Check, ChevronDown } from "lucide-react";
@@ -32,6 +32,7 @@ type Suggestion = {
 type EmpSuggestion = Suggestion & { employee_id: string };
 
 function useSuggestions() {
+  const fetchSuggestions = useServerFn(getAliasSuggestionsFn);
   return useQuery({
     queryKey: ["alias-suggestions"],
     queryFn: async (): Promise<{
@@ -39,13 +40,18 @@ function useSuggestions() {
       employee_suggestions: EmpSuggestion[];
       primary_domain: string | null;
     }> => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? "";
-      const res = await fetch("/api/alias-suggestions", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to load suggestions");
-      return res.json();
+      try {
+        const result = await fetchSuggestions();
+        return result as any;
+      } catch {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token ?? "";
+        const res = await fetch("/api/alias-suggestions", {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+        if (res?.ok) return res.json();
+        return { suggestions: [], employee_suggestions: [], primary_domain: null };
+      }
     },
     staleTime: 5 * 60_000,
     retry: 1,

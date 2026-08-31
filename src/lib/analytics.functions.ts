@@ -159,10 +159,18 @@ export const listAliases = createServerFn({ method: "GET" })
 
 export const createAlias = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
-        address: z.string().trim().email().max(254),
+        address: z
+          .string()
+          .trim()
+          .toLowerCase()
+          .max(254)
+          .regex(
+            /^[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+            "Invalid email address. Local part cannot exceed 64 characters and special characters like quotes or apostrophes are not permitted.",
+          ),
         employee_id: z.string().uuid(),
       })
       .parse(d),
@@ -186,7 +194,7 @@ export const createAlias = createServerFn({ method: "POST" })
 
 export const deleteAlias = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
@@ -201,7 +209,7 @@ export const deleteAlias = createServerFn({ method: "POST" })
 
 export const updateAliasEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -219,6 +227,99 @@ export const updateAliasEmployee = createServerFn({ method: "POST" })
       .eq("organization_id", ctx.organizationId);
     if (error) throw error;
     return { ok: true };
+  });
+
+const COMMON_ALIASES = [
+  { address: "hello", label: "Hello / Welcome", reason: "First point of contact — great for inbound leads and general enquiries." },
+  { address: "info", label: "Info", reason: "Standard address customers try first. Reduces missed messages." },
+  { address: "support", label: "Support", reason: "Customers expect this for help requests. Boosts trust and response rates." },
+  { address: "sales", label: "Sales", reason: "Routes sales enquiries to your team. Critical for revenue." },
+  { address: "contact", label: "Contact", reason: "General contact alias — used widely on websites and business cards." },
+  { address: "admin", label: "Admin", reason: "Internal and vendor communications often target admin@." },
+  { address: "billing", label: "Billing", reason: "Finance and invoice queries — keep them separate from general mail." },
+  { address: "careers", label: "Careers / HR", reason: "Recruiting and HR enquiries go here instead of an employee inbox." },
+  { address: "press", label: "Press / Media", reason: "Journalists and media contacts expect a dedicated address." },
+  { address: "noreply", label: "No-reply", reason: "Use for transactional system emails to set clear reply expectations." },
+  { address: "newsletter", label: "Newsletter", reason: "Dedicate an address for outbound marketing campaigns." },
+  { address: "legal", label: "Legal", reason: "Contracts, NDAs, and legal notices should go to a controlled mailbox." },
+  { address: "partners", label: "Partners", reason: "Dedicated inbox for partnership and vendor discussions." },
+  { address: "security", label: "Security", reason: "Responsible disclosure and security reports." },
+  { address: "privacy", label: "Privacy / DPO", reason: "GDPR and privacy requests — legally required in many jurisdictions." },
+];
+
+export const getAliasSuggestionsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = await requireOrgContext(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [{ data: existingAliases }, { data: domains }, { data: employees }] = await Promise.all([
+      supabaseAdmin
+        .from("aliases")
+        .select("address")
+        .eq("organization_id", ctx.organizationId),
+      supabaseAdmin
+        .from("domains")
+        .select("domain_name")
+        .eq("organization_id", ctx.organizationId)
+        .eq("verification_status", "verified"),
+      supabaseAdmin
+        .from("employees")
+        .select("id, full_name, professional_email, job_title, department, status")
+        .eq("organization_id", ctx.organizationId)
+        .is("deleted_at", null)
+        .eq("status", "active"),
+    ]);
+
+    const existingLocal = new Set(
+      (existingAliases ?? []).map((a: any) => {
+        const parts = (a.address || "").split("@");
+        return parts[0]?.toLowerCase() ?? "";
+      }),
+    );
+
+    const primaryDomain = (domains ?? [])[0]?.domain_name ?? null;
+
+    const suggestions = COMMON_ALIASES.filter((alias) => !existingLocal.has(alias.address)).map(
+      (alias) => ({
+        local_part: alias.address,
+        label: alias.label,
+        reason: alias.reason,
+        suggested_address: primaryDomain ? `${alias.address}@${primaryDomain}` : null,
+      }),
+    );
+
+    const employeeSuggestions = (employees ?? []).flatMap((emp: any) => {
+      const parts = (emp.full_name || "").trim().toLowerCase().split(/\s+/);
+      const firstName = parts[0] ?? "";
+      const lastName = parts[parts.length - 1] ?? "";
+      const firstInitial = firstName.charAt(0);
+
+      const patterns: { local: string; reason: string }[] = [];
+      if (firstName.length >= 2 && !existingLocal.has(firstName)) {
+        patterns.push({ local: firstName, reason: `Direct first-name alias for ${emp.full_name}` });
+      }
+      if (firstInitial && lastName.length >= 2) {
+        const firstLast = `${firstInitial}${lastName}`;
+        if (!existingLocal.has(firstLast)) {
+          patterns.push({ local: firstLast, reason: `Standard short-form alias for ${emp.full_name}` });
+        }
+      }
+
+      return patterns.map((p) => ({
+        local_part: p.local,
+        label: `${emp.full_name} (${p.local})`,
+        reason: p.reason,
+        suggested_address: primaryDomain ? `${p.local}@${primaryDomain}` : null,
+        employee_id: emp.id,
+      }));
+    });
+
+    return {
+      suggestions,
+      employee_suggestions: employeeSuggestions,
+      primary_domain: primaryDomain,
+    };
   });
 
 /* ---------------- SETTINGS (signature + catch-all) ---------------- */
