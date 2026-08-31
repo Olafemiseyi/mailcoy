@@ -87,8 +87,10 @@ function OnboardingRoute() {
     try {
       await createOrg({ data: { name: orgName.trim(), industry: industry || undefined, country: country || undefined } });
       setStep("domain");
-    } catch (e) { setErr(e instanceof Error ? e.message : "Failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      console.error("[Onboarding] submitOrg error:", e);
+      setErr(e?.message || (typeof e === "string" ? e : "Failed to create workspace. Please try again."));
+    } finally { setBusy(false); }
   }
 
   async function submitDomain(e: React.FormEvent) {
@@ -96,8 +98,10 @@ function OnboardingRoute() {
     try {
       if (domain.trim()) await addDom({ data: { name: domain.trim().toLowerCase() } });
       setStep("employee");
-    } catch (e) { setErr(e instanceof Error ? e.message : "Failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      console.error("[Onboarding] submitDomain error:", e);
+      setErr(e?.message || (typeof e === "string" ? e : "Failed to add domain. Please check domain format and try again."));
+    } finally { setBusy(false); }
   }
 
   async function skipDomain() {
@@ -117,8 +121,10 @@ function OnboardingRoute() {
         });
       }
       await completeOnboarding();
-    } catch (e) { setErr(e instanceof Error ? e.message : "Failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      console.error("[Onboarding] submitEmployee error:", e);
+      setErr(e?.message || (typeof e === "string" ? e : "Failed to add team member. Please try again."));
+    } finally { setBusy(false); }
   }
 
   async function completeOnboarding() {
@@ -128,8 +134,10 @@ function OnboardingRoute() {
       await qc.invalidateQueries();
       setStep("done");
       setTimeout(() => nav({ to: "/dashboard" }), 1000);
-    } catch (e) { setErr(e instanceof Error ? e.message : "Failed"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      console.error("[Onboarding] completeOnboarding error:", e);
+      setErr(e?.message || (typeof e === "string" ? e : "Failed to complete setup."));
+    } finally { setBusy(false); }
   }
 
   const stepIndex = step === "org" ? 1 : step === "domain" ? 2 : step === "employee" ? 3 : 4;

@@ -54,7 +54,7 @@ export const getMyOrganization = createServerFn({ method: "GET" })
 
 export const createOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => createOrgSchema.parse(data))
+  .validator((data: unknown) => createOrgSchema.parse(data))
   .handler(async ({ data, context }) => {
     const existing = await resolveOrgContext(context.supabase, context.userId);
     if (existing) return { id: existing.organizationId, alreadyExists: true as const };
@@ -87,7 +87,10 @@ export const createOrganization = createServerFn({ method: "POST" })
       } as never)
       .select("id")
       .single();
-    if (error || !org) throw error ?? new Error("Failed to create organization");
+    if (error || !org) {
+      console.error("[createOrganization] Failed inserting organization:", error);
+      throw error ?? new Error("Failed to create workspace");
+    }
 
     const orgId = (org as { id: string }).id;
 
