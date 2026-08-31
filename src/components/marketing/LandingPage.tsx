@@ -28,7 +28,7 @@ function Hero() {
         <div className="mx-auto max-w-3xl text-center space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-3.5 py-1 text-[11px] sm:text-[12px] font-semibold text-ink-3 shadow-2xs backdrop-blur-sm whitespace-nowrap">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span>Zero Workspace Markup · Live Routing</span>
+            <span>Zero Workspace Markup · Scalable from 1 to 1,000+ Inboxes</span>
           </div>
 
           <h1 className="font-display text-[44px] sm:text-[60px] md:text-[72px] font-bold tracking-[-0.035em] text-ink leading-[1.04]">
@@ -39,7 +39,7 @@ function Hero() {
           </h1>
 
           <p className="mx-auto max-w-xl text-[16px] sm:text-[17.5px] leading-relaxed text-ink-3">
-            Give your team branded email on your custom domain (<code className="font-mono text-primary font-semibold">sales@yourcompany.com</code>) without buying expensive Google Workspace licenses. Setup in 3 minutes.
+            Give your team branded email on your custom domain (<code className="font-mono text-primary font-semibold">sales@yourcompany.com</code>) without paying expensive Google Workspace per-seat licenses. Built for teams of 1 to 1,000+.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3.5 w-full max-w-sm sm:max-w-none mx-auto">
@@ -409,7 +409,7 @@ function InteractiveSimulator() {
 }
 
 function SavingsCalculator() {
-  const [employees, setEmployees] = useState(15);
+  const [employees, setEmployees] = useState(25);
   const [currency, setCurrency] = useState<Currency>("USD");
 
   useEffect(() => {
@@ -417,11 +417,14 @@ function SavingsCalculator() {
   }, []);
 
   const gwRate = currency === "USD" ? 7 : 5740;
-  const mcRate = currency === "USD" ? 1.45 : 1000;
+  // Dynamic tiered rate for Mailcoy calculation up to 500 users
+  const mcRate = currency === "USD"
+    ? (employees <= 5 ? 1.8 : employees <= 20 ? 1.45 : employees <= 50 ? 1.26 : 0.95)
+    : (employees <= 5 ? 1500 : employees <= 20 ? 1000 : employees <= 50 ? 800 : 650);
   const sym = currency === "USD" ? "$" : "₦";
 
   const workspaceYearly = employees * gwRate * 12;
-  const mailcoyYearly = employees * mcRate * 12;
+  const mailcoyYearly = Math.round(employees * mcRate * 12);
   const annualSavings = workspaceYearly - mailcoyYearly;
   const percentageSaved = Math.round((annualSavings / workspaceYearly) * 100);
 
@@ -433,7 +436,7 @@ function SavingsCalculator() {
             See How Much You Save vs. Google Workspace
           </h2>
           <p className="text-[14px] sm:text-[15px] text-ink-3 leading-relaxed">
-            Eliminate per-seat markups for email. Flat team billing means your bill stays predictable as you hire.
+            Eliminate per-seat markups for email. Flat team economics scale smoothly from solo startups to 500+ employees.
           </p>
         </div>
 
@@ -452,7 +455,8 @@ function SavingsCalculator() {
               <input
                 type="range"
                 min="3"
-                max="100"
+                max="500"
+                step={employees > 100 ? "10" : "1"}
                 value={employees}
                 onChange={(e) => setEmployees(Number(e.target.value))}
                 className="w-full h-2.5 bg-surface-muted rounded-lg appearance-none cursor-pointer accent-primary my-2"
@@ -460,9 +464,9 @@ function SavingsCalculator() {
 
               <div className="flex justify-between text-[11px] sm:text-[11.5px] text-ink-4 font-mono px-0.5">
                 <span>3 staff</span>
-                <span>25 staff</span>
                 <span>50 staff</span>
-                <span>100+</span>
+                <span>200 staff</span>
+                <span>500+ Enterprise</span>
               </div>
 
               <div className="pt-2 sm:pt-4 space-y-2 text-[12.5px] sm:text-[13px] text-ink-3">
@@ -473,7 +477,7 @@ function SavingsCalculator() {
                   </span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-line gap-1">
-                  <span className="text-ink-3">Mailcoy (~{sym}{mcRate.toLocaleString()}/seat/mo eq):</span>
+                  <span className="text-ink-3">Mailcoy Flat Team Rate (~{sym}{mcRate.toLocaleString()}/seat/mo eq):</span>
                   <span className="font-mono font-bold text-emerald-600 self-start sm:self-auto">
                     {sym}{mailcoyYearly.toLocaleString()} / year
                   </span>
@@ -521,8 +525,8 @@ function FeatureGrid() {
       icon: Lock,
     },
     {
-      title: "Sub-200ms Edge Delivery",
-      desc: "Ultra-low latency inbound routing forwards customer inquiries directly to Gmail in under 200 milliseconds.",
+      title: "Sub-200ms Edge Delivery at Scale",
+      desc: "High-throughput Anycast edge routing forwards customer inquiries directly to Gmail in under 200 milliseconds, engineered for millions of monthly messages.",
       tag: "High Throughput",
       colSpan: "md:col-span-1",
       icon: Zap,
@@ -555,7 +559,7 @@ function FeatureGrid() {
             Google Workspace seat markup.
           </h2>
           <p className="mt-3 text-[14px] sm:text-[15px] text-ink-3 leading-relaxed">
-            All the enterprise email features your company needs, with flat-rate team economics.
+            All the enterprise email features your company needs, with flat-rate team economics scaling from 1 to 1,000+ seats.
           </p>
         </div>
 
@@ -597,6 +601,10 @@ function FAQSection() {
 
   const faqs = [
     {
+      q: "Is Mailcoy only for small teams, or does it scale to large enterprises with 50, 100, 500+ employees?",
+      a: "Mailcoy is architected to scale seamlessly from a solo founder up to enterprises with 1,000+ staff across multiple global domains. Our infrastructure uses high-throughput Anycast edge MX relays, redundant buffering queues, dedicated IP warming pools, and centralized RBAC controls. Whether you have 5 or 500 employees, you get 99.8%+ inbox placement with flat, predictable economics.",
+    },
+    {
       q: "Do my employees need to create new accounts or learn new software?",
       a: "No. Your employees continue logging into their regular, existing Gmail inbox on web, iPhone, or Android. They read incoming customer inquiries and reply directly inside Gmail as sales@yourcompany.com with zero training required.",
     },
@@ -622,7 +630,7 @@ function FAQSection() {
     },
     {
       q: "How does Mailcoy compare in cost to Google Workspace or Microsoft 365?",
-      a: "Google Workspace charges $7 to $18 per user every month ($140/mo for 20 users). Mailcoy charges flat team billing starting at $9/mo (₦7,500/mo) for 5 inboxes or $29/mo (₦20,000/mo) for 20 inboxes, cutting email infrastructure costs by over 80%.",
+      a: "Google Workspace charges $7 to $18 per user every month ($140/mo for 20 users, $700/mo for 100 users). Mailcoy charges flat team billing starting at $9/mo (₦7,500/mo) for 5 inboxes or $29/mo (₦20,000/mo) for 20 inboxes, with custom enterprise plans saving companies over 80% on email infrastructure costs.",
     },
     {
       q: "What happens if Google or an edge server experiences temporary downtime?",

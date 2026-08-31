@@ -133,6 +133,10 @@ function FaqSection() {
 
   const faqs = [
     {
+      q: "Can large organizations with 50, 100, 500, or 1,000+ employees use Mailcoy?",
+      a: "Yes, absolutely. Mailcoy is built from the ground up to support organizations of any size—from single-person consultancies to multi-national enterprises with hundreds of staff. With high-throughput Anycast edge MX relays, dedicated IP warming pools, multi-domain routing, SAML SSO, and centralized RBAC offboarding controls, Mailcoy easily scales to handle millions of monthly emails.",
+    },
+    {
       q: "Do my employees need to create new accounts or learn new software?",
       a: "No. Your employees continue logging into their regular, existing Gmail inbox on web, iPhone, or Android. They read incoming customer inquiries and reply directly inside Gmail as sales@yourcompany.com with verified DKIM signatures.",
     },

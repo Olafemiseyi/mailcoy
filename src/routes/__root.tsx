@@ -40,23 +40,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Mailcoy — Professional Business Email Operating System for Gmail" },
+      { title: "Mailcoy — Professional Business Email Operating System for Gmail (Solo to 1,000+ Seats)" },
       {
         name: "description",
         content:
-          "Mailcoy connects your custom domain to your team's existing Gmail inboxes with automated SPF/DKIM verification, Google OAuth 2.0 security, centralized HTML signatures, and flat team billing saving up to 80% vs Google Workspace.",
+          "Mailcoy connects your custom domain to your team's existing Gmail inboxes with automated SPF/DKIM verification, Google OAuth 2.0 security, centralized HTML signatures, and flat team billing saving up to 80% vs Google Workspace. Engineered for solo founders, growing startups, and enterprises with 1 to 1,000+ inboxes.",
       },
       { name: "author", content: "Mailcoy Technologies" },
       {
         name: "keywords",
         content:
-          "business email, custom domain email, gmail send as, google workspace alternative, email routing proxy, SPF DKIM DMARC, zero workspace markup, team email identity",
+          "business email, custom domain email, gmail send as, google workspace alternative, enterprise email routing proxy, SPF DKIM DMARC, zero workspace markup, team email identity, large team email management, high volume email relay",
       },
-      { property: "og:title", content: "Mailcoy — Professional Business Email via Gmail" },
+      { property: "og:title", content: "Mailcoy — Professional Business Email via Gmail (Solo to 1,000+ Seats)" },
       {
         property: "og:description",
         content:
-          "Keep your familiar Gmail workflow while sending and receiving from your verified custom domain. Save 80%+ with zero seat markup.",
+          "Keep your familiar Gmail workflow while sending and receiving from your verified custom domain. Save 80%+ with zero seat markup. Built for 1 to 1,000+ team members.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://mailcoy.com" },
@@ -69,10 +69,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image:alt", content: "Mailcoy — Professional Business Email Operating System for Gmail" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@mailcoy" },
-      { name: "twitter:title", content: "Mailcoy — Business Email via Gmail" },
+      { name: "twitter:title", content: "Mailcoy — Business Email via Gmail (Solo to 1,000+ Seats)" },
       {
         name: "twitter:description",
-        content: "Professional custom domain email without Google Workspace per-seat markup.",
+        content: "Professional custom domain email without Google Workspace per-seat markup. Scales seamlessly from 1 to 1,000+ inboxes.",
       },
       { name: "twitter:image", content: "https://mailcoy.com/og-image.jpg" },
       { name: "twitter:image:alt", content: "Mailcoy — Professional Business Email Operating System for Gmail" },
@@ -101,15 +101,47 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web, Cloud, iOS, Android (via Gmail)",
           description:
-            "Mailcoy is an intelligent email identity and domain routing platform that allows businesses to send and receive verified custom domain emails directly inside their existing Gmail inboxes without paying per-seat Google Workspace licenses.",
+            "Mailcoy is an enterprise-grade email identity and domain routing operating system that connects verified custom domains directly into existing personal Gmail inboxes. Scalable from solo entrepreneurs to enterprises with 1,000+ staff, eliminating Google Workspace per-seat license markups.",
+          audience: {
+            "@type": "Audience",
+            audienceType: "Solo Founders, SMBs, High-Growth Startups, Agencies, and Large Enterprises (1 to 1,000+ Employees)",
+          },
           offers: {
-            "@type": "Offer",
-            price: "0",
+            "@type": "AggregateOffer",
             priceCurrency: "USD",
-            priceSpecification: {
-              "@type": "PriceSpecification",
-              description: "Free tier with 1 custom domain and 1 team inbox, plus flat-rate team plans from $9/month.",
-            },
+            lowPrice: "0",
+            highPrice: "79",
+            offerCount: "4",
+            offers: [
+              {
+                "@type": "Offer",
+                name: "Free Solo Plan",
+                price: "0",
+                priceCurrency: "USD",
+                description: "1 custom domain and 1 employee inbox with full Gmail Send-As integration.",
+              },
+              {
+                "@type": "Offer",
+                name: "Starter Pro",
+                price: "9",
+                priceCurrency: "USD",
+                description: "Up to 5 inboxes with shared aliases and full DKIM signing.",
+              },
+              {
+                "@type": "Offer",
+                name: "Growth Plan",
+                price: "29",
+                priceCurrency: "USD",
+                description: "Up to 20 inboxes, company HTML signatures, catch-all routing, and 1-click offboarding.",
+              },
+              {
+                "@type": "Offer",
+                name: "Scale & Enterprise",
+                price: "79",
+                priceCurrency: "USD",
+                description: "50 to 1,000+ inboxes, dedicated IP pools, multi-domain routing, REST API/Webhooks, and enterprise SLA.",
+              },
+            ],
           },
           featureList: [
             "Custom Domain Email Verification (SPF, DKIM, DMARC)",
@@ -118,6 +150,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             "Broadcast and Round-Robin Shared Inboxes",
             "1-Click Offboarding Deliverability Shield",
             "Sub-200ms Inbound Edge Routing",
+            "Enterprise Multi-Domain Scaling (1 to 1,000+ Inboxes)",
+            "Dedicated Outbound IP Pools and Custom SLAs",
           ],
         }),
       },

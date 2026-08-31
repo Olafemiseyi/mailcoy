@@ -52,19 +52,19 @@ export function AboutPage() {
             </div>
             <h3 className="mb-2 font-display text-[17px] font-semibold text-ink">Scale Seamlessly</h3>
             <p className="text-[14px] text-ink-3 leading-relaxed">
-              Whether you're a team of one or fifty, adding aliases, catch-alls, and team members takes seconds.
+              Whether you're a team of one, fifty, or five hundred, adding aliases, catch-alls, and team members takes seconds.
             </p>
           </div>
         </div>
 
         <h2 className="mt-12 mb-4 text-2xl font-semibold text-ink">Our Mission</h2>
         <p className="text-[15.5px] leading-relaxed">
-          We want to commoditize professional communication. Our goal is to save thousands of hours and millions of dollars for entrepreneurs globally, so they can focus on building their businesses rather than managing their MX records.
+          We want to commoditize professional communication for teams of any size. Our goal is to save thousands of hours and millions of dollars for startups, agencies, and large enterprises globally, so they can focus on building their businesses rather than managing bloated mailbox fees or complex MX records.
         </p>
 
-        <h2 className="mt-12 mb-4 text-2xl font-semibold text-ink">Built for Speed and Scale</h2>
+        <h2 className="mt-12 mb-4 text-2xl font-semibold text-ink">Built for Speed and Enterprise Scale</h2>
         <p className="text-[15.5px] leading-relaxed mb-6">
-          We process inbound webhooks and outbound SMTP relays in milliseconds. By leveraging cutting-edge cloud infrastructure and deep integration with global edge networks, we ensure your emails are delivered instantaneously without ever compromising on privacy or security.
+          We process inbound webhooks and outbound SMTP relays in sub-200 milliseconds. By leveraging high-throughput Anycast edge networks, dedicated IP warming pools, and enterprise-grade deliverability pipelines, Mailcoy effortlessly handles millions of monthly messages for solo operators and multi-national organizations alike.
         </p>
 
         <hr className="my-12 border-line" />

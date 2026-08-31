@@ -101,9 +101,9 @@ function PricingPage() {
       actionText: "Start 14-Day Free Trial",
     },
     {
-      name: "Scale",
-      tag: "Mid-Market",
-      desc: "Maximum capacity and dedicated infrastructure for enterprises.",
+      name: "Scale & Enterprise",
+      tag: "Scale & Large Teams",
+      desc: "Maximum capacity, dedicated IP pools, and enterprise-grade SLAs.",
       usdMonthly: 79,
       usdAnnual: 63,
       ngnMonthly: 50000,
@@ -111,14 +111,14 @@ function PricingPage() {
       perUserEq: { usd: "$1.26/user", ngn: "₦800/user", users: 50 },
       gwSaving: { usd: "$271", ngn: "₦222,000" },
       features: [
-        "Up to 50 employee inboxes",
-        "10 verified custom domains",
-        "Unlimited routed emails",
+        "Up to 50 inboxes included (add more anytime)",
+        "10+ verified custom domains",
+        "Unlimited routed & relayed emails",
         "Advanced RBAC permission tiers",
         "REST API & Webhooks access",
         "Dedicated outbound IP pool",
         "Custom DPA & CASA compliance logs",
-        "Dedicated account manager",
+        "Dedicated VIP support & SLAs",
       ],
       highlight: false,
       actionText: "Start 14-Day Free Trial",
@@ -134,15 +134,15 @@ function PricingPage() {
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1 text-[11.5px] font-semibold uppercase tracking-widest text-primary shadow-2xs">
             <Tag className="h-3.5 w-3.5" />
-            <span>Flat Team Billing</span>
+            <span>Flat Team Billing · Built to Scale from 1 to 1,000+ Staff</span>
           </div>
           <h1 className="font-display text-[32px] sm:text-[44px] md:text-[54px] font-bold text-ink leading-[1.1] tracking-tight">
-            Transparent pricing for your whole team.
+            Predictable email pricing for teams of any size.
           </h1>
           <p className="text-[15px] sm:text-[17.5px] text-ink-3 leading-relaxed max-w-2xl mx-auto">
             {currency === "NGN"
-              ? "Stop paying $7 per user per month. A team of 20 on Growth pays ₦20,000/mo total — not ₦114,800/mo."
-              : "Stop paying $7 per user per month. A team of 20 on Growth pays $29/mo total — not $140/mo."}
+              ? "Stop paying $7 per user per month as your company grows. Save 80%+ with predictable flat-rate infrastructure from solo to 500+ employees."
+              : "Stop paying $7 per user per month as your company grows. Save 80%+ with predictable flat-rate infrastructure from solo to 500+ employees."}
           </p>
 
           {/* Billing Cycle Toggle */}
@@ -218,7 +218,7 @@ function PricingPage() {
                       ≈ <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
                         {currency === "USD" ? p.perUserEq.usd : p.perUserEq.ngn}
                       </strong>
-                      {" "}for up to {p.perUserEq.users} users
+                      {" "}effective per seat
                     </div>
                   )}
 
@@ -261,67 +261,88 @@ function PricingPage() {
           <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-line bg-surface-muted/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="font-display text-[16px] sm:text-[18px] font-bold text-ink">
-                Compare Mailcoy vs. Traditional Per-Seat Hosts
+                Compare Mailcoy vs. Traditional Per-Seat Hosts at Scale
               </h3>
               <p className="text-[12.5px] sm:text-[13px] text-ink-3">
-                Calculated for a standard 20-person company requiring professional custom domains.
+                See how flat team economics drastically beat per-seat licensing across teams of 20, 50, 100, and 500+ employees.
               </p>
             </div>
             <span className="self-start sm:self-auto px-2.5 py-1 rounded-full bg-primary/10 text-primary font-mono text-[11px] font-semibold border border-primary/20 whitespace-nowrap">
-              Flat Team Economics
+              Massive Enterprise Savings
             </span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[12.5px] sm:text-[13px] min-w-[540px]">
+            <table className="w-full text-left text-[12.5px] sm:text-[13px] min-w-[620px]">
               <thead className="bg-surface-muted/60 text-[11px] uppercase tracking-wider font-semibold text-ink-4 border-b border-line">
                 <tr>
                   <th className="px-5 py-3">Platform</th>
                   <th className="px-5 py-3">Billing Model</th>
-                  <th className="px-5 py-3">20-User Monthly Total</th>
-                  <th className="px-5 py-3">Uses Real Gmail App?</th>
-                  <th className="px-5 py-3 text-right">Effective Savings</th>
+                  <th className="px-5 py-3">20 Users / mo</th>
+                  <th className="px-5 py-3">50 Users / mo</th>
+                  <th className="px-5 py-3">100 Users / mo</th>
+                  <th className="px-5 py-3">Native Gmail App?</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 <tr className="bg-emerald-500/[0.04] font-semibold">
                   <td className="px-5 py-3.5 text-ink flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    Mailcoy Growth
+                    Mailcoy (Flat Tiers)
                   </td>
-                  <td className="px-5 py-3.5 text-ink-2">Flat Team Plan</td>
+                  <td className="px-5 py-3.5 text-emerald-600 font-medium">Flat Team Plan</td>
                   <td className="px-5 py-3.5 font-mono text-emerald-600">
-                    {currency === "USD" ? "$29 / mo" : "₦20,000 / mo"}
+                    {currency === "USD" ? "$29" : "₦20,000"}
                   </td>
-                  <td className="px-5 py-3.5 text-emerald-600">✓ Native Gmail</td>
-                  <td className="px-5 py-3.5 text-right font-mono text-emerald-600">Baseline (Best)</td>
+                  <td className="px-5 py-3.5 font-mono text-emerald-600">
+                    {currency === "USD" ? "$79" : "₦50,000"}
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-emerald-600">
+                    {currency === "USD" ? "$129" : "₦85,000"}
+                  </td>
+                  <td className="px-5 py-3.5 text-emerald-600 font-medium">✓ Yes (Real Gmail)</td>
                 </tr>
                 <tr>
-                  <td className="px-5 py-3.5 text-ink font-medium">Google Workspace (Business Starter)</td>
+                  <td className="px-5 py-3.5 text-ink font-medium">Google Workspace</td>
                   <td className="px-5 py-3.5 text-ink-3">$7 / user / mo</td>
-                  <td className="px-5 py-3.5 font-mono text-ink">
-                    {currency === "USD" ? "$140 / mo" : "₦114,800 / mo"}
+                  <td className="px-5 py-3.5 font-mono text-rose-500">
+                    {currency === "USD" ? "$140" : "₦114,800"}
                   </td>
-                  <td className="px-5 py-3.5 text-ink-3">✓ Native Gmail</td>
-                  <td className="px-5 py-3.5 text-right font-mono text-rose-500">-79% More Expensive</td>
+                  <td className="px-5 py-3.5 font-mono text-rose-500">
+                    {currency === "USD" ? "$350" : "₦287,000"}
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-rose-500">
+                    {currency === "USD" ? "$700" : "₦574,000"}
+                  </td>
+                  <td className="px-5 py-3.5 text-ink-3">✓ Yes (Real Gmail)</td>
+                </tr>
+                <tr>
+                  <td className="px-5 py-3.5 text-ink font-medium">Microsoft 365</td>
+                  <td className="px-5 py-3.5 text-ink-3">$6 / user / mo</td>
+                  <td className="px-5 py-3.5 font-mono text-rose-500">
+                    {currency === "USD" ? "$120" : "₦98,400"}
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-rose-500">
+                    {currency === "USD" ? "$300" : "₦246,000"}
+                  </td>
+                  <td className="px-5 py-3.5 font-mono text-rose-500">
+                    {currency === "USD" ? "$600" : "₦492,000"}
+                  </td>
+                  <td className="px-5 py-3.5 text-ink-4">✗ Outlook App Required</td>
                 </tr>
                 <tr>
                   <td className="px-5 py-3.5 text-ink font-medium">Zoho Workplace</td>
                   <td className="px-5 py-3.5 text-ink-3">$1 / user / mo</td>
                   <td className="px-5 py-3.5 font-mono text-ink">
-                    {currency === "USD" ? "$20 / mo" : "₦16,400 / mo"}
+                    {currency === "USD" ? "$20" : "₦16,400"}
                   </td>
-                  <td className="px-5 py-3.5 text-ink-4">✗ Zoho Webmail app required</td>
-                  <td className="px-5 py-3.5 text-right font-mono text-ink-3">No Gmail Workflow</td>
-                </tr>
-                <tr>
-                  <td className="px-5 py-3.5 text-ink font-medium">Microsoft 365 (Business Basic)</td>
-                  <td className="px-5 py-3.5 text-ink-3">$6 / user / mo</td>
                   <td className="px-5 py-3.5 font-mono text-ink">
-                    {currency === "USD" ? "$120 / mo" : "₦98,400 / mo"}
+                    {currency === "USD" ? "$50" : "₦41,000"}
                   </td>
-                  <td className="px-5 py-3.5 text-ink-4">✗ Outlook app required</td>
-                  <td className="px-5 py-3.5 text-right font-mono text-rose-500">-75% More Expensive</td>
+                  <td className="px-5 py-3.5 font-mono text-ink">
+                    {currency === "USD" ? "$100" : "₦82,000"}
+                  </td>
+                  <td className="px-5 py-3.5 text-ink-4">✗ Zoho Webmail Required</td>
                 </tr>
               </tbody>
             </table>
@@ -332,17 +353,17 @@ function PricingPage() {
         <div className="rounded-3xl border border-line bg-surface p-6 sm:p-10 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <h3 className="font-display text-[20px] sm:text-[22px] font-bold text-ink">
-              Need custom enterprise provisioning for 100+ seats?
+              Need custom enterprise provisioning for 100 to 1,000+ seats?
             </h3>
             <p className="text-[13.5px] text-ink-3 max-w-xl leading-relaxed">
-              We offer dedicated Amazon SES IP warming pools, custom data retention SLAs, SAML SSO integration, and direct Wire / ACH corporate invoicing.
+              Mailcoy handles high-throughput enterprise routing with dedicated Amazon SES and Anycast edge IP pools, SAML/Okta SSO, custom data retention compliance, and direct corporate wire invoicing.
             </p>
           </div>
           <Link
             to="/contact"
             className="shrink-0 inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-[13.5px] font-semibold text-primary-foreground shadow-xs hover:opacity-95 transition w-full sm:w-auto text-center whitespace-nowrap"
           >
-            Contact Enterprise Sales &rarr;
+            Talk to Enterprise Sales &rarr;
           </Link>
         </div>
       </div>

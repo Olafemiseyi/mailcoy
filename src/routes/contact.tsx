@@ -95,10 +95,10 @@ function Contact() {
 
           <div className="rounded-2xl border border-line bg-surface p-5 shadow-xs space-y-2">
             <div className="flex items-center gap-2 text-emerald-600 font-semibold text-[14px]">
-              <Mail className="h-4 w-4" /> Enterprise & Sales
+              <Mail className="h-4 w-4" /> Enterprise & Large Teams
             </div>
             <p className="text-[13px] text-ink-3 leading-relaxed">
-              Teams with 50+ members and custom billing: <br />
+              Organizations with 50 to 1,000+ inboxes and custom SLAs: <br />
               <a href="mailto:sales@mailcoy.com" className="font-mono text-ink font-semibold hover:text-primary underline">sales@mailcoy.com</a>
             </p>
           </div>
