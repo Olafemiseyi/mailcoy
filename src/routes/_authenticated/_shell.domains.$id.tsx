@@ -785,27 +785,55 @@ function BimiConfigCard({
       </div>
 
       {/* Startup Zero-Cost Logo Guide */}
-      <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-3.5 sm:p-4 text-[13px]">
-        <div className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400 mb-1.5">
+      <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 text-[13px] space-y-3">
+        <div className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400">
           <Zap className="h-4 w-4 shrink-0" />
-          <span className="text-[13px] font-semibold">
-            Starting out? Show your logo for $0 on Gmail & Yahoo
+          <span className="text-[13.5px] font-bold font-display">
+            Show your Brand Logo in Inboxes for $0 (Zero Stress Guide)
           </span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 text-ink-2 text-[12.5px] mt-2">
-          <div className="p-3 rounded-lg border border-line bg-surface/70">
-            <strong className="text-ink block mb-0.5">1. For Gmail Inboxes ($0)</strong>
-            <span>
-              Set your company logo as the Google Account avatar for your connected Gmail profile.
-              Google will display this avatar next to all emails sent via Mailcoy.
-            </span>
+        <p className="text-[12.5px] text-ink-3">
+          Official BIMI blue checkmarks on Gmail/Apple require a $1,500/yr trademark VMC certificate. However, you can display your logo in 99% of inboxes for <strong>100% free</strong> using these two instant methods:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-ink-2 text-[12.5px]">
+          <div className="p-3.5 rounded-xl border border-line bg-surface flex flex-col justify-between space-y-2">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <strong className="text-ink font-semibold">1. For Gmail & Android ($0 · 30s)</strong>
+                <span className="text-[10.5px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">Instant</span>
+              </div>
+              <p className="text-[12px] text-ink-3 leading-relaxed">
+                Upload your company logo as the Google Account Profile Picture on your connected Gmail. Gmail automatically displays this avatar on all emails sent via Mailcoy!
+              </p>
+            </div>
+            <a
+              href="https://myaccount.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:underline pt-1"
+            >
+              Open Google Profile Settings <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
-          <div className="p-3 rounded-lg border border-line bg-surface/70">
-            <strong className="text-ink block mb-0.5">2. For Yahoo! & Fastmail ($0)</strong>
-            <span>
-              Add the Self-Asserted BIMI DNS record below with your SVG logo URL. Yahoo & Fastmail
-              do not require paid VMC certificates.
-            </span>
+
+          <div className="p-3.5 rounded-xl border border-line bg-surface flex flex-col justify-between space-y-2">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <strong className="text-ink font-semibold">2. For Apple Mail & Outlook ($0 · 1m)</strong>
+                <span className="text-[10.5px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">Universal</span>
+              </div>
+              <p className="text-[12px] text-ink-3 leading-relaxed">
+                Register your business email on Gravatar and upload your company logo. Apple Mail, Thunderbird, Slack, and CRMs will display it automatically.
+              </p>
+            </div>
+            <a
+              href="https://gravatar.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:underline pt-1"
+            >
+              Create Free Gravatar Profile <ExternalLink className="h-3 w-3" />
+            </a>
           </div>
         </div>
       </div>

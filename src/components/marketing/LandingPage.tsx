@@ -24,11 +24,11 @@ function Hero() {
       {/* Ambient background mesh glow */}
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-primary/10 blur-[130px] rounded-full opacity-60 dark:opacity-40" />
 
-      <div className="mx-auto max-w-6xl px-5 relative z-10">
-        <div className="mx-auto max-w-3xl text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-3.5 py-1 text-[11px] sm:text-[12px] font-semibold text-ink-3 shadow-2xs backdrop-blur-sm whitespace-nowrap">
+      <div className="mx-auto max-w-6xl px-4 sm:px-5 relative z-10">
+        <div className="mx-auto max-w-3xl text-center space-y-5 sm:space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-3.5 py-1 text-[11px] sm:text-[12px] font-semibold text-ink-3 shadow-2xs backdrop-blur-sm max-w-full text-center">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span>Zero Workspace Markup · Scalable from 1 to 1,000+ Inboxes</span>
+            <span className="truncate sm:whitespace-normal">Zero Workspace Markup · Scalable from 1 to 1,000+ Inboxes</span>
           </div>
 
           <h1 className="font-display text-[44px] sm:text-[60px] md:text-[72px] font-bold tracking-[-0.035em] text-ink leading-[1.04]">

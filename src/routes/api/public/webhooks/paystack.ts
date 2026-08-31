@@ -107,6 +107,45 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             } as never,
             { onConflict: "provider_reference" },
           );
+
+          // Dispatch lifecycle email notifications based on status change
+          try {
+            const { data: orgData } = await supabaseAdmin
+              .from("organizations")
+              .select("name, billing_email")
+              .eq("id", orgId)
+              .maybeSingle();
+
+            const ownerEmail = (orgData as any)?.billing_email || event.data?.customer?.email;
+            const orgName = (orgData as any)?.name || "Your Workspace";
+
+            if (ownerEmail) {
+              const {
+                sendPaymentFailedGraceEmail,
+                sendSubscriptionExpiredEmail,
+              } = await import("@/server/billingLifecycleEmail.server");
+
+              if (status === "past_due") {
+                const amountFormatted = event.data?.amount ? `₦${(event.data.amount / 100).toLocaleString()}` : "₦20,000";
+                await sendPaymentFailedGraceEmail({
+                  toEmail: ownerEmail,
+                  ownerName: orgName,
+                  organizationName: orgName,
+                  planName: planCode ? `${planCode.toUpperCase()} Plan` : "Growth Plan",
+                  renewalAmount: amountFormatted,
+                  graceEndDate: new Date(Date.now() + 72 * 3600 * 1000).toLocaleDateString(),
+                });
+              } else if (status === "canceled") {
+                await sendSubscriptionExpiredEmail({
+                  toEmail: ownerEmail,
+                  ownerName: orgName,
+                  organizationName: orgName,
+                });
+              }
+            }
+          } catch (emailErr) {
+            console.warn("[PaystackWebhook] Error sending billing lifecycle email:", emailErr);
+          }
         }
 
         return new Response("ok", { status: 200 });

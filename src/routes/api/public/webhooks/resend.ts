@@ -234,6 +234,34 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
       `;
 
       for (const target of targetDeliveries) {
+        // Enforce Free Tier Monthly Quota & Subscription Status
+        let quotaAllowed = true;
+        let blockReason: string | undefined = undefined;
+
+        if (target.orgId) {
+          const { checkAndEnforceEmailQuota } = await import("@/server/usageQuota.server");
+          const quotaCheck = await checkAndEnforceEmailQuota(target.orgId, recipientEmail, true);
+          quotaAllowed = quotaCheck.allowed;
+          blockReason = quotaCheck.reason;
+        }
+
+        if (!quotaAllowed) {
+          console.warn(`[Mailcoy] Email blocked for ${recipientEmail} (${blockReason})`);
+          if (target.orgId) {
+            await supabaseAdmin.from("email_logs").insert({
+              organization_id: target.orgId,
+              sender: fromAddress,
+              receiver: recipientEmail,
+              subject,
+              snippet: `[Blocked: ${blockReason || "Limit Reached"}] ${(text || subject || "").slice(0, 120)}`,
+              direction: "incoming",
+              status: blockReason === "subscription_expired" ? "blocked_subscription_expired" : "blocked_quota_exceeded",
+              timestamp: new Date().toISOString(),
+            });
+          }
+          continue;
+        }
+
         const fwd = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {

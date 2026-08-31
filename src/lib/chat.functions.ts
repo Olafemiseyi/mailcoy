@@ -105,9 +105,10 @@ Your sole mission is to assist visitors and customers with Mailcoy. You possess 
        • **SPF Record:** Authorizes delivery via \`v=spf1 include:_spf.mailcoy.com ~all\`.
        • **DKIM Record:** Cryptographic keys (1024/2048-bit) for 100% Gmail/Outlook deliverability.
        • **DMARC Record:** Anti-phishing policy (\`v=DMARC1; p=quarantine; rua=mailto:dmarc@mailcoy.com\`).
-       • **BIMI Record:** Brand Indicators for Message Identification. To use BIMI, users add a TXT record (\`v=BIMI1; l=url_to_svg; a=url_to_vmc;\`).
-     - **Pro Tip for Free Logos in Gmail:** Create a free Google Account using the custom business email address (e.g. \`you@company.com\`) and upload the company logo as the profile picture. It shows up in Gmail instantly for free without expensive VMC certificates.
-     - Cloudflare Guidance: DNS records must be set to 'DNS Only' (Grey Cloud).
+       • **BIMI & Brand Logos:**
+          - **Method 1 ($0 Free & Instant for Gmail):** Upload the company logo as the Google Account Profile Picture at \`myaccount.google.com\` for the connected Gmail account. Gmail automatically attaches this logo avatar next to every email sent via Mailcoy!
+          - **Method 2 ($0 Free for Apple Mail, Outlook & CRMs):** Register the business email (\`you@yourdomain.com\`) on \`gravatar.com\` and upload the company logo.
+          - **Method 3 (Official BIMI DNS):** Add a TXT record at \`default._bimi.domain.com\` (\`v=BIMI1; l=url_to_svg;\`). Free on Yahoo/Fastmail; Google/Apple require a paid $1,500/yr VMC certificate. Always recommend Method 1 & 2 for fast, free setup!
 
   5. **High Availability & MX Fallback Queues:**
      - Mailcoy operates redundant multi-region Anycast fallback MX proxies (\`mx1\` and \`mx2\`).
@@ -363,9 +364,38 @@ When an employee departs your organization:
 2. Click the employee row and select **'Offboard / Suspend'**.
 3. Mailcoy immediately purges routing tokens and blocks all inbound/outbound company email access from their personal Gmail without affecting their personal inbox or disrupting the rest of your domain.`;
 
-    // 9. Deliverability & Spam
+    // 9. Brand Logo & BIMI Setup ($0 Free Guide)
+    } else if (
+      msg.includes("logo") ||
+      msg.includes("bimi") ||
+      msg.includes("avatar") ||
+      msg.includes("profile picture") ||
+      msg.includes("picture") ||
+      data.selectedIssue === "bimi_logo"
+    ) {
+      reply = `**How to Display Your Company Logo in Emails ($0 Free & No Stress):**
+
+Here are the 2 fastest, free ways to show your brand logo in customer inboxes without paying for $1,500/yr BIMI certificates:
+
+1. **For Gmail Inboxes ($0 · Takes 30 Seconds):**
+   • Go to **[myaccount.google.com](https://myaccount.google.com)** for the Gmail account connected to Mailcoy.
+   • Click the **Profile Picture** icon at the top and upload your company logo (PNG or JPG).
+   • Whenever you send an email as \`you@yourdomain.com\` via Mailcoy, Google automatically attaches your logo avatar to all Gmail recipients!
+
+2. **For Apple Mail, Outlook & CRMs ($0 · Takes 1 Minute):**
+   • Go to **[gravatar.com](https://gravatar.com)** and create a free profile.
+   • Add your custom business email (\`you@yourdomain.com\`) and upload your logo.
+   • Email clients and CRMs that query Gravatar will automatically display your brand avatar.
+
+3. **Official BIMI DNS Record (Yahoo! & Fastmail):**
+   • Open your domain details in Mailcoy, copy the generated \`default._bimi\` TXT record, and add it to your DNS registrar with your square SVG URL.
+
+💡 *Recommendation:* Use **Method 1 & 2** for instant, 100% free logo coverage across all major inboxes!`;
+
+    // 10. Deliverability & Spam
     } else if (msg.includes("spam") || msg.includes("deliverability") || msg.includes("inbox") || data.selectedIssue === "spam_issues") {
       reply = `**Deliverability Shield & DNSBL Monitoring:**
+
 
 Mailcoy configures 3 industry-standard authentication shields to guarantee 99%+ inbox placement:
 • **SPF:** Authorizes Mailcoy servers to send on your behalf.
