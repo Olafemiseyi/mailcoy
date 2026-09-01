@@ -54,8 +54,10 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
   let text = emailData?.text || "";
   let fromAddress = emailData?.from || "(Unknown sender)";
   const subject = emailData?.subject || "(No subject)";
+  let originalMessageId: string | undefined = undefined;
+  let attachments: any[] = [];
 
-  // Resend email.received webhook sends metadata only — fetch full body
+  // Resend email.received webhook sends metadata only — fetch full body & attachments
   const emailId = emailData?.email_id || emailData?.id;
   if (emailId) {
     try {
@@ -70,6 +72,12 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
         if (full?.headers?.from) {
           fromAddress = full.headers.from;
         }
+        if (full?.headers?.["message-id"]) {
+          originalMessageId = full.headers["message-id"];
+        }
+        if (Array.isArray(full?.attachments) && full.attachments.length > 0) {
+          attachments = full.attachments;
+        }
       }
     } catch (e) {
       console.warn("[Mailcoy] Could not fetch email body:", e);
@@ -82,6 +90,76 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
     const recipientMatch = recipientRaw.match(/<([^>]+)>/) || [null, recipientRaw];
     const recipientEmail = (recipientMatch[1] || recipientRaw).trim().toLowerCase();
     const recipientDomain = recipientEmail.split("@")[1] || "mailcoy.com";
+
+    // 0. Smart Relay Reply Processing (When employee clicks Reply in Gmail)
+    if (recipientEmail.startsWith("reply+")) {
+      const token = recipientEmail.slice(6).split("@")[0];
+      try {
+        const { decodeRelayToken, sanitizeQuotedText } = await import("@/server/relayToken.server");
+        const payload = await decodeRelayToken(token);
+
+        if (payload) {
+          const senderClean = (fromAddress.match(/<([^>]+)>/)?.[1] || fromAddress).trim().toLowerCase();
+          const expectedSender = payload.employeePersonalEmail.trim().toLowerCase();
+
+          // Verify sender matches the authorized personal email
+          if (senderClean === expectedSender) {
+            const cleanHtml = sanitizeQuotedText(html, token, payload.customerEmail, payload.customerName);
+            const cleanText = sanitizeQuotedText(text, token, payload.customerEmail, payload.customerName);
+
+            const outboundHeaders: Record<string, string> = {
+              "X-Mailcoy-Relayed": "1",
+              "Auto-Submitted": "auto-replied",
+            };
+
+            if (payload.originalMessageId) {
+              outboundHeaders["In-Reply-To"] = payload.originalMessageId;
+              outboundHeaders["References"] = payload.originalMessageId;
+            }
+
+            const outRes = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: `${payload.employeeName} <${payload.employeeBusinessEmail}>`,
+                to: [payload.customerEmail],
+                ...(payload.cc && payload.cc.length > 0 ? { cc: payload.cc } : {}),
+                subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
+                headers: outboundHeaders,
+                html: cleanHtml || `<pre style="font-family:inherit;white-space:pre-wrap;">${cleanText}</pre>`,
+                text: cleanText || undefined,
+                ...(attachments.length > 0 ? { attachments } : {}),
+              }),
+            });
+
+            const outResult = await outRes.json() as any;
+            console.log(`[Mailcoy Relay] Dispatched threaded reply to ${payload.customerEmail} as ${payload.employeeBusinessEmail} | id:`, outResult?.id);
+
+            if (payload.organizationId) {
+              await supabaseAdmin.from("email_logs").insert({
+                organization_id: payload.organizationId,
+                sender: payload.employeeBusinessEmail,
+                receiver: payload.customerEmail,
+                subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
+                snippet: (cleanText || subject || "(Outbound Reply)").slice(0, 150),
+                direction: "outgoing",
+                status: outRes.ok ? "delivered" : "failed",
+                timestamp: new Date().toISOString(),
+              });
+            }
+            continue;
+          } else {
+            console.warn(`[Mailcoy Relay] Unauthorized sender ${senderClean} (expected ${expectedSender})`);
+            continue;
+          }
+        }
+      } catch (relayErr) {
+        console.error("[Mailcoy Relay] Error processing relay reply:", relayErr);
+      }
+    }
 
     try {
       const targetDeliveries: Array<{ gmail: string; orgId: string | null; name: string }> = [];
@@ -262,6 +340,25 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
           continue;
         }
 
+        let replyToAddress = fromAddress;
+        try {
+          const { generateRelayToken } = await import("@/server/relayToken.server");
+          const relayToken = await generateRelayToken({
+            customerEmail: senderEmail,
+            customerName: senderDisplayName,
+            employeePersonalEmail: target.gmail,
+            employeeBusinessEmail: recipientEmail,
+            employeeName: target.name,
+            organizationId: target.orgId || undefined,
+            originalSubject: subject,
+            originalMessageId,
+            ts: Date.now(),
+          });
+          replyToAddress = `reply+${relayToken}@mailcoy.com`;
+        } catch (e) {
+          console.warn("[Mailcoy Relay] Could not generate token, fallback:", e);
+        }
+
         const fwd = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -271,11 +368,12 @@ async function processInboundEmail(emailData: any, resendApiKey: string) {
             "Auto-Submitted": "auto-generated",
           },
           body: JSON.stringify({
-            from: `${senderDisplayName} <router@${recipientDomain}>`,
+            from: `${senderDisplayName} via Mailcoy <router@${recipientDomain}>`,
             to: [target.gmail],
-            reply_to: [fromAddress],
+            reply_to: [replyToAddress],
             subject,
             html: forwardHtml,
+            ...(attachments.length > 0 ? { attachments } : {}),
           }),
         });
 

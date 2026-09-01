@@ -359,46 +359,57 @@ const SECTIONS: Section[] = [
   {
     id: "gmail",
     icon: Mail,
-    title: "Gmail Integration & Send-As Setup",
-    badge: "Native Gmail App",
+    title: "Gmail Workflow & Smart Relay Bridge",
+    badge: "Zero-Config Routing",
     body: (
       <div className="space-y-4">
         <p className="text-[14px] text-ink-2 leading-relaxed">
-          Employees send and receive directly inside standard Gmail using their custom business email address:
+          Mailcoy enables your entire team to send, receive, and reply to business emails using their normal Gmail app without configuring SMTP servers or manual passwords:
         </p>
 
-        <div className="p-4 rounded-xl bg-surface border border-line space-y-3">
-          <h4 className="font-semibold text-ink text-[13.5px]">Outbound SMTP Configuration:</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12.5px] font-mono">
-            <div className="p-2.5 rounded-lg bg-surface-muted border border-line flex items-center justify-between">
-              <span>Server: <strong>smtp.resend.com</strong></span>
-              <CopyButton text="smtp.resend.com" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 rounded-xl border border-line bg-surface space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="h-6 w-6 rounded-full bg-primary/10 text-primary font-mono text-[12px] font-bold grid place-items-center">
+                1
+              </span>
+              <h4 className="font-semibold text-ink text-[13.5px]">Receive in Gmail</h4>
             </div>
-            <div className="p-2.5 rounded-lg bg-surface-muted border border-line flex items-center justify-between">
-              <span>Port: <strong>465 (SSL)</strong></span>
-              <CopyButton text="465" />
+            <p className="text-[12.5px] text-ink-3 leading-relaxed">
+              When a customer emails your business address (e.g. <em>john@company.com</em>), it instantly lands in your regular Gmail inbox with clear customer headers.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl border border-line bg-surface space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="h-6 w-6 rounded-full bg-primary/10 text-primary font-mono text-[12px] font-bold grid place-items-center">
+                2
+              </span>
+              <h4 className="font-semibold text-ink text-[13.5px]">Reply in 1-Click</h4>
             </div>
-            <div className="p-2.5 rounded-lg bg-surface-muted border border-line flex items-center justify-between">
-              <span>Username: <strong>resend</strong></span>
-              <CopyButton text="resend" />
+            <p className="text-[12.5px] text-ink-3 leading-relaxed">
+              Just click <strong>Reply</strong> in your normal Gmail app. Mailcoy's Smart Relay Bridge automatically sends your response from your business email with full DKIM authentication—your personal Gmail address is never exposed.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl border border-line bg-surface space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="h-6 w-6 rounded-full bg-primary/10 text-primary font-mono text-[12px] font-bold grid place-items-center">
+                3
+              </span>
+              <h4 className="font-semibold text-ink text-[13.5px]">Quick Compose</h4>
             </div>
-            <div className="p-2.5 rounded-lg bg-surface-muted border border-line flex items-center justify-between">
-              <span>Password: <strong>SMTP API Key</strong></span>
-              <span className="text-[11px] text-ink-4">From Dashboard</span>
-            </div>
+            <p className="text-[12.5px] text-ink-3 leading-relaxed">
+              To start a new business email, click <strong>Compose</strong> in Mailcoy (or on your phone PWA). Select your business identity, insert templates, attach files, and send. Customer replies return straight to your Gmail!
+            </p>
           </div>
         </div>
 
-        <ol className="list-decimal list-inside space-y-2 text-[13px] text-ink-2">
-          <li>Open <strong>Gmail Settings → Accounts and Import</strong>.</li>
-          <li>Under <em>"Send mail as"</em>, click <strong>"Add another email address"</strong>.</li>
-          <li>Enter the employee's name and business email address (keep <em>"Treat as an alias"</em> checked).</li>
-          <li>Enter the SMTP details above and confirm the 6-digit verification code.</li>
-          <li>Select <strong>"Reply from the same address to which the message was sent"</strong>.</li>
-        </ol>
-
-        <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[12.5px] text-blue-900 dark:text-blue-200">
-          <strong>📱 Mobile Sync (iOS & Android):</strong> Once completed in your mobile browser, the custom <em>From:</em> address will automatically sync to the official Gmail app on your smartphone.
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[12.5px] text-emerald-900 dark:text-emerald-300 flex items-center gap-2.5">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span>
+            <strong>Zero Configuration Required:</strong> Employees never need to enter SMTP passwords, configure ports, or manage third-party app passwords.
+          </span>
         </div>
       </div>
     ),

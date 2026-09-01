@@ -27,7 +27,9 @@ import {
   ChevronDown,
   LayoutTemplate,
   ArrowLeft,
+  SquarePen,
 } from "lucide-react";
+import { QuickComposeModal } from "@/components/app/QuickComposeModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -89,6 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
   const fetchOrg = useServerFn(getMyOrganization);
   const { data: org } = useQuery({
     queryKey: ["my-org"],
@@ -169,7 +172,23 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
 
-        <nav className="px-2 py-3 flex-1 space-y-0.5">
+        {/* Quick Compose Button */}
+        <div className="px-2 pt-3 pb-1">
+          <button
+            type="button"
+            onClick={() => setIsComposeOpen(true)}
+            aria-label="Compose business email"
+            title="Compose business email"
+            className={`w-full flex items-center ${
+              collapsed ? "justify-center" : "gap-2 px-3"
+            } h-9 rounded-md text-[13px] font-semibold bg-primary text-primary-foreground hover:opacity-90 shadow-sm transition cursor-pointer`}
+          >
+            <SquarePen className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Compose</span>}
+          </button>
+        </div>
+
+        <nav className="px-2 py-2 flex-1 space-y-0.5">
           {navItems.map((item) => {
             const active = isActive(item.to);
             const Icon = item.icon;
@@ -269,6 +288,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
           </Link>
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsComposeOpen(true)}
+              aria-label="Compose email"
+              className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground cursor-pointer shadow-xs"
+            >
+              <SquarePen className="h-4 w-4" />
+            </button>
             <ThemeToggle />
             <button
               type="button"
@@ -407,13 +434,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="hidden md:flex sticky top-0 z-20 border-b border-line bg-background/85 backdrop-blur px-5 md:px-10 h-14 items-center justify-between">
           <div className="text-[13px] text-ink-3 truncate">{currentLabel}</div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsComposeOpen(true)}
+              aria-label="Compose business email"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition shadow-xs cursor-pointer"
+            >
+              <SquarePen className="h-3.5 w-3.5" />
+              <span>Compose</span>
+            </button>
             <ThemeToggle />
             <UserChip email={userEmail} initial={userInitial} onSignOut={signOut} />
           </div>
         </div>
         <div className="px-5 md:px-10 py-6 md:py-8 max-w-6xl">{children}</div>
       </main>
+
+      <QuickComposeModal
+        isOpen={isComposeOpen}
+        onClose={() => setIsComposeOpen(false)}
+      />
     </div>
   );
 }

@@ -36,6 +36,7 @@ import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizat
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedShellRouteImport } from './routes/_authenticated/_shell'
+import { Route as ApiWebhooksResendRouteImport } from './routes/api/webhooks/resend'
 import { Route as ApiPublicStatusRouteImport } from './routes/api/public/status'
 import { Route as AuthenticatedShellTemplatesRouteImport } from './routes/_authenticated/_shell.templates'
 import { Route as AuthenticatedShellSignaturesRouteImport } from './routes/_authenticated/_shell.signatures'
@@ -194,6 +195,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
 const AuthenticatedShellRoute = AuthenticatedShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiWebhooksResendRoute = ApiWebhooksResendRouteImport.update({
+  id: '/api/webhooks/resend',
+  path: '/api/webhooks/resend',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicStatusRoute = ApiPublicStatusRouteImport.update({
   id: '/api/public/status',
@@ -378,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/signatures': typeof AuthenticatedShellSignaturesRoute
   '/templates': typeof AuthenticatedShellTemplatesRoute
   '/api/public/status': typeof ApiPublicStatusRoute
+  '/api/webhooks/resend': typeof ApiWebhooksResendRoute
   '/domains/$id': typeof AuthenticatedShellDomainsIdRoute
   '/employees/$id': typeof AuthenticatedShellEmployeesIdRoute
   '/settings/api-keys': typeof AuthenticatedShellSettingsApiKeysRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/signatures': typeof AuthenticatedShellSignaturesRoute
   '/templates': typeof AuthenticatedShellTemplatesRoute
   '/api/public/status': typeof ApiPublicStatusRoute
+  '/api/webhooks/resend': typeof ApiWebhooksResendRoute
   '/domains/$id': typeof AuthenticatedShellDomainsIdRoute
   '/employees/$id': typeof AuthenticatedShellEmployeesIdRoute
   '/settings/api-keys': typeof AuthenticatedShellSettingsApiKeysRoute
@@ -483,6 +491,7 @@ export interface FileRoutesById {
   '/_authenticated/_shell/signatures': typeof AuthenticatedShellSignaturesRoute
   '/_authenticated/_shell/templates': typeof AuthenticatedShellTemplatesRoute
   '/api/public/status': typeof ApiPublicStatusRoute
+  '/api/webhooks/resend': typeof ApiWebhooksResendRoute
   '/_authenticated/_shell/domains/$id': typeof AuthenticatedShellDomainsIdRoute
   '/_authenticated/_shell/employees/$id': typeof AuthenticatedShellEmployeesIdRoute
   '/_authenticated/_shell/settings/api-keys': typeof AuthenticatedShellSettingsApiKeysRoute
@@ -537,6 +546,7 @@ export interface FileRouteTypes {
     | '/signatures'
     | '/templates'
     | '/api/public/status'
+    | '/api/webhooks/resend'
     | '/domains/$id'
     | '/employees/$id'
     | '/settings/api-keys'
@@ -587,6 +597,7 @@ export interface FileRouteTypes {
     | '/signatures'
     | '/templates'
     | '/api/public/status'
+    | '/api/webhooks/resend'
     | '/domains/$id'
     | '/employees/$id'
     | '/settings/api-keys'
@@ -641,6 +652,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_shell/signatures'
     | '/_authenticated/_shell/templates'
     | '/api/public/status'
+    | '/api/webhooks/resend'
     | '/_authenticated/_shell/domains/$id'
     | '/_authenticated/_shell/employees/$id'
     | '/_authenticated/_shell/settings/api-keys'
@@ -678,6 +690,7 @@ export interface RootRouteChildren {
   AuthVerifyRoute: typeof AuthVerifyRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ApiPublicStatusRoute: typeof ApiPublicStatusRoute
+  ApiWebhooksResendRoute: typeof ApiWebhooksResendRoute
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
   ApiPublicHooksVerifyDomainsRoute: typeof ApiPublicHooksVerifyDomainsRoute
   ApiPublicWebhooksPaystackRoute: typeof ApiPublicWebhooksPaystackRoute
@@ -875,6 +888,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedShellRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/webhooks/resend': {
+      id: '/api/webhooks/resend'
+      path: '/api/webhooks/resend'
+      fullPath: '/api/webhooks/resend'
+      preLoaderRoute: typeof ApiWebhooksResendRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/status': {
       id: '/api/public/status'
@@ -1197,6 +1217,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthVerifyRoute: AuthVerifyRoute,
   InviteTokenRoute: InviteTokenRoute,
   ApiPublicStatusRoute: ApiPublicStatusRoute,
+  ApiWebhooksResendRoute: ApiWebhooksResendRoute,
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
   ApiPublicHooksVerifyDomainsRoute: ApiPublicHooksVerifyDomainsRoute,
   ApiPublicWebhooksPaystackRoute: ApiPublicWebhooksPaystackRoute,
