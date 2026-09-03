@@ -29,6 +29,10 @@ function VerifyPage() {
           });
           if (!error && isMounted) {
             setState("ok");
+            const next = urlParams.get("next");
+            if (next && next.startsWith("/") && !next.startsWith("//")) {
+              window.location.href = next;
+            }
             return;
           }
         } catch (e) {
@@ -40,6 +44,10 @@ function VerifyPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.user && isMounted) {
         setState("ok");
+        const next = urlParams.get("next");
+        if (next && next.startsWith("/") && !next.startsWith("//")) {
+          window.location.href = next;
+        }
         return;
       }
 
@@ -47,6 +55,10 @@ function VerifyPage() {
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         if (session?.user && isMounted) {
           setState("ok");
+          const next = urlParams.get("next");
+          if (next && next.startsWith("/") && !next.startsWith("//")) {
+            window.location.href = next;
+          }
         }
       });
 
@@ -54,7 +66,15 @@ function VerifyPage() {
       const timeout = setTimeout(async () => {
         const { data: checkUser } = await supabase.auth.getUser();
         if (isMounted) {
-          setState(checkUser.user ? "ok" : "error");
+          if (checkUser.user) {
+            setState("ok");
+            const next = urlParams.get("next");
+            if (next && next.startsWith("/") && !next.startsWith("//")) {
+              window.location.href = next;
+            }
+          } else {
+            setState("error");
+          }
         }
       }, 3500);
 

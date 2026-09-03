@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Mail,
   ShieldCheck,
+  ShieldAlert,
   AlertTriangle,
   Loader2,
   Copy,
@@ -19,6 +20,7 @@ import {
   Laptop,
   Check,
   Zap,
+  ExternalLink,
 } from "lucide-react";
 
 export const Route = createFileRoute("/invite/$token")({
@@ -134,6 +136,38 @@ function InvitePage() {
     );
   }
 
+  // Security Screen: If unauthorized person tries to connect to an already-connected invite
+  if (search.error === "belongs_to_another" || search.error?.includes("belongs to another person")) {
+    return (
+      <Shell>
+        <div className="text-center space-y-4 py-6">
+          <div className="inline-grid place-items-center h-14 w-14 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 mx-auto shadow-sm ring-1 ring-red-500/20">
+            <ShieldAlert className="h-7 w-7" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-ink">
+              This account or page belongs to another person
+            </h1>
+            <p className="text-[13px] sm:text-[13.5px] text-ink-3 leading-relaxed max-w-sm mx-auto">
+              This official company invitation has already been verified and connected to an active employee account. Any other email that is not connected to the owner dashboard is not permitted.
+            </p>
+            <p className="text-[12.5px] text-amber-600 dark:text-amber-400 font-medium pt-1">
+              Please contact your employer to receive your own invitation link.
+            </p>
+          </div>
+          <div className="pt-4">
+            <a
+              href="/auth/login"
+              className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-ink text-background text-xs font-semibold hover:opacity-90 transition cursor-pointer"
+            >
+              Back to Sign In
+            </a>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
   const orgName = (res.organization as { name?: string } | null)?.name ?? "your workspace";
   const emp = res.employee as {
     full_name?: string | null;
@@ -161,6 +195,28 @@ function InvitePage() {
           Google account.
         </p>
       </div>
+
+      {(res as any)?.isAlreadyClaimed && !search.error && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 mb-4 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+          <ShieldAlert className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <strong className="block font-semibold">Invitation Already Connected</strong>
+            <span className="leading-relaxed">
+              This invitation has already been linked to an active employee account in the owner dashboard. If you are not the assigned employee, please contact your employer.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {search.error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 mb-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-2.5 animate-in fade-in duration-150">
+          <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+          <div className="space-y-0.5 min-w-0">
+            <strong className="block font-semibold">Unable to Link Account</strong>
+            <span className="leading-relaxed break-words">{search.error}</span>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-line bg-surface p-4 sm:p-5 mb-4 sm:mb-5 space-y-2.5 sm:space-y-3 min-w-0 shadow-xs">
         <InfoRow label="You are" value={emp?.full_name ?? "—"} />
@@ -192,10 +248,34 @@ function InvitePage() {
             </div>
           </div>
 
+          {/* Primary Action Card: Open Mailcoy Compose */}
+          <div className="p-4 sm:p-5 rounded-2xl border-2 border-primary/40 bg-primary/5 space-y-3 shadow-sm min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-xs shrink-0">
+                <Mail className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-sm font-bold text-ink">Launch Mailcoy Compose</h4>
+                <p className="text-xs text-ink-3">
+                  Start sending and managing emails as{" "}
+                  <span className="font-mono text-ink font-semibold">{emp?.professional_email}</span>
+                </p>
+              </div>
+            </div>
+
+            <a
+              href="/compose"
+              className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-semibold text-xs sm:text-sm inline-flex items-center justify-center gap-2 hover:opacity-90 transition shadow-xs cursor-pointer"
+            >
+              <span>Open Mailcoy Compose</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+
           <div className="rounded-xl border border-line bg-surface overflow-hidden shadow-xs min-w-0">
             <div className="p-4 sm:p-5 border-b border-line bg-surface-muted/40">
               <h3 className="font-semibold text-[13.5px] sm:text-[14px] text-ink flex items-center gap-1.5">
-                <span>Final Step: Send as {emp?.professional_email}</span>
+                <span>Optional: Send directly from Gmail Web / Mobile App</span>
               </h3>
               <p className="text-[12px] sm:text-[12.5px] text-ink-3 mt-1 leading-relaxed">
                 To send emails as your professional address, configure Gmail settings once (takes 45

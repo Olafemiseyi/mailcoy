@@ -108,23 +108,25 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' })
     let userId: string | null = null;
     let claims: any = {};
 
+    // 1. Fast, reliable local JWT payload decoding first (zero-network, immune to ECONNRESET / network hiccups)
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser(token);
-      if (!userError && userData?.user?.id) {
-        userId = userData.user.id;
-        claims = userData.user;
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        if (payload.sub && (!payload.exp || payload.exp * 1000 > Date.now())) {
+          userId = payload.sub;
+          claims = payload;
+        }
       }
     } catch {}
 
+    // 2. Fallback to Supabase Auth getUser if local decode did not yield user
     if (!userId) {
       try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-          if (payload.sub && (!payload.exp || payload.exp * 1000 > Date.now())) {
-            userId = payload.sub;
-            claims = payload;
-          }
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (!userError && userData?.user?.id) {
+          userId = userData.user.id;
+          claims = userData.user;
         }
       } catch {}
     }
@@ -133,10 +135,13 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' })
       throw new Error('Unauthorized: Invalid or expired session token. Please log in again.');
     }
 
+    const userEmail = claims.email || claims.user_metadata?.email || null;
+
     return next({
       context: {
         supabase,
         userId,
+        userEmail,
         claims,
       },
     });

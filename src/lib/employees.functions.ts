@@ -91,7 +91,6 @@ export const addEmployee = createServerFn({ method: "POST" })
         company_email: profEmail,
         professional_email: profEmail,
         personal_email: profEmail,
-        personal_gmail: profEmail,
         job_title: data.job_title || null,
         department: data.department || null,
         phone_number: data.phone_number || null,
@@ -157,7 +156,6 @@ export const bulkAddEmployees = createServerFn({ method: "POST" })
         company_email: email,
         professional_email: email,
         personal_email: email,
-        personal_gmail: email,
         status: "invited" as const,
       };
     });
@@ -219,10 +217,22 @@ export const offboardEmployee = createServerFn({ method: "POST" })
     assertAdmin(ctx.role);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1. Mark employee status suspended
+    // 0. Verify employee belongs to this org and retrieve the linked auth user_id
+    const { data: empRow, error: fetchErr } = await supabaseAdmin
+      .from("employees")
+      .select("id, user_id")
+      .eq("organization_id", ctx.organizationId)
+      .eq("id", data.id)
+      .single();
+
+    if (fetchErr || !empRow) {
+      throw new Error("Employee not found or does not belong to this organisation.");
+    }
+
+    // 1. Mark employee status offboarded
     const { error: empErr } = await supabaseAdmin
       .from("employees")
-      .update({ status: "suspended" } as never)
+      .update({ status: "offboarded" } as never)
       .eq("organization_id", ctx.organizationId)
       .eq("id", data.id);
 
@@ -243,11 +253,13 @@ export const offboardEmployee = createServerFn({ method: "POST" })
       .update({ revoked_at: new Date().toISOString() } as never)
       .eq("employee_id", data.id);
 
-    // 4. Delete app_user_connections
-    await supabaseAdmin
-      .from("app_user_connections")
-      .delete()
-      .eq("user_id", data.id);
+    // 4. Delete app_user_connections by the employee's actual auth user_id (not employee row id)
+    if (empRow.user_id) {
+      await supabaseAdmin
+        .from("app_user_connections")
+        .delete()
+        .eq("user_id", empRow.user_id);
+    }
 
     return { ok: true };
   });
@@ -347,29 +359,23 @@ export const getEmployeeDetail = createServerFn({ method: "GET" })
 
     const allEmails = Array.from(
       new Set(
-        [profEmail, emp.company_email, emp.professional_email, ...(aliases || []).map((a: any) => a.address)].filter(
-          Boolean
-        )
-      )
+        [
+          profEmail,
+          emp.company_email,
+          emp.professional_email,
+          emp.personal_email,
+          gmail?.google_email,
+          ...(aliases || []).map((a: any) => a.address),
+        ]
+          .filter(Boolean)
+          .map((e) => e!.toLowerCase().trim()),
+      ),
     );
-
-    // Fetch message counts using email_logs
-    const { count: sentCount } = await supabaseAdmin
-      .from("email_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", ctx.organizationId)
-      .in("sender", allEmails);
-
-    const { count: receivedCount } = await supabaseAdmin
-      .from("email_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("organization_id", ctx.organizationId)
-      .in("receiver", allEmails);
 
     // Fetch recent messages from email_logs with subjects and snippets
     let logs: any[] = [];
     if (allEmails.length > 0) {
-      const orFilter = allEmails.map((e) => `sender.eq."${e}",receiver.eq."${e}"`).join(",");
+      const orFilter = allEmails.map((e) => `sender.ilike.*${e}*,receiver.ilike.*${e}*`).join(",");
       const { data: logsData } = await supabaseAdmin
         .from("email_logs")
         .select("id, sender, receiver, subject, snippet, direction, status, timestamp")
@@ -390,6 +396,9 @@ export const getEmployeeDetail = createServerFn({ method: "GET" })
       status: m.status || "delivered",
       timestamp: m.timestamp,
     }));
+
+    const sentCount = messages.filter((m) => m.direction === "outgoing").length;
+    const receivedCount = messages.filter((m) => m.direction === "incoming").length;
 
     return {
       employee: {

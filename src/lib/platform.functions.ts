@@ -17,6 +17,48 @@ function newWebhookSecret(): string {
   return `whsec_${randomBytes(24).toString("base64url")}`;
 }
 
+/**
+ * SSRF guard: rejects webhook URLs that resolve to private/loopback ranges or
+ * use non-HTTPS schemes. This prevents server-side request forgery attacks
+ * targeting AWS IMDS (169.254.169.254), internal VPC services, etc.
+ */
+function assertSafeWebhookUrl(rawUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid webhook URL.");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("Webhook URLs must use HTTPS.");
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Block loopback and localhost
+  if (hostname === "localhost" || hostname === "::1") {
+    throw new Error("Webhook URL must not target localhost.");
+  }
+
+  // Block private IPv4 ranges and link-local (AWS IMDS)
+  const privateRanges = [
+    /^127\./,                            // 127.0.0.0/8 loopback
+    /^10\./,                             // 10.0.0.0/8 private
+    /^192\.168\./,                       // 192.168.0.0/16 private
+    /^172\.(1[6-9]|2\d|3[01])\./,       // 172.16.0.0/12 private
+    /^169\.254\./,                       // 169.254.0.0/16 link-local (AWS IMDS)
+    /^0\./,                              // 0.0.0.0/8
+    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // 100.64.0.0/10 shared address
+  ];
+
+  for (const pattern of privateRanges) {
+    if (pattern.test(hostname)) {
+      throw new Error("Webhook URL must not target private or reserved IP ranges.");
+    }
+  }
+}
+
 /* ---------------- API KEYS ---------------- */
 
 export const listApiKeys = createServerFn({ method: "GET" })
@@ -163,6 +205,55 @@ export const listEmailLogs = createServerFn({ method: "GET" })
       .eq("organization_id", ctx.organizationId)
       .order("timestamp", { ascending: false })
       .range(data.offset, data.offset + data.limit - 1);
+
+    // If caller is an employee member (not admin/owner), strictly restrict logs to emails relevant to them
+    if (ctx.role === "member") {
+      const userEmailLower = context.userEmail?.toLowerCase() || "";
+      const { data: empList } = await supabaseAdmin
+        .from("employees")
+        .select("id, professional_email, company_email, personal_email, personal_email, user_id, gmail_connections(google_email)")
+        .eq("organization_id", ctx.organizationId)
+        .or(`user_id.eq.${context.userId},personal_email.ilike.${userEmailLower},company_email.ilike.${userEmailLower},professional_email.ilike.${userEmailLower}`);
+
+      const emp = empList?.[0];
+      const authorizedEmails: string[] = [];
+      if (emp) {
+        if (emp.professional_email) authorizedEmails.push(emp.professional_email.toLowerCase());
+        if (emp.company_email) authorizedEmails.push(emp.company_email.toLowerCase());
+        if (emp.personal_email) authorizedEmails.push(emp.personal_email.toLowerCase());
+        if (emp.personal_email) authorizedEmails.push(emp.personal_email.toLowerCase());
+        const gconns = Array.isArray(emp.gmail_connections)
+          ? emp.gmail_connections
+          : emp.gmail_connections
+          ? [emp.gmail_connections]
+          : [];
+        gconns.forEach((g: any) => {
+          if (g?.google_email) authorizedEmails.push(g.google_email.toLowerCase());
+        });
+
+        const { data: empAliases } = await supabaseAdmin
+          .from("aliases")
+          .select("address")
+          .eq("organization_id", ctx.organizationId)
+          .or(`employee_id.eq.${emp.id},employee_id.is.null`);
+
+        empAliases?.forEach((a) => {
+          if (a.address) authorizedEmails.push(a.address.toLowerCase());
+        });
+      } else if (userEmailLower) {
+        authorizedEmails.push(userEmailLower);
+      }
+
+      if (authorizedEmails.length > 0) {
+        const emailFilters = authorizedEmails
+          .map((em) => `sender.ilike.%${em}%,receiver.ilike.%${em}%`)
+          .join(",");
+        q = q.or(emailFilters);
+      } else {
+        return { rows: [], total: 0 };
+      }
+    }
+
     if (data.status) q = q.eq("status", data.status as never);
     if (data.direction) q = q.eq("direction", data.direction as never);
     if (data.search)

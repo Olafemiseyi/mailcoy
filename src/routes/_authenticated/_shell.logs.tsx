@@ -22,6 +22,7 @@ import {
   Copy,
   Check,
   Filter,
+  Reply,
 } from "lucide-react";
 
 const PAGE = 50;
@@ -67,6 +68,19 @@ function LogsRoute() {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleQuickReply = (log: any) => {
+    const targetEmail = log.direction === "incoming" ? log.sender : log.receiver;
+    const cleanSubject = log.subject?.startsWith("Re:") ? log.subject : `Re: ${log.subject || ""}`;
+    window.dispatchEvent(
+      new CustomEvent("mailcoy:compose", {
+        detail: {
+          to: targetEmail,
+          subject: cleanSubject,
+        },
+      })
+    );
   };
 
   return (
@@ -265,15 +279,27 @@ function LogsRoute() {
                         })}
                       </td>
 
-                      {/* Inspect Button */}
+                      {/* Actions */}
                       <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickReply(row);
+                          }}
+                          title="Reply to message"
+                          className="p-1.5 rounded-lg text-ink-3 hover:text-primary hover:bg-primary/10 transition cursor-pointer inline-flex items-center gap-1 text-[12px] font-medium mr-1.5"
+                        >
+                          <Reply className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">Reply</span>
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedLog(row);
                           }}
-                          className="p-1.5 rounded-lg text-ink-3 group-hover:text-primary group-hover:bg-primary/10 transition cursor-pointer inline-flex items-center gap-1 text-[12px] font-medium"
+                          className="p-1.5 rounded-lg text-ink-3 hover:text-ink hover:bg-ink/[0.05] transition cursor-pointer inline-flex items-center gap-1 text-[12px] font-medium"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           <span className="hidden sm:inline">View</span>
@@ -411,7 +437,7 @@ function LogsRoute() {
                   Subject
                 </div>
                 <div className="p-2.5 rounded-xl bg-surface-muted border border-line text-[13px] font-medium text-ink break-words">
-                  {selectedLog.subject || <span className="text-ink-4 italic">No Subject</span>}
+                  {selectedLog.subject || <span className="text-ink-4 italic font-normal">No Subject</span>}
                 </div>
               </div>
 
@@ -439,9 +465,19 @@ function LogsRoute() {
             </div>
 
             {/* Modal Footer */}
-            <div className="pt-2 flex justify-end">
-              <Button onClick={() => setSelectedLog(null)} className="w-full sm:w-auto">
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <Button variant="ghost" onClick={() => setSelectedLog(null)} className="w-full sm:w-auto">
                 Close
+              </Button>
+              <Button
+                onClick={() => {
+                  handleQuickReply(selectedLog);
+                  setSelectedLog(null);
+                }}
+                className="w-full sm:w-auto gap-1.5 bg-primary text-primary-foreground"
+              >
+                <Reply className="h-3.5 w-3.5" />
+                <span>Reply in Compose</span>
               </Button>
             </div>
           </div>

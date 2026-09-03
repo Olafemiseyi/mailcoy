@@ -34,7 +34,7 @@ function CatchAllRoute() {
     staleTime: 60_000,
   });
 
-  const isFreePlan = org?.subscription?.planCode === "free";
+  const isLockedTier = org?.subscription ? !org.subscription.canUseCatchAll : false;
 
   const [enabled, setEnabled] = useState<boolean>(
     ((data?.catchall_mode as Mode) ?? "reject") !== "reject",
@@ -59,7 +59,7 @@ function CatchAllRoute() {
   }, [data]);
 
   async function handleToggle(checked: boolean) {
-    if (isFreePlan) return;
+    if (isLockedTier) return;
     setErr(null);
     setSaved(false);
     setBusy(true);
@@ -152,11 +152,11 @@ function CatchAllRoute() {
               )}
               <Switch.Root
                 checked={enabled}
-                disabled={isFreePlan || busy}
+                disabled={isLockedTier || busy}
                 onCheckedChange={handleToggle}
                 className={`w-[46px] h-[26px] rounded-full relative transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 inline-flex items-center cursor-pointer p-0.5 ${
                   enabled ? "!bg-emerald-600 dark:!bg-emerald-500" : "!bg-zinc-300 dark:!bg-zinc-700"
-                } ${isFreePlan || busy ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${isLockedTier || busy ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <Switch.Thumb
                   className={`block w-[20px] h-[20px] bg-white rounded-full shadow-md transition-transform duration-200 ${
@@ -182,14 +182,14 @@ function CatchAllRoute() {
         </div>
 
         {/* Configuration Area */}
-        {isFreePlan ? (
+        {isLockedTier ? (
           <div className="p-8 sm:p-10 flex flex-col items-center justify-center text-center bg-surface-muted/30">
             <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
               <Lock className="h-6 w-6" />
             </div>
-            <h3 className="font-display text-lg font-semibold">Catch-all is a Growth Pro feature</h3>
+            <h3 className="font-display text-lg font-semibold">Catch-all is a Growth feature</h3>
             <p className="text-[13.5px] text-ink-3 mt-2 max-w-md">
-              Upgrade to route misaddressed emails to a shared inbox or forward them to an external address automatically.
+              Upgrade to the Growth plan ($29/mo) to route misaddressed emails to a shared inbox or forward them to an external address automatically.
             </p>
             <Button
               className="mt-6 w-full sm:w-auto whitespace-nowrap justify-center"
@@ -197,7 +197,7 @@ function CatchAllRoute() {
                 window.location.href = "/settings/billing";
               }}
             >
-              Upgrade to Growth Pro
+              Upgrade to Growth
             </Button>
           </div>
         ) : enabled ? (
@@ -303,7 +303,7 @@ function CatchAllRoute() {
       </Card>
 
       {/* Webmail Inbox Section */}
-      {!isFreePlan && enabled && activeMode === "receive" && (
+      {!isLockedTier && enabled && activeMode === "receive" && (
         <div className="mt-8">
           <h2 className="text-lg font-semibold text-ink mb-4 flex items-center gap-2">
             <Inbox className="h-5 w-5" /> Webmail Inbox

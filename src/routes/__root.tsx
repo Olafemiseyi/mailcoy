@@ -76,8 +76,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { name: "twitter:image", content: "https://mailcoy.com/og-image.jpg" },
       { name: "twitter:image:alt", content: "Mailcoy — Professional Business Email Operating System for Gmail" },
+      { name: "theme-color", content: "#090d16" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Mailcoy Compose" },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/logo-120.png" },
       {
         rel: "canonical",
         href: "https://www.mailcoy.com/",

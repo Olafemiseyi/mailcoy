@@ -2,10 +2,13 @@
 // Automatically triggered when an employee connects their Google account via invite link.
 
 export interface OnboardingEmailParams {
-  toEmail: string; // Personal Gmail address (e.g. femiseyi101@gmail.com)
-  employeeName: string;
-  professionalEmail: string; // (e.g. olafemi.seyi@mailcoy.com)
+  toEmail?: string;
+  recipientGmail?: string; // Support both naming styles
+  employeeName?: string;
+  professionalEmail: string; // (e.g. sarah.smith@apexlogistics.com)
   organizationName: string;
+  appUrl?: string;
+  smtpPassword?: string;
 }
 
 export async function sendEmployeeOnboardingEmail(params: OnboardingEmailParams): Promise<void> {
@@ -15,10 +18,15 @@ export async function sendEmployeeOnboardingEmail(params: OnboardingEmailParams)
     return;
   }
 
-  const { toEmail, employeeName, professionalEmail, organizationName } = params;
-  const firstName = employeeName ? employeeName.split(" ")[0] : "there";
+  const destinationEmail = params.toEmail || params.recipientGmail;
+  if (!destinationEmail) return;
 
-  const subject = `⚡ Action Required: Finish setting up ${professionalEmail} in Gmail`;
+  const { employeeName, professionalEmail, organizationName } = params;
+  const firstName = employeeName ? employeeName.split(" ")[0] : "there";
+  const origin = (params.appUrl || process.env.PUBLIC_APP_URL || "https://mailcoy.com").replace(/\/+$/, "");
+  const composeUrl = `${origin}/compose`;
+
+  const subject = `🎉 Welcome to ${organizationName}! Your business email ${professionalEmail} is ready`;
 
   const html = `
 <!DOCTYPE html>
@@ -28,16 +36,16 @@ export async function sendEmployeeOnboardingEmail(params: OnboardingEmailParams)
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px 12px; color: #0f172a;">
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #090d16; margin: 0; padding: 32px 12px; color: #f1f5f9;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #0f172a; border-radius: 16px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);">
     <!-- Header -->
     <tr>
-      <td style="padding: 28px 32px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff;">
-        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 6px;">
+      <td style="padding: 32px 32px 24px 32px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #0f172a 100%); color: #ffffff;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #bae6fd; margin-bottom: 8px;">
           ${organizationName} · Business Email
         </div>
-        <h1 style="font-size: 22px; font-weight: 700; margin: 0; line-height: 1.3;">
-          Welcome to your business address
+        <h1 style="font-size: 24px; font-weight: 800; margin: 0; line-height: 1.25; color: #ffffff;">
+          Welcome to your official business address
         </h1>
       </td>
     </tr>
@@ -45,63 +53,78 @@ export async function sendEmployeeOnboardingEmail(params: OnboardingEmailParams)
     <!-- Body -->
     <tr>
       <td style="padding: 32px;">
-        <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
+        <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0; color: #e2e8f0;">
           Hi <strong>${firstName}</strong>,
         </p>
-        <p style="font-size: 14.5px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
-          Your professional address <strong style="color: #0f172a; font-family: monospace;">${professionalEmail}</strong> has been linked to this Gmail inbox!
+        <p style="font-size: 14.5px; line-height: 1.6; color: #94a3b8; margin: 0 0 24px 0;">
+          Your official business address <strong style="color: #38bdf8; font-family: monospace;">${professionalEmail}</strong> is now live and linked to this Gmail inbox!
         </p>
 
-        <!-- Status Card -->
-        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 16px; margin-bottom: 24px;">
-          <div style="font-size: 13px; font-weight: 600; color: #166534; margin-bottom: 2px;">
-            ✅ Inbound Emails are Active
+        <!-- Primary Action Card: Mailcoy Compose -->
+        <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 24px; margin-bottom: 24px;">
+          <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #38bdf8; margin-bottom: 4px;">
+            🚀 Recommended: 1-Click Mailbox
           </div>
-          <div style="font-size: 13px; color: #15803d; line-height: 1.4;">
-            Any client or customer emails sent to <strong>${professionalEmail}</strong> will automatically arrive right here in your Gmail inbox.
+          <div style="font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">
+            Launch Mailcoy Compose
           </div>
-        </div>
-
-        <!-- Outbound Action Box -->
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 24px;">
-          <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">
-            ⚡ Final 1-Minute Step: Enable Sending from Gmail
-          </div>
-          <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0 0 16px 0;">
-            To send and reply to emails as <strong>${professionalEmail}</strong> directly from Gmail (on desktop, iPhone, and Android):
+          <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.5; margin: 0 0 18px 0;">
+            Send, reply, and manage all your corporate emails from a clean, high-speed interface with zero configuration needed:
           </p>
 
-          <ol style="margin: 0; padding-left: 20px; font-size: 13.5px; color: #334155; line-height: 1.7;">
-            <li style="margin-bottom: 8px;">
-              Your 1-click Google OAuth connection has automatically authorized your Send-As alias.
-            </li>
-            <li style="margin-bottom: 8px;">
-              When composing a new message or replying in Gmail, tap or click the <strong>"From"</strong> line and choose <strong>${professionalEmail}</strong>.
-            </li>
-            <li style="margin-bottom: 8px;">
-              You can set it as your default sending address anytime in <strong><a href="https://mail.google.com/mail/u/0/#settings/accounts" target="_blank" style="color: #2563eb; text-decoration: underline;">Gmail Settings → Accounts and Import</a></strong>.
-            </li>
-          </ol>
+          <table border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+            <tr>
+              <td style="padding-bottom: 8px; vertical-align: top; width: 22px;">✍️</td>
+              <td style="padding-bottom: 8px;"><strong>Official Signature:</strong> Your company signature is pre-loaded with official branding and your job title.</td>
+            </tr>
+            <tr>
+              <td style="padding-bottom: 8px; vertical-align: top; width: 22px;">🪄</td>
+              <td style="padding-bottom: 8px;"><strong>Mailcoy AI Polish:</strong> Polish emails for tone and grammar with 1 click before sending.</td>
+            </tr>
+            <tr>
+              <td style="padding-bottom: 8px; vertical-align: top; width: 22px;">📥</td>
+              <td style="padding-bottom: 8px;"><strong>Live Message Stream:</strong> Real-time inbox and sent dispatches with delivery status tracking.</td>
+            </tr>
+          </table>
+
+          <table align="center" border="0" cellpadding="0" cellspacing="0" style="width: 100%;">
+            <tr>
+              <td align="center" style="border-radius: 10px; background-color: #0284c7;">
+                <a href="${composeUrl}" target="_blank" style="display: block; width: 100%; padding: 12px 0; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none; text-align: center; border-radius: 10px;">
+                  Open Mailcoy Compose ↗
+                </a>
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <!-- CTA Button -->
-        <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto 24px auto;">
-          <tr>
-            <td align="center" style="border-radius: 8px; background-color: #0f172a;">
-              <a href="https://mail.google.com/mail/u/0/#settings/accounts" target="_blank" style="display: inline-block; padding: 12px 28px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
-                Open Gmail Settings ↗
-              </a>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Mobile Note -->
-        <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px;">
-          <div style="font-size: 12.5px; font-weight: 600; color: #1e40af; margin-bottom: 2px;">
-            📱 Mobile Users (iPhone & Android):
+        <!-- Mobile Install Tip (PWA) -->
+        <div style="background-color: #131c2e; border: 1px solid #1e3a8a; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
+          <div style="font-size: 13.5px; font-weight: 700; color: #60a5fa; margin-bottom: 6px;">
+            📱 Install as a Mobile App (iPhone & Android)
           </div>
-          <div style="font-size: 12px; color: #1e3a8a; line-height: 1.5;">
-            Open the link above in your phone's browser (Safari or Chrome). Once saved, it will immediately sync to your native Gmail mobile app so you can send as <strong>${professionalEmail}</strong> on the go!
+          <p style="font-size: 13px; color: #93c5fd; line-height: 1.5; margin: 0;">
+            Open <a href="${composeUrl}" target="_blank" style="color: #ffffff; font-weight: 600; text-decoration: underline;">${composeUrl}</a> in your phone's browser (Safari or Chrome) and tap <strong>Share / Menu → "Add to Home Screen"</strong> for instant 1-tap app access!
+          </p>
+        </div>
+
+        <!-- Native Gmail Tip -->
+        <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; margin-bottom: 24px;">
+          <div style="font-size: 13.5px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">
+            ✉️ Prefer your regular Gmail app?
+          </div>
+          <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin: 0;">
+            Any incoming emails sent to <strong style="color: #f1f5f9;">${professionalEmail}</strong> will also arrive right in your regular Gmail inbox. You can reply directly to any incoming customer email on the go.
+          </p>
+        </div>
+
+        <!-- Privacy & Security Guarantee -->
+        <div style="background-color: #0b1324; border: 1px solid #1e293b; border-radius: 10px; padding: 14px 16px;">
+          <div style="font-size: 12.5px; font-weight: 600; color: #38bdf8; margin-bottom: 2px;">
+            🔒 100% Privacy Guarantee
+          </div>
+          <div style="font-size: 12px; color: #64748b; line-height: 1.4;">
+            Your personal emails remain completely private and confidential. Mailcoy only routes business emails sent to and from your company address.
           </div>
         </div>
 
@@ -110,7 +133,7 @@ export async function sendEmployeeOnboardingEmail(params: OnboardingEmailParams)
 
     <!-- Footer -->
     <tr>
-      <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+      <td style="padding: 24px 32px; background-color: #090d16; border-top: 1px solid #1e293b; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">
         Sent via ${organizationName} workspace email router · Powered by Mailcoy<br>
         If you have questions, please contact your workspace administrator.
       </td>
@@ -121,27 +144,55 @@ export async function sendEmployeeOnboardingEmail(params: OnboardingEmailParams)
   `;
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Mailcoy Setup <router@mailcoy.com>",
-        to: [toEmail],
-        subject,
-        html,
-      }),
+    const { sendResendEmail } = await import("@/server/resendClient.server");
+    const result = await sendResendEmail({
+      from: `${organizationName} <router@mailcoy.com>`,
+      to: destinationEmail,
+      subject,
+      html,
+      idempotencyKey: `onboard_${destinationEmail}_${organizationName.replace(/[^a-zA-Z0-9]/g, "")}`,
+      apiKey: resendApiKey,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.warn("[OnboardingEmail] Failed to send onboarding email:", errText);
+    if (!result.ok) {
+      console.warn("[OnboardingEmail] Failed to send onboarding email:", result.error);
     } else {
-      console.log(`[OnboardingEmail] Successfully sent setup guide to ${toEmail}`);
+      console.log(`[OnboardingEmail] Successfully sent welcome guide to ${destinationEmail} | id: ${result.id}`);
+
+      // Record in email_logs so it displays in employee message activity & Compose feed
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        let orgId = (params as any).organizationId;
+        if (!orgId) {
+          const { data: emp } = await supabaseAdmin
+            .from("employees")
+            .select("organization_id")
+            .or(`personal_email.eq.${destinationEmail},company_email.eq.${professionalEmail},professional_email.eq.${professionalEmail}`)
+            .maybeSingle();
+          orgId = emp?.organization_id;
+        }
+
+        if (orgId) {
+          await supabaseAdmin.from("email_logs").insert({
+            organization_id: orgId,
+            sender: `Mailcoy <router@mailcoy.com>`,
+            receiver: professionalEmail || destinationEmail,
+            subject,
+            snippet: `Welcome to ${organizationName}! Your business email ${professionalEmail} is configured and ready for business mail.`,
+            direction: "incoming",
+            status: "delivered",
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch (logErr) {
+        console.warn("[OnboardingEmail] Error logging to email_logs:", logErr);
+      }
     }
   } catch (err) {
     console.error("[OnboardingEmail] Error dispatching email:", err);
   }
 }
+
+// Backwards compatibility alias
+export const sendOnboardingEmail = sendEmployeeOnboardingEmail;
+

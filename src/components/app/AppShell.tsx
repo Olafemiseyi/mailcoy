@@ -27,13 +27,16 @@ import {
   ChevronDown,
   LayoutTemplate,
   ArrowLeft,
+  ArrowRight,
+  Building2,
   SquarePen,
+  ExternalLink,
 } from "lucide-react";
-import { QuickComposeModal } from "@/components/app/QuickComposeModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyOrganization } from "@/lib/orgs.functions";
+import { checkAdminComposeAccess } from "@/lib/compose.functions";
 import { useEffect, useState, type ReactNode } from "react";
 
 const NAV = [
@@ -91,14 +94,64 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isComposeOpen, setIsComposeOpen] = useState(false);
   const fetchOrg = useServerFn(getMyOrganization);
-  const { data: org } = useQuery({
+  const { data: org, isLoading: isOrgLoading } = useQuery({
     queryKey: ["my-org"],
     queryFn: async () => fetchOrg(),
     staleTime: 60_000,
   });
   const { theme, toggle: toggleTheme } = useTheme();
+  const checkComposeFn = useServerFn(checkAdminComposeAccess);
+  const [composeLoading, setComposeLoading] = useState(false);
+
+  const handleLaunchCompose = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    setComposeLoading(true);
+    try {
+      const res = await checkComposeFn({
+        data: {
+          redirectOrigin: window.location.origin,
+        },
+      });
+      if (res?.hasGmail) {
+        router.navigate({ to: "/compose" });
+      } else if (res?.authorizationUrl) {
+        window.location.href = res.authorizationUrl;
+      } else {
+        router.navigate({ to: "/compose" });
+      }
+    } catch {
+      router.navigate({ to: "/compose" });
+    } finally {
+      setComposeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalCompose = () => {
+      handleLaunchCompose();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.key === "c" || e.key === "C") &&
+        !["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName) &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        handleLaunchCompose();
+      }
+    };
+
+    window.addEventListener("mailcoy:compose" as any, handleGlobalCompose);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mailcoy:compose" as any, handleGlobalCompose);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [router]);
 
   useEffect(() => {
     try {
@@ -139,6 +192,42 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
   const userInitial = userEmail ? userEmail.charAt(0).toUpperCase() : "•";
 
+  // If user has no organization and is not on onboarding page
+  if (!isOrgLoading && !org && !path.startsWith("/onboarding")) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-surface border border-line shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+          <div className="h-14 w-14 rounded-2xl bg-amber-500/10 text-amber-500 mx-auto grid place-items-center ring-1 ring-amber-500/20">
+            <Building2 className="h-7 w-7" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-lg font-bold text-ink">No Workspace Found</h2>
+            <p className="text-xs text-ink-3 leading-relaxed">
+              This account is not associated with any active company workspace. If you are an owner setting up a company, create your workspace now. If you are an employee, please accept your company invitation link.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+            <Link
+              to="/onboarding"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:opacity-90 transition cursor-pointer shadow-sm"
+            >
+              <span>Set Up Workspace</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <button
+              type="button"
+              onClick={signOut}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-surface-muted hover:bg-surface border border-line text-ink font-semibold text-xs transition cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen bg-background text-foreground grid grid-cols-1 grid-rows-[auto_1fr] md:grid-rows-none ${
@@ -172,21 +261,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
 
-        {/* Quick Compose Button */}
-        <div className="px-2 pt-3 pb-1">
-          <button
-            type="button"
-            onClick={() => setIsComposeOpen(true)}
-            aria-label="Compose business email"
-            title="Compose business email"
-            className={`w-full flex items-center ${
-              collapsed ? "justify-center" : "gap-2 px-3"
-            } h-9 rounded-md text-[13px] font-semibold bg-primary text-primary-foreground hover:opacity-90 shadow-sm transition cursor-pointer`}
-          >
-            <SquarePen className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Compose</span>}
-          </button>
-        </div>
 
         <nav className="px-2 py-2 flex-1 space-y-0.5">
           {navItems.map((item) => {
@@ -212,6 +286,33 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+
+          {/* Green Standalone Compose App Redirect Button */}
+          <div className="pt-2 mt-2 border-t border-line/60">
+            <button
+              type="button"
+              onClick={handleLaunchCompose}
+              disabled={composeLoading}
+              aria-label="Launch Mailcoy Compose"
+              title="Launch Mailcoy Compose"
+              className={`w-full group relative flex items-center ${
+                collapsed ? "justify-center" : "gap-2.5 px-3"
+              } h-10 rounded-xl font-semibold text-[13px] bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all cursor-pointer disabled:opacity-50`}
+            >
+              <SquarePen className={`h-4 w-4 shrink-0 ${composeLoading ? "animate-spin" : "group-hover:scale-110 transition-transform"}`} />
+              {!collapsed && (
+                <div className="flex items-center justify-between flex-1 min-w-0">
+                  <span className="truncate">{composeLoading ? "Opening..." : "Mailcoy Compose"}</span>
+                  <ExternalLink className="h-3.5 w-3.5 text-white/80 shrink-0 ml-1" />
+                </div>
+              )}
+              {collapsed && (
+                <span className="pointer-events-none absolute left-full ml-2 z-40 hidden group-hover:block whitespace-nowrap rounded-md bg-emerald-600 px-2.5 py-1 text-[12px] text-white font-medium shadow-md">
+                  Mailcoy Compose ↗
+                </span>
+              )}
+            </button>
+          </div>
         </nav>
 
         <div className="border-t border-line p-2 space-y-0.5">
@@ -288,14 +389,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
           </Link>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsComposeOpen(true)}
-              aria-label="Compose email"
-              className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground cursor-pointer shadow-xs"
-            >
-              <SquarePen className="h-4 w-4" />
-            </button>
             <ThemeToggle />
             <button
               type="button"
@@ -350,6 +443,26 @@ export function AppShell({ children }: { children: ReactNode }) {
                 );
               })}
             </nav>
+
+            {/* Mobile Drawer Mailcoy Compose Button */}
+            <div className="mx-3 mb-2 pt-2 border-t border-line/60">
+              <button
+                type="button"
+                onClick={(e) => {
+                  setMobileOpen(false);
+                  handleLaunchCompose(e);
+                }}
+                disabled={composeLoading}
+                className="w-full flex items-center justify-between px-3.5 h-11 rounded-xl text-[13.5px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition cursor-pointer disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2.5">
+                  <SquarePen className="h-4 w-4" />
+                  <span>{composeLoading ? "Opening..." : "Mailcoy Compose"}</span>
+                </div>
+                <ExternalLink className="h-4 w-4 text-white/80" />
+              </button>
+            </div>
+
             {/* Mobile Drawer Workspace Profile Card */}
             {orgName && (
               <div className="mx-3 mb-2 p-2.5 rounded-xl bg-surface-muted/60 border border-line flex items-center gap-3">
@@ -435,26 +548,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="hidden md:flex sticky top-0 z-20 border-b border-line bg-background/85 backdrop-blur px-5 md:px-10 h-14 items-center justify-between">
           <div className="text-[13px] text-ink-3 truncate">{currentLabel}</div>
           <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setIsComposeOpen(true)}
-              aria-label="Compose business email"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition shadow-xs cursor-pointer"
-            >
-              <SquarePen className="h-3.5 w-3.5" />
-              <span>Compose</span>
-            </button>
             <ThemeToggle />
             <UserChip email={userEmail} initial={userInitial} onSignOut={signOut} />
           </div>
         </div>
         <div className="px-5 md:px-10 py-6 md:py-8 max-w-6xl">{children}</div>
       </main>
-
-      <QuickComposeModal
-        isOpen={isComposeOpen}
-        onClose={() => setIsComposeOpen(false)}
-      />
     </div>
   );
 }

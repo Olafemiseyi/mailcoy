@@ -14,6 +14,16 @@ export interface SubscriptionInfo {
   isLocked: boolean;
   maxDomains: number;
   maxEmployees: number;
+  maxAliases: number;
+  maxAliasesPerEmployee: number;
+  maxMonthlyMessages: number;
+  maxDailyMessages: number;
+  maxRecipientsPerMessage: number;
+  maxAttachmentBytes: number;
+  canUseAliases: boolean;
+  canUseCatchAll: boolean;
+  canUseCustomSignatures: boolean;
+  canUseCustomTemplates: boolean;
   currentPeriodEnd: string | null;
 }
 
@@ -23,12 +33,99 @@ export interface OrgContext {
   subscription: SubscriptionInfo;
 }
 
-const PLAN_LIMITS: Record<string, { maxDomains: number; maxEmployees: number; name: string }> = {
-  free: { maxDomains: 1, maxEmployees: 1, name: "Free" },
-  starter: { maxDomains: 1, maxEmployees: 5, name: "Starter Pro" },
-  growth: { maxDomains: 3, maxEmployees: 20, name: "Growth" },
-  scale: { maxDomains: 10, maxEmployees: 50, name: "Scale" },
-  custom: { maxDomains: 50, maxEmployees: 500, name: "Enterprise" },
+export const PLAN_LIMITS: Record<
+  string,
+  {
+    maxDomains: number;
+    maxEmployees: number;
+    maxAliases: number;
+    maxAliasesPerEmployee: number;
+    maxMonthlyMessages: number;
+    maxDailyMessages: number;
+    maxRecipientsPerMessage: number;
+    maxAttachmentBytes: number;
+    canUseAliases: boolean;
+    canUseCatchAll: boolean;
+    canUseCustomSignatures: boolean;
+    canUseCustomTemplates: boolean;
+    name: string;
+  }
+> = {
+  free: {
+    maxDomains: 1,
+    maxEmployees: 1,
+    maxAliases: 0,
+    maxAliasesPerEmployee: 0,
+    maxMonthlyMessages: 50,
+    maxDailyMessages: 10,
+    maxRecipientsPerMessage: 3,
+    maxAttachmentBytes: 5 * 1024 * 1024,
+    canUseAliases: false,
+    canUseCatchAll: false,
+    canUseCustomSignatures: false,
+    canUseCustomTemplates: false,
+    name: "Free",
+  },
+  starter: {
+    maxDomains: 1,
+    maxEmployees: 5,
+    maxAliases: 10,
+    maxAliasesPerEmployee: 2,
+    maxMonthlyMessages: 2000,
+    maxDailyMessages: 150,
+    maxRecipientsPerMessage: 10,
+    maxAttachmentBytes: 10 * 1024 * 1024,
+    canUseAliases: true,
+    canUseCatchAll: false,
+    canUseCustomSignatures: true,
+    canUseCustomTemplates: true,
+    name: "Starter Pro",
+  },
+  growth: {
+    maxDomains: 3,
+    maxEmployees: 20,
+    maxAliases: 30,
+    maxAliasesPerEmployee: 5,
+    maxMonthlyMessages: 10000,
+    maxDailyMessages: 500,
+    maxRecipientsPerMessage: 25,
+    maxAttachmentBytes: 25 * 1024 * 1024,
+    canUseAliases: true,
+    canUseCatchAll: true,
+    canUseCustomSignatures: true,
+    canUseCustomTemplates: true,
+    name: "Growth",
+  },
+  scale: {
+    maxDomains: 10,
+    maxEmployees: 50,
+    maxAliases: Infinity,
+    maxAliasesPerEmployee: Infinity,
+    maxMonthlyMessages: 50000,
+    maxDailyMessages: 2500,
+    maxRecipientsPerMessage: 50,
+    maxAttachmentBytes: 25 * 1024 * 1024,
+    canUseAliases: true,
+    canUseCatchAll: true,
+    canUseCustomSignatures: true,
+    canUseCustomTemplates: true,
+    name: "Scale",
+  },
+  custom: {
+    maxDomains: 50,
+    maxEmployees: 500,
+    maxAliases: Infinity,
+    maxAliasesPerEmployee: Infinity,
+    maxMonthlyMessages: Infinity,
+    maxDailyMessages: Infinity,
+    maxRecipientsPerMessage: 100,
+    maxAttachmentBytes: 25 * 1024 * 1024,
+    canUseAliases: true,
+    canUseCatchAll: true,
+    canUseCustomSignatures: true,
+    canUseCustomTemplates: true,
+    name: "Enterprise",
+  },
 };
 
 /**
@@ -63,6 +160,10 @@ export async function resolveOrgContext(
     }
   }
 
+  if (!userId && !isSuperAdminImpersonating) {
+    return null; // No authenticated user provided
+  }
+
   // First, find the user's organization membership using supabaseAdmin to bypass RLS
   let query = supabaseAdmin.from("organization_members").select("organization_id, role");
 
@@ -70,12 +171,11 @@ export async function resolveOrgContext(
     query = query.eq("organization_id", actualPreferredOrgId);
     // If they are a super admin in ghost mode, don't restrict to their own membership records.
     // We just want to get ANY member to verify the org exists and get a role (defaulting to owner).
-    if (!isSuperAdminImpersonating && userId) {
+    if (!isSuperAdminImpersonating) {
       query = query.eq("user_id", userId);
     }
   } else {
-    if (userId) query = query.eq("user_id", userId);
-    query = query.limit(1);
+    query = query.eq("user_id", userId).limit(1);
   }
 
   const { data: members } = await query;
@@ -86,7 +186,7 @@ export async function resolveOrgContext(
     member = { organization_id: actualPreferredOrgId, role: "owner" } as any;
   } else if (isSuperAdminImpersonating) {
     // Elevate super admin to owner role in the UI for the impersonated org
-    member = { ...member, role: "owner" };
+    member = { ...member, role: "owner" } as any;
   }
 
   if (!member) {
@@ -102,14 +202,14 @@ export async function resolveOrgContext(
     .eq("organization_id", orgId)
     .maybeSingle();
 
-  let planCode = "growth";
+  let planCode = "free";
   let status = "active";
   let isTrial = false;
   let isLocked = false;
   let currentPeriodEnd = null;
 
   if (subData) {
-    planCode = subData.plan_code || "growth";
+    planCode = subData.plan_code || "free";
     status = subData.status || "active";
     currentPeriodEnd = subData.current_period_end;
     if (status !== "active" && status !== "trialing") {
@@ -117,7 +217,7 @@ export async function resolveOrgContext(
     }
   }
 
-  const limits = PLAN_LIMITS[planCode] || PLAN_LIMITS.growth;
+  const limits = PLAN_LIMITS[planCode] || PLAN_LIMITS.free;
 
   const subscription: SubscriptionInfo = {
     plan: limits.name,
@@ -128,6 +228,16 @@ export async function resolveOrgContext(
     isLocked,
     maxDomains: limits.maxDomains,
     maxEmployees: limits.maxEmployees,
+    maxAliases: limits.maxAliases,
+    maxAliasesPerEmployee: limits.maxAliasesPerEmployee,
+    maxMonthlyMessages: limits.maxMonthlyMessages,
+    maxDailyMessages: limits.maxDailyMessages,
+    maxRecipientsPerMessage: limits.maxRecipientsPerMessage,
+    maxAttachmentBytes: limits.maxAttachmentBytes,
+    canUseAliases: limits.canUseAliases,
+    canUseCatchAll: limits.canUseCatchAll,
+    canUseCustomSignatures: limits.canUseCustomSignatures,
+    canUseCustomTemplates: limits.canUseCustomTemplates,
     currentPeriodEnd,
   };
 

@@ -15,21 +15,35 @@ export const listSignatures = createServerFn({ method: "GET" })
       .select("*")
       .eq("organization_id", ctx.organizationId);
 
-    const { data: emps } = await supabaseAdmin
+    let empsQuery = supabaseAdmin
       .from("employees")
       .select("id, full_name, professional_email, company_email, department, job_title")
       .eq("organization_id", ctx.organizationId);
 
+    if (ctx.role === "member") {
+      const userEmailLower = context.userEmail?.toLowerCase() || "";
+      empsQuery = empsQuery.or(
+        `user_id.eq.${context.userId},personal_email.ilike.${userEmailLower},company_email.ilike.${userEmailLower},professional_email.ilike.${userEmailLower}`
+      );
+    }
+
+    const { data: emps } = await empsQuery;
+
     const org = sigs?.find((s: any) => s.scope === "org") || null;
     const departments = sigs?.filter((s: any) => s.scope === "department") || [];
-    const rawEmployees = sigs?.filter((s: any) => s.scope === "employee") || [];
+    let rawEmployees = sigs?.filter((s: any) => s.scope === "employee") || [];
+
+    if (ctx.role === "member") {
+      const allowedEmpIds = new Set((emps || []).map((e) => e.id));
+      rawEmployees = rawEmployees.filter((s: any) => allowedEmpIds.has(s.scope_ref));
+    }
 
     const allEmployees = (emps || []).map((e: any) => ({
       id: e.id,
       full_name: e.full_name,
       professional_email: e.professional_email || e.company_email,
       department: e.department,
-      job_title: e.job_title
+      job_title: e.job_title,
     }));
 
     const employees = rawEmployees.map((s: any) => {
@@ -59,6 +73,13 @@ export const upsertSignature = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
+
+    if (!ctx.subscription.canUseCustomSignatures && data.scope !== "org") {
+      throw new Error(
+        "Department and employee-specific HTML signatures are available on Starter Pro and above. Please upgrade in Settings → Billing.",
+      );
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     let scopeRef = "org";

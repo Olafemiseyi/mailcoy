@@ -70,17 +70,10 @@ export async function checkAndEnforceEmailQuota(
           planCode,
         };
       }
-
-      // Paid plan is active or in grace period -> Unlimited volume
-      return {
-        allowed: true,
-        planCode,
-      };
     }
 
     // 3. Free Plan Enforcement: Seat Limit (Max 1 Employee)
-    if (!isOwnerOrPrimary) {
-      // Check total employees in this organization
+    if (planCode === "free" && !isOwnerOrPrimary) {
       const { count } = await supabaseAdmin
         .from("employees")
         .select("id", { count: "exact", head: true })
@@ -95,11 +88,21 @@ export async function checkAndEnforceEmailQuota(
       }
     }
 
-    // 4. Free Plan Monthly Quota Enforcement (50 emails/month)
+    // 4. Monthly Quota Enforcement (Free: 50, Starter: 2000, Growth: 10000, Scale: 50000)
+    const PLAN_LIMITS: Record<string, number> = {
+      free: 50,
+      starter: 2000,
+      growth: 10000,
+      scale: 50000,
+    };
+
+    const monthlyLimit = PLAN_LIMITS[planCode] ?? 50;
+    const warningThreshold = Math.floor(monthlyLimit * 0.8);
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    // Query messages count for this month from billing_events or activity_logs
+    // Query messages count for this month from billing_events or email_logs
     const { count: monthlyCount } = await supabaseAdmin
       .from("billing_events")
       .select("id", { count: "exact", head: true })
@@ -107,37 +110,36 @@ export async function checkAndEnforceEmailQuota(
       .eq("event_type", "email.routed")
       .gte("received_at", startOfMonth);
 
-    const currentUsage = (monthlyCount || 0) + 1; // including current message
+    const currentUsage = (monthlyCount || 0) + 1;
 
-    // Check 100% Limit (50 emails)
-    if (currentUsage > FREE_MONTHLY_LIMIT) {
-      // Send 100% email only on the first breach (currentUsage === 51)
-      if (currentUsage === FREE_MONTHLY_LIMIT + 1) {
+    // Check 100% Limit
+    if (currentUsage > monthlyLimit) {
+      if (currentUsage === monthlyLimit + 1) {
         await sendQuotaExceededEmail({
           toEmail: ownerEmail,
           ownerName: orgName,
           organizationName: orgName,
-          maxLimit: FREE_MONTHLY_LIMIT,
+          maxLimit: monthlyLimit,
         }).catch((e) => console.warn("[QuotaGuard] Error sending 100% email:", e));
       }
 
       return {
         allowed: false,
         reason: "quota_exceeded",
-        planCode: "free",
+        planCode,
         currentCount: currentUsage - 1,
-        maxLimit: FREE_MONTHLY_LIMIT,
+        maxLimit: monthlyLimit,
       };
     }
 
-    // Check 80% Threshold Alert (40 emails)
-    if (currentUsage === FREE_WARNING_THRESHOLD) {
+    // Check 80% Threshold Alert
+    if (currentUsage === warningThreshold) {
       await sendQuotaWarningEmail({
         toEmail: ownerEmail,
         ownerName: orgName,
         organizationName: orgName,
         currentCount: currentUsage,
-        maxLimit: FREE_MONTHLY_LIMIT,
+        maxLimit: monthlyLimit,
       }).catch((e) => console.warn("[QuotaGuard] Error sending 80% warning email:", e));
     }
 
@@ -147,16 +149,16 @@ export async function checkAndEnforceEmailQuota(
       provider: "mailcoy_internal",
       event_type: "email.routed",
       reference: `route_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      payload: { targetEmail, timestamp: now.toISOString(), plan: "free" },
+      payload: { targetEmail, timestamp: now.toISOString(), plan: planCode },
       received_at: now.toISOString(),
       status: "success",
     } as never);
 
     return {
       allowed: true,
-      planCode: "free",
+      planCode,
       currentCount: currentUsage,
-      maxLimit: FREE_MONTHLY_LIMIT,
+      maxLimit: monthlyLimit,
     };
   } catch (e) {
     console.error("[QuotaGuard] Error checking quota:", e);

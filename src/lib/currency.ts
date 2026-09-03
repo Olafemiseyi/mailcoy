@@ -60,7 +60,18 @@ export interface PlanPricing {
   ngnDisplay: string;
   ngnYearlyDisplay: string;
   blurb: string;
-  limits: { employees: number; domains: number };
+  limits: {
+    employees: number;
+    domains: number;
+    aliases: number;
+    monthlyMessages: number;
+  };
+  features: {
+    canUseAliases: boolean;
+    canUseCatchAll: boolean;
+    canUseCustomSignatures: boolean;
+    canUseCustomTemplates: boolean;
+  };
 }
 
 export const PRICING_PLANS: PlanPricing[] = [
@@ -75,8 +86,14 @@ export const PRICING_PLANS: PlanPricing[] = [
     ngnYearlyKobo: 0,
     ngnDisplay: "₦0",
     ngnYearlyDisplay: "₦0",
-    blurb: "Up to 1 employee inbox, 1 domain",
-    limits: { employees: 1, domains: 1 },
+    blurb: "1 business email, 1 domain, 50 monthly messages",
+    limits: { employees: 1, domains: 1, aliases: 0, monthlyMessages: 50 },
+    features: {
+      canUseAliases: false,
+      canUseCatchAll: false,
+      canUseCustomSignatures: false,
+      canUseCustomTemplates: false,
+    },
   },
   {
     code: "starter",
@@ -89,8 +106,14 @@ export const PRICING_PLANS: PlanPricing[] = [
     ngnYearlyKobo: 75_000_00,
     ngnDisplay: "₦7,500",
     ngnYearlyDisplay: "₦75,000",
-    blurb: "Up to 5 employee inboxes, 1 domain",
-    limits: { employees: 5, domains: 1 },
+    blurb: "Up to 5 employees, 2,000 emails/mo, 2 aliases/seat",
+    limits: { employees: 5, domains: 1, aliases: 10, monthlyMessages: 2000 },
+    features: {
+      canUseAliases: true,
+      canUseCatchAll: false,
+      canUseCustomSignatures: true,
+      canUseCustomTemplates: true,
+    },
   },
   {
     code: "growth",
@@ -103,8 +126,14 @@ export const PRICING_PLANS: PlanPricing[] = [
     ngnYearlyKobo: 200_000_00,
     ngnDisplay: "₦20,000",
     ngnYearlyDisplay: "₦200,000",
-    blurb: "Up to 20 employee inboxes, 3 domains",
-    limits: { employees: 20, domains: 3 },
+    blurb: "Up to 20 employees, 10,000 emails/mo, Catch-All",
+    limits: { employees: 20, domains: 3, aliases: 30, monthlyMessages: 10000 },
+    features: {
+      canUseAliases: true,
+      canUseCatchAll: true,
+      canUseCustomSignatures: true,
+      canUseCustomTemplates: true,
+    },
   },
   {
     code: "scale",
@@ -117,7 +146,13 @@ export const PRICING_PLANS: PlanPricing[] = [
     ngnYearlyKobo: 500_000_00,
     ngnDisplay: "₦50,000",
     ngnYearlyDisplay: "₦500,000",
-    blurb: "Up to 50 employee inboxes, 10 domains",
-    limits: { employees: 50, domains: 10 },
+    blurb: "Up to 50 inboxes, 50,000 emails/mo, API & Webhooks",
+    limits: { employees: 50, domains: 10, aliases: Infinity, monthlyMessages: 50000 },
+    features: {
+      canUseAliases: true,
+      canUseCatchAll: true,
+      canUseCustomSignatures: true,
+      canUseCustomTemplates: true,
+    },
   },
 ];

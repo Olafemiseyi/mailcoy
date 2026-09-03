@@ -28,10 +28,13 @@ function getSupabaseClient() {
  * and stores the conversation routing metadata in Supabase.
  */
 export async function generateRelayToken(payload: RelayPayload): Promise<string> {
-  const token = `rel_${crypto.randomBytes(6).toString("hex")}`;
+  // 24 random bytes = 192 bits of entropy (well above OWASP 128-bit minimum)
+  const token = `rel_${crypto.randomBytes(24).toString("hex")}`;
   const client = getSupabaseClient();
 
   if (client) {
+    // Tokens expire after 72 hours to prevent indefinite replay
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
     try {
       await client.from("billing_events").insert({
         event_type: "relay.thread",
@@ -40,6 +43,7 @@ export async function generateRelayToken(payload: RelayPayload): Promise<string>
         payload: payload as any,
         status: "active",
         organization_id: payload.organizationId || null,
+        expires_at: expiresAt,
       });
     } catch (e) {
       console.error("[Mailcoy Relay] Error saving relay token:", e);
@@ -51,6 +55,7 @@ export async function generateRelayToken(payload: RelayPayload): Promise<string>
 
 /**
  * Decodes and retrieves the conversation routing payload for a compact token.
+ * Returns null if the token is not found or has expired.
  */
 export async function decodeRelayToken(token: string): Promise<RelayPayload | null> {
   const client = getSupabaseClient();
@@ -59,12 +64,20 @@ export async function decodeRelayToken(token: string): Promise<RelayPayload | nu
   try {
     const { data } = await client
       .from("billing_events")
-      .select("payload")
+      .select("payload, expires_at")
       .eq("event_type", "relay.thread")
       .eq("reference", token)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (!data) return null;
+
+    // Reject expired tokens
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      console.warn("[Mailcoy Relay] Token expired:", token.slice(0, 12) + "…");
+      return null;
+    }
 
     if (data?.payload) {
       return data.payload as unknown as RelayPayload;
@@ -84,7 +97,9 @@ export function sanitizeQuotedText(
   content: string,
   token: string,
   customerEmail: string,
-  customerName?: string
+  customerName?: string,
+  employeePersonalEmail?: string,
+  employeeBusinessEmail?: string
 ): string {
   if (!content) return "";
 
@@ -95,8 +110,15 @@ export function sanitizeQuotedText(
   const cleanCustomer = customerName ? `${customerName} &lt;${customerEmail}&gt;` : customerEmail;
   const cleanCustomerText = customerName ? `${customerName} <${customerEmail}>` : customerEmail;
 
-  return content
+  let sanitized = content
     .replace(tokenRegex, cleanCustomerText)
     .replace(generalRelayRegex, cleanCustomerText)
     .replace(routerRegex, cleanCustomer);
+
+  if (employeePersonalEmail && employeeBusinessEmail) {
+    const personalEmailRegex = new RegExp(employeePersonalEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    sanitized = sanitized.replace(personalEmailRegex, employeeBusinessEmail);
+  }
+
+  return sanitized;
 }

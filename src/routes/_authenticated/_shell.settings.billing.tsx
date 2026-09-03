@@ -700,7 +700,6 @@ function BillingPage() {
               <div className="p-3.5 bg-surface-muted/30 border-t border-line text-center">
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={handleLoadMoreEvents}
                   disabled={loadingMoreEvents}
                   className="text-xs"

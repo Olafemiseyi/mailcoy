@@ -28,6 +28,8 @@ interface QuickComposeModalProps {
   onClose: () => void;
   defaultTo?: string;
   defaultSubject?: string;
+  defaultFrom?: string;
+  composeCtx?: any;
 }
 
 export function QuickComposeModal({
@@ -35,6 +37,8 @@ export function QuickComposeModal({
   onClose,
   defaultTo,
   defaultSubject,
+  defaultFrom,
+  composeCtx: propComposeCtx,
 }: QuickComposeModalProps) {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -582,3 +586,7 @@ export function QuickComposeModal({
     </div>
   );
 }
+
+
+
+

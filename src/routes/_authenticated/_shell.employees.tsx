@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient, queryOptions, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { listEmployees, addEmployee, deleteEmployee } from "@/lib/employees.functions";
 import { listDomains } from "@/lib/domains.functions";
 import {
@@ -23,6 +23,8 @@ import {
   Trash2,
   Users,
   ChevronRight,
+  ChevronDown,
+  Check,
   AlertCircle,
 } from "lucide-react";
 import { EmployeesSkeleton } from "@/components/Skeleton";
@@ -64,6 +66,122 @@ export const Route = createFileRoute("/_authenticated/_shell/employees")({
   errorComponent: ({ error, reset }) => <GlobalError error={error} reset={reset} />,
   component: EmployeesRoute,
 });
+
+const DEFAULT_DEPARTMENTS = [
+  "Sales",
+  "Marketing",
+  "Engineering",
+  "Product",
+  "Operations",
+  "Customer Support",
+  "Human Resources",
+  "Finance & Accounting",
+  "Legal",
+  "Executive & Management",
+];
+
+const DEFAULT_POSITIONS = [
+  "Account Executive",
+  "Sales Representative",
+  "Sales Manager",
+  "Marketing Specialist",
+  "Marketing Lead",
+  "Software Engineer",
+  "Frontend Developer",
+  "Backend Developer",
+  "Product Manager",
+  "Operations Specialist",
+  "Operations Manager",
+  "Customer Support Specialist",
+  "HR Specialist",
+  "Financial Analyst",
+  "Managing Director",
+  "Founder & CEO",
+];
+
+function ComboboxField({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const filtered = value.trim()
+    ? options.filter((o) => o.toLowerCase().includes(value.toLowerCase()))
+    : options;
+
+  return (
+    <div className="relative w-full" ref={ref}>
+      <div className="relative flex items-center">
+        <Input
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={placeholder}
+          className="pr-8"
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setOpen(!open)}
+          className="absolute right-2 p-1 text-ink-3 hover:text-ink cursor-pointer transition"
+        >
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition-transform duration-200 ${
+              open ? "rotate-180 text-primary" : ""
+            }`}
+          />
+        </button>
+      </div>
+
+      {open && filtered.length > 0 && (
+        <div className="absolute left-0 top-full mt-1 w-full max-h-52 overflow-y-auto bg-surface border border-line rounded-xl shadow-xl z-50 p-1 animate-in fade-in duration-100">
+          {filtered.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(opt);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 rounded-lg text-[13px] transition cursor-pointer flex items-center justify-between ${
+                value.toLowerCase() === opt.toLowerCase()
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-ink hover:bg-surface-muted"
+              }`}
+            >
+              <span>{opt}</span>
+              {value.toLowerCase() === opt.toLowerCase() && (
+                <Check className="h-3.5 w-3.5 text-primary" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function EmployeesRoute() {
   const path = useRouterState({
@@ -129,10 +247,10 @@ function EmployeesList() {
 
   const allEmps = employees as EmployeeRow[];
   const uniqueDepts = Array.from(
-    new Set(allEmps.map((e) => e.department).filter(Boolean)),
+    new Set([...DEFAULT_DEPARTMENTS, ...allEmps.map((e) => e.department).filter(Boolean)]),
   ) as string[];
   const uniquePositions = Array.from(
-    new Set(allEmps.map((e) => e.job_title).filter(Boolean)),
+    new Set([...DEFAULT_POSITIONS, ...allEmps.map((e) => e.job_title).filter(Boolean)]),
   ) as string[];
 
   async function submit(e: React.FormEvent) {
@@ -253,30 +371,20 @@ function EmployeesList() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Department">
-                  <Input
+                  <ComboboxField
                     value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
+                    onChange={setDepartment}
+                    options={uniqueDepts}
                     placeholder="Sales"
-                    list="dept-list"
                   />
-                  <datalist id="dept-list">
-                    {uniqueDepts.map((d) => (
-                      <option key={d} value={d} />
-                    ))}
-                  </datalist>
                 </Field>
                 <Field label="Position">
-                  <Input
+                  <ComboboxField
                     value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
+                    onChange={setJobTitle}
+                    options={uniquePositions}
                     placeholder="Account Executive"
-                    list="pos-list"
                   />
-                  <datalist id="pos-list">
-                    {uniquePositions.map((p) => (
-                      <option key={p} value={p} />
-                    ))}
-                  </datalist>
                 </Field>
               </div>
               <Field label="Phone number (optional)">

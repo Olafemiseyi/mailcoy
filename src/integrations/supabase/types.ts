@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+        processed_webhooks: {
+          Row: {
+            id: string
+            event_id: string
+            provider: string
+            event_type: string | null
+            status: string
+            locked_at: string
+            completed_at: string | null
+            error_message: string | null
+            metadata: Json | null
+            created_at: string
+            updated_at: string
+          }
+          Insert: {
+            id?: string
+            event_id: string
+            provider?: string
+            event_type?: string | null
+            status?: string
+            locked_at?: string
+            completed_at?: string | null
+            error_message?: string | null
+            metadata?: Json | null
+            created_at?: string
+            updated_at?: string
+          }
+          Update: {
+            id?: string
+            event_id?: string
+            provider?: string
+            event_type?: string | null
+            status?: string
+            locked_at?: string
+            completed_at?: string | null
+            error_message?: string | null
+            metadata?: Json | null
+            created_at?: string
+            updated_at?: string
+          }
+          Relationships: []
+        }
       activity_logs: {
         Row: {
           action: string
@@ -1723,3 +1765,6 @@ export const Constants = {
     },
   },
 } as const
+
+
+

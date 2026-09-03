@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient, useMutation, queryOptions, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +13,7 @@ import {
   ConfirmDeleteModal,
   CustomSelect,
 } from "@/components/app/AppShell";
-import { Trash2, Plus, User, Building2, Check, Eye, Sun, Moon, Copy } from "lucide-react";
+import { Trash2, Plus, User, Building2, Check, Eye, Sun, Moon, Copy, Lock, ArrowRight } from "lucide-react";
 
 const opts = queryOptions({
   queryKey: ["signatures"],
@@ -72,17 +72,24 @@ function SignatureRoute() {
       name: string;
       html: string;
     }) => save({ data: v }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["signatures"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["signatures"] });
+      qc.invalidateQueries({ queryKey: ["compose-context"] });
+    },
   });
   const delM = useMutation({
     mutationFn: (id: string) => del({ data: { id } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["signatures"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["signatures"] });
+      qc.invalidateQueries({ queryKey: ["compose-context"] });
+    },
   });
 
   const [pendingDeleteSig, setPendingDeleteSig] = useState<{ id: string; name: string } | null>(
     null,
   );
 
+  const canUseCustomSignatures = myOrg?.subscription?.canUseCustomSignatures ?? true;
   const usedEmpIds = useMemo(() => new Set(employeeSigs.map((s) => s.scope_ref)), [employeeSigs]);
   const availableEmployees = allEmployees.filter((e) => !usedEmpIds.has(e.id));
 
@@ -157,19 +164,45 @@ function SignatureRoute() {
             />
           ))}
 
-          <AddEmployeeSignature
-            employees={availableEmployees}
-            companyName={orgName}
-            onCreate={(v) =>
-              saveM.mutate({
-                scope: "employee",
-                scope_ref: v.employee_id,
-                name: v.name,
-                html: v.html,
-              })
-            }
-            saving={saveM.isPending}
-          />
+          {canUseCustomSignatures ? (
+            <AddEmployeeSignature
+              employees={availableEmployees}
+              companyName={orgName}
+              onCreate={(v) =>
+                saveM.mutate({
+                  scope: "employee",
+                  scope_ref: v.employee_id,
+                  name: v.name,
+                  html: v.html,
+                })
+              }
+              saving={saveM.isPending}
+            />
+          ) : (
+            <Card className="p-4 bg-amber-500/5 border-amber-500/20 text-ink">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Lock className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="text-xs">
+                    <div className="font-semibold text-amber-900 dark:text-amber-200">
+                      Per-Employee Signatures require Starter Pro
+                    </div>
+                    <div className="text-amber-700/90 dark:text-amber-400/90 mt-0.5">
+                      Free Tier includes your default company signature above. Upgrade to Starter Pro ($9/mo) to configure custom department and employee overrides.
+                    </div>
+                  </div>
+                </div>
+                <Link
+                  to="/settings/billing"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline shrink-0"
+                >
+                  Upgrade now <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
 

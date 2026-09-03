@@ -22,7 +22,7 @@ const EMAIL_FOOTER = `
   </tr>
 `;
 
-async function dispatchEmail(to: string, subject: string, html: string): Promise<boolean> {
+async function dispatchEmail(to: string, subject: string, html: string, idempotencyKey?: string): Promise<boolean> {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
     console.warn("[BillingEmail] RESEND_API_KEY not set. Skipping email dispatch.");
@@ -30,18 +30,14 @@ async function dispatchEmail(to: string, subject: string, html: string): Promise
   }
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Mailcoy Billing <billing@mailcoy.com>",
-        to: [to],
-        subject,
-        html,
-      }),
+    const { sendResendEmail } = await import("@/server/resendClient.server");
+    const res = await sendResendEmail({
+      from: "Mailcoy Billing <billing@mailcoy.com>",
+      to,
+      subject,
+      html,
+      idempotencyKey: idempotencyKey || `bill_${to}_${Buffer.from(subject).toString("base64url").slice(0, 16)}`,
+      apiKey: resendApiKey,
     });
     return res.ok;
   } catch (e) {

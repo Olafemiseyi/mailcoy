@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader, Card, Button, Input, Field, ConfirmDeleteModal } from "@/components/app/AppShell";
 import { useState, useMemo } from "react";
 import {
@@ -14,6 +14,8 @@ import {
   Copy,
   Sun,
   Moon,
+  Lock,
+  ArrowRight,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -89,7 +91,10 @@ function TemplatesPage() {
   const [copiedId, setCopiedId] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
+  const canUseCustomTemplates = myOrg?.subscription?.canUseCustomTemplates ?? true;
+
   const handleCreate = () => {
+    if (!canUseCustomTemplates) return;
     setEditing({
       name: "New Template",
       subject: `Notification from ${companyName}`,
@@ -111,13 +116,14 @@ function TemplatesPage() {
         },
       });
       await qc.invalidateQueries({ queryKey: ["email-templates"] });
+      await qc.invalidateQueries({ queryKey: ["compose-context"] });
       setSavedSuccess(true);
       setTimeout(() => {
         setSavedSuccess(false);
         setEditing(null);
       }, 1000);
-    } catch {
-      alert("Failed to save template. Please check all fields.");
+    } catch (e: any) {
+      alert(e?.message || "Failed to save template. Please check all fields.");
     } finally {
       setBusy(false);
     }
@@ -363,13 +369,49 @@ function TemplatesPage() {
           title="Email Templates"
           subtitle="Design, preview, and manage HTML templates for your transactional emails."
         />
-        <Button
-          onClick={handleCreate}
-          className="w-full sm:w-auto gap-1.5 whitespace-nowrap justify-center shrink-0"
-        >
-          <Plus className="h-4 w-4" /> Create Template
-        </Button>
+        {canUseCustomTemplates ? (
+          <Button
+            onClick={handleCreate}
+            className="w-full sm:w-auto gap-1.5 whitespace-nowrap justify-center shrink-0"
+          >
+            <Plus className="h-4 w-4" /> Create Template
+          </Button>
+        ) : (
+          <Link
+            to="/settings/billing"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold hover:bg-amber-500/20 transition shrink-0"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            <span>Unlock Templates on Starter Pro</span>
+          </Link>
+        )}
       </div>
+
+      {!canUseCustomTemplates && (
+        <Card className="p-4 bg-amber-500/5 border-amber-500/20 text-ink">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <div className="h-7 w-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                <Lock className="h-3.5 w-3.5" />
+              </div>
+              <div className="text-xs">
+                <div className="font-semibold text-amber-900 dark:text-amber-200">
+                  Custom Templates are a Starter Pro feature
+                </div>
+                <div className="text-amber-700/90 dark:text-amber-400/90 mt-0.5">
+                  Free Tier includes 4 built-in starter templates in Quick Compose. Upgrade to Starter Pro ($9/mo) to save custom branded templates.
+                </div>
+              </div>
+            </div>
+            <Link
+              to="/settings/billing"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline shrink-0"
+            >
+              Upgrade now <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {isPending ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -471,6 +513,7 @@ function TemplatesPage() {
             try {
               await delFn({ data: { id: pendingDeleteId } });
               await qc.invalidateQueries({ queryKey: ["email-templates"] });
+              await qc.invalidateQueries({ queryKey: ["compose-context"] });
             } finally {
               setPendingDeleteId(null);
             }

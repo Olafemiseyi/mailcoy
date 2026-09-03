@@ -343,7 +343,7 @@ function EmployeeDetailRoute() {
               Leaving the company? Revoking identity severs Gmail send-as privileges immediately and
               reroutes inbound mail to the workspace catch-all.
             </div>
-            {emp.status !== "inactive" && emp.status !== "revoked" && emp.status !== "suspended" ? (
+            {emp.status !== "inactive" && emp.status !== "revoked" && emp.status !== "suspended" && emp.status !== "offboarded" ? (
               <Button
                 variant="danger"
                 className="w-full h-8 text-[12.5px]"

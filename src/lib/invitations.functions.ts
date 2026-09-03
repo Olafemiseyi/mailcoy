@@ -146,7 +146,7 @@ export const getInviteByToken = createServerFn({ method: "GET" })
     }
 
     const [{ data: emp }, { data: org }, { data: gmail }] = await Promise.all([
-      supabaseAdmin.from("employees").select("id, full_name, professional_email, job_title, department, status").eq("id", inv.employee_id).maybeSingle(),
+      supabaseAdmin.from("employees").select("id, full_name, professional_email, personal_email, job_title, department, status").eq("id", inv.employee_id).maybeSingle(),
       supabaseAdmin.from("organizations").select("id, name, logo_url").eq("id", inv.organization_id).maybeSingle(),
       supabaseAdmin.from("gmail_connections").select("google_email, connected_at, health_status, revoked_at").eq("employee_id", inv.employee_id).is("revoked_at", null).maybeSingle(),
     ]);
@@ -155,12 +155,19 @@ export const getInviteByToken = createServerFn({ method: "GET" })
       process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
     );
 
+    const isAlreadyClaimed = Boolean(
+      (gmail && !gmail.revoked_at) ||
+      (emp?.status === "active" && emp?.personal_email) ||
+      inv.accepted_at
+    );
+
     return {
       ok: true as const,
       invite: { id: inv.id, expiresAt: inv.expires_at, acceptedAt: inv.accepted_at },
       employee: emp,
       organization: org,
       gmail,
+      isAlreadyClaimed,
       smtpPassword: process.env.RESEND_API_KEY || "(Not configured in backend)",
       hasGoogleKeys,
     };
@@ -185,6 +192,36 @@ export const startGmailByInvite = createServerFn({ method: "POST" })
     const jsonStr = JSON.stringify({ token: data.token, nonce });
     // Use btoa to avoid Vite injecting a Node.js Buffer polyfill which breaks the client
     const state = btoa(jsonStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const origin = data.redirectOrigin.replace(/\/+$/, "");
+    const redirectUri = `${origin}/api/auth/google/callback`;
+
+    const hasGoogleKeys = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+    if (data.mock || !hasGoogleKeys) {
+      const mockCallbackUrl = `${redirectUri}?code=mock_oauth_code_${Date.now()}&state=${state}`;
+      return { authorizationUrl: mockCallbackUrl, isMock: true };
+    }
+
+    const { buildGoogleAuthUrl } = await import("@/server/googleOAuth.server");
+    const authorizationUrl = await buildGoogleAuthUrl(redirectUri, state);
+    return { authorizationUrl, isMock: false };
+  });
+
+export const startGoogleLogin = createServerFn({ method: "POST" })
+  .validator((d: unknown) =>
+    z.object({
+      redirectOrigin: z.string().url(),
+      targetUrl: z.string().optional(),
+      mock: z.boolean().optional(),
+    }).parse(d)
+  )
+  .handler(async ({ data }) => {
+    const nonce = crypto.randomUUID();
+    const jsonStr = JSON.stringify({
+      type: "login",
+      targetUrl: data.targetUrl || "/compose",
+      nonce,
+    });
+    const state = btoa(jsonStr).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     const origin = data.redirectOrigin.replace(/\/+$/, "");
     const redirectUri = `${origin}/api/auth/google/callback`;
 

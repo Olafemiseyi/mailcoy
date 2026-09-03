@@ -42,6 +42,12 @@ export const saveTemplate = createServerFn({ method: "POST" })
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
 
+    if (!ctx.subscription.canUseCustomTemplates) {
+      throw new Error(
+        "Custom email templates are available on Starter Pro and above. Please upgrade in Settings → Billing.",
+      );
+    }
+
     if (data.id) {
       const { error } = await context.supabase
         .from("email_templates")

@@ -1,11 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient, queryOptions, useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { listAliases, createAlias, deleteAlias, updateAliasEmployee, getAliasSuggestionsFn } from "@/lib/analytics.functions";
+import { listDomains } from "@/lib/domains.functions";
 import { listEmployees } from "@/lib/employees.functions";
+import { getMyOrganization } from "@/lib/orgs.functions";
 import { PageHeader, Card, Button, Input, Field, CustomSelect, ConfirmDeleteModal } from "@/components/app/AppShell";
-import { Plus, Trash2, Lightbulb, X, Search, Pencil, Check, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Lightbulb, X, Search, Pencil, Check, ChevronDown, Lock, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const aliasesOpts = queryOptions({ queryKey: ["aliases"], queryFn: async () => listAliases(), staleTime: 20_000 });
@@ -58,6 +60,23 @@ function useSuggestions() {
   });
 }
 
+function parseCleanErrorMessage(err: unknown): string {
+  if (!err) return "An unexpected error occurred.";
+  const msg = err instanceof Error ? err.message : String(err);
+  try {
+    const parsed = JSON.parse(msg);
+    if (Array.isArray(parsed) && parsed[0]?.message) {
+      return parsed[0].message;
+    }
+    if (parsed && typeof parsed === "object" && (parsed as any).message) {
+      return (parsed as any).message;
+    }
+  } catch {
+    // not JSON
+  }
+  return msg;
+}
+
 function AliasesRoute() {
   const qc = useQueryClient();
   const { data: aliases } = useSuspenseQuery(aliasesOpts);
@@ -66,19 +85,51 @@ function AliasesRoute() {
   const del = useServerFn(deleteAlias);
   const updateEmp = useServerFn(updateAliasEmployee);
   const suggestionsQ = useSuggestions();
+  const fetchDomains = useServerFn(listDomains);
+  const fetchOrg = useServerFn(getMyOrganization);
+
+  const { data: orgData } = useQuery({
+    queryKey: ["my-org"],
+    queryFn: async () => fetchOrg(),
+    staleTime: 60_000,
+  });
+
+  const canUseAliases = orgData?.subscription ? orgData.subscription.canUseAliases : true;
+
+  const { data: orgDomains } = useQuery({
+    queryKey: ["domains"],
+    queryFn: async () => fetchDomains(),
+    staleTime: 60_000,
+  });
+
+  const verifiedDomains = useMemo(() => {
+    const list = (orgDomains || [])
+      .filter((d: any) => d.verification_status === "verified")
+      .map((d: any) => d.domain_name);
+    if (list.length > 0) return list;
+    if (suggestionsQ.data?.primary_domain) return [suggestionsQ.data.primary_domain];
+    return ["mailcoy.com"];
+  }, [orgDomains, suggestionsQ.data?.primary_domain]);
 
   const [open, setOpen] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("mailcoy_aliases_suggestions") === "true";
   });
-  const [address, setAddress] = useState("");
+  const [aliasPrefix, setAliasPrefix] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState("");
   const [employeeId, setEmployeeId] = useState<string>((employees[0] as { id?: string })?.id ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<{ id: string; address: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!selectedDomain && verifiedDomains.length > 0) {
+      setSelectedDomain(verifiedDomains[0]);
+    }
+  }, [verifiedDomains, selectedDomain]);
 
   const [filterText, setFilterText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -89,14 +140,29 @@ function AliasesRoute() {
     e.preventDefault();
     setErr(null);
     setBusy(true);
+
+    const currentEmpCount = employeeAliasCounts.get(employeeId) || 0;
+    if (maxPerEmp !== Infinity && currentEmpCount >= maxPerEmp) {
+      setErr(`This team member has reached the limit of ${maxPerEmp} aliases on your plan. Upgrade to Growth to assign more aliases.`);
+      setBusy(false);
+      return;
+    }
+
+    const cleanPrefix = aliasPrefix.trim().toLowerCase();
+    const finalDomain = selectedDomain || verifiedDomains[0] || "mailcoy.com";
+    const finalAddress = cleanPrefix.includes("@")
+      ? cleanPrefix
+      : `${cleanPrefix}@${finalDomain}`;
+
     try {
-      await create({ data: { address, employee_id: employeeId } });
+      await create({ data: { address: finalAddress, employee_id: employeeId } });
       await qc.invalidateQueries({ queryKey: ["aliases"] });
       await qc.invalidateQueries({ queryKey: ["alias-suggestions"] });
-      setAddress("");
+      await qc.invalidateQueries({ queryKey: ["compose-context"] });
+      setAliasPrefix("");
       setOpen(false);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed");
+      setErr(parseCleanErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -116,11 +182,19 @@ function AliasesRoute() {
 
   const quickCreate = useMutation({
     mutationFn: async ({ address, empId }: { address: string; empId: string }) => {
+      const currentEmpCount = employeeAliasCounts.get(empId) || 0;
+      if (maxPerEmp !== Infinity && currentEmpCount >= maxPerEmp) {
+        throw new Error(`This team member has reached the limit of ${maxPerEmp} aliases on your plan. Upgrade to Growth to assign more aliases.`);
+      }
       await create({ data: { address, employee_id: empId } });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["aliases"] });
       qc.invalidateQueries({ queryKey: ["alias-suggestions"] });
+      qc.invalidateQueries({ queryKey: ["compose-context"] });
+    },
+    onError: (err: any) => {
+      alert(parseCleanErrorMessage(err));
     },
   });
 
@@ -176,6 +250,19 @@ function AliasesRoute() {
     return Array.from(map.values());
   }, [aliases, employees]);
 
+  const maxPerEmp = orgData?.subscription?.maxAliasesPerEmployee ?? Infinity;
+  const maxAliasesTotal = orgData?.subscription?.maxAliases ?? Infinity;
+
+  const employeeAliasCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of (aliases || []) as unknown as RawAlias[]) {
+      if (a.employee_id) {
+        counts.set(a.employee_id, (counts.get(a.employee_id) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [aliases]);
+
   const filteredAliases = groupedAliases.filter((group) => {
     const q = filterText.toLowerCase();
     const matchesAddr = group.address.toLowerCase().includes(q);
@@ -191,14 +278,20 @@ function AliasesRoute() {
 
   async function handleAddRecipient(targetAddress: string) {
     if (!addMemberId) return;
+    const currentEmpCount = employeeAliasCounts.get(addMemberId) || 0;
+    if (maxPerEmp !== Infinity && currentEmpCount >= maxPerEmp) {
+      alert(`This team member already has ${currentEmpCount}/${maxPerEmp} aliases on your plan. Upgrade to Growth to assign more aliases per member.`);
+      return;
+    }
     setAddingMember(true);
     try {
       await create({ data: { address: targetAddress, employee_id: addMemberId } });
       await qc.invalidateQueries({ queryKey: ["aliases"] });
+      await qc.invalidateQueries({ queryKey: ["compose-context"] });
       setAddingToAddress(null);
       setAddMemberId("");
     } catch (err: any) {
-      alert(err?.message || "Failed to add team member");
+      alert(parseCleanErrorMessage(err));
     } finally {
       setAddingMember(false);
     }
@@ -218,43 +311,137 @@ function AliasesRoute() {
         title="Shared Inboxes & Aliases"
         subtitle="Role-based addresses (sales@, support@, team@) that automatically fan out and route inbound emails to one or multiple team members."
         actions={
-          <Button onClick={() => setOpen((v) => !v)}>
-            <Plus className="h-4 w-4 mr-1" /> New shared alias
-          </Button>
+          canUseAliases ? (
+            <Button onClick={() => setOpen((v) => !v)}>
+              <Plus className="h-4 w-4 mr-1" /> New shared alias
+            </Button>
+          ) : (
+            <Link
+              to="/settings/billing"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[12.5px] font-semibold hover:bg-amber-500/20 transition"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              <span>Unlock Aliases on Starter Pro</span>
+            </Link>
+          )
         }
       />
 
-      {open && (
-        <Card className="p-5 mb-6">
-          <form onSubmit={submit} className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-            <Field label="Alias / Shared Address">
-              <Input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="sales@company.com"
-                required
-              />
-            </Field>
+      {!canUseAliases && (
+        <Card className="p-4 sm:p-5 mb-6 border-amber-500/20 bg-amber-500/[0.04] animate-in fade-in">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 shrink-0">
+                  <Lock className="h-3.5 w-3.5" />
+                </span>
+                <h3 className="text-sm font-semibold text-ink">Shared Inboxes & Aliases require Starter Pro</h3>
+              </div>
+              <p className="text-xs text-ink-3 max-w-xl">
+                The Free Tier is limited to 1 primary business email. Upgrade to Starter Pro ($9/mo or ₦7,500/mo) to create up to 10 role-based aliases (sales@, support@, team@) and connect up to 5 team members with unlimited monthly emails.
+              </p>
+            </div>
+            <Link
+              to="/settings/billing"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs shadow-sm hover:opacity-90 transition shrink-0"
+            >
+              <span>Upgrade to Starter Pro</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      {open && canUseAliases && (
+        <Card className="p-4 sm:p-5 mb-6 max-w-full overflow-hidden animate-in fade-in">
+          <form onSubmit={submit} className="grid gap-4 md:grid-cols-[1.3fr_1fr_auto] md:items-end w-full max-w-full min-w-0">
+            <div className="w-full min-w-0">
+              <Field label="Alias Prefix / Shared Address">
+                <div className="w-full min-w-0 flex items-center rounded-xl border border-line bg-background overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition">
+                  <input
+                    type="text"
+                    value={aliasPrefix}
+                    onChange={(e) => {
+                      let val = e.target.value.trim().toLowerCase();
+                      if (val.includes("@")) {
+                        const [p, d] = val.split("@");
+                        setAliasPrefix(p);
+                        if (d && verifiedDomains.includes(d)) {
+                          setSelectedDomain(d);
+                        }
+                      } else {
+                        setAliasPrefix(val);
+                      }
+                    }}
+                    placeholder="e.g. hello, sales"
+                    className="w-full min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-ink outline-none"
+                    required
+                    autoFocus
+                  />
+                  <div className="flex items-center px-2.5 sm:px-3 py-2 bg-surface-muted/60 border-l border-line text-xs font-mono text-ink-3 shrink-0 max-w-[145px] sm:max-w-none">
+                    <span className="text-ink-4 mr-0.5 shrink-0">@</span>
+                    {verifiedDomains.length > 1 ? (
+                      <select
+                        value={selectedDomain}
+                        onChange={(e) => setSelectedDomain(e.target.value)}
+                        className="bg-transparent font-semibold text-ink cursor-pointer outline-none hover:text-primary transition truncate max-w-[110px] sm:max-w-none"
+                        title="Select domain for this alias"
+                      >
+                        {verifiedDomains.map((d) => (
+                          <option key={d} value={d} className="bg-surface text-ink">
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span
+                        className="font-semibold text-ink truncate max-w-[110px] sm:max-w-none"
+                        title={selectedDomain || verifiedDomains[0] || "mailcoy.com"}
+                      >
+                        {selectedDomain || verifiedDomains[0] || "mailcoy.com"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Field>
+            </div>
+
             <Field label="Assign initial team member">
               <CustomSelect
-                options={(employees as Array<{ id: string; full_name: string }>).map((e) => ({
-                  value: e.id,
-                  label: e.full_name,
-                }))}
+                options={(employees as Array<{ id: string; full_name: string }>).map((e) => {
+                  const count = employeeAliasCounts.get(e.id) || 0;
+                  const isMaxed = maxPerEmp !== Infinity && count >= maxPerEmp;
+                  return {
+                    value: e.id,
+                    label: isMaxed
+                      ? `${e.full_name} (${count}/${maxPerEmp} aliases - Max reached)`
+                      : maxPerEmp !== Infinity
+                        ? `${e.full_name} (${count}/${maxPerEmp} aliases)`
+                        : e.full_name,
+                    disabled: isMaxed,
+                  };
+                })}
                 value={employeeId}
                 placeholder="Select employee…"
                 onChange={(val) => setEmployeeId(val)}
               />
             </Field>
+
             <div className="flex gap-2">
-              <Button type="submit" disabled={busy || !employeeId}>
+              <Button type="submit" disabled={busy || !employeeId || !aliasPrefix.trim()}>
                 {busy ? "Creating…" : "Create"}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="ghost" onClick={() => { setOpen(false); setErr(null); }}>
                 Cancel
               </Button>
             </div>
-            {err && <div className="md:col-span-3 text-[12.5px] text-danger">{err}</div>}
+
+            {err && (
+              <div className="md:col-span-3 text-[12.5px] font-medium text-danger bg-danger/10 border border-danger/20 px-3.5 py-2.5 rounded-xl flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{err}</span>
+              </div>
+            )}
           </form>
         </Card>
       )}
@@ -314,13 +501,22 @@ function AliasesRoute() {
                         <div className="flex flex-col gap-1 shrink-0">
                           <button
                             onClick={() => {
+                              if (!canUseAliases) {
+                                window.location.href = "/settings/billing";
+                                return;
+                              }
                               if (s.suggested_address && primaryEmployee) {
                                 quickCreate.mutate({
                                   address: s.suggested_address,
                                   empId: primaryEmployee,
                                 });
-                              } else {
-                                setAddress(s.suggested_address ?? `${s.local_part}@`);
+                                if (s.suggested_address?.includes("@")) {
+                                  const [p, d] = s.suggested_address.split("@");
+                                  setAliasPrefix(p);
+                                  if (d) setSelectedDomain(d);
+                                } else {
+                                  setAliasPrefix(s.local_part);
+                                }
                                 setOpen(true);
                               }
                             }}
@@ -369,6 +565,10 @@ function AliasesRoute() {
                         <div className="flex flex-col gap-1 shrink-0">
                           <button
                             onClick={() => {
+                              if (!canUseAliases) {
+                                window.location.href = "/settings/billing";
+                                return;
+                              }
                               if (s.suggested_address) {
                                 quickCreate.mutate({
                                   address: s.suggested_address,
@@ -438,21 +638,21 @@ function AliasesRoute() {
                   key={group.address}
                   className="p-4 sm:p-5 flex flex-col gap-3 transition-colors hover:bg-ink/[0.01]"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="font-mono text-[14px] font-semibold text-ink truncate">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap sm:flex-nowrap">
+                      <span className="font-mono text-[13.5px] sm:text-[14px] font-semibold text-ink truncate min-w-0 max-w-full">
                         {group.address}
                       </span>
                       {group.is_primary ? (
-                        <span className="text-[10.5px] uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">
+                        <span className="text-[10.5px] uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded font-medium whitespace-nowrap shrink-0">
                           Primary
                         </span>
                       ) : isMulti ? (
-                        <span className="text-[10.5px] uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-medium">
+                        <span className="text-[10.5px] uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-medium whitespace-nowrap shrink-0">
                           Shared Inbox ({group.recipients.length} team members)
                         </span>
                       ) : (
-                        <span className="text-[10.5px] uppercase tracking-wider bg-ink/[0.05] text-ink-3 px-2 py-0.5 rounded font-medium">
+                        <span className="text-[10.5px] uppercase tracking-wider bg-ink/[0.05] text-ink-3 px-2 py-0.5 rounded font-medium whitespace-nowrap shrink-0">
                           Single Routing
                         </span>
                       )}
@@ -464,13 +664,14 @@ function AliasesRoute() {
                         onClick={() =>
                           setPendingDelete({
                             id: group.recipients[0]?.aliasId || "",
-                            address: group.address,
+                            address: group.address, // ← required: wipes ALL rows for this alias address
                           })
                         }
                         aria-label={`Delete shared inbox ${group.address}`}
-                        className="self-end sm:self-auto text-ink-3 hover:text-danger p-1 rounded-md hover:bg-danger/10 transition-colors text-[12px] flex items-center gap-1"
+                        className="self-start sm:self-auto text-ink-3 hover:text-danger p-1 rounded-md hover:bg-danger/10 transition-colors text-[12px] flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
                       >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete alias
+                        <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="whitespace-nowrap">Delete alias</span>
                       </button>
                     )}
                   </div>
@@ -510,11 +711,19 @@ function AliasesRoute() {
                               className="h-7 rounded-md border border-line bg-background px-2 text-[12px] outline-none focus:border-primary"
                             >
                               <option value="">Select team member…</option>
-                              {unassignedEmployees.map((e) => (
-                                <option key={e.id} value={e.id}>
-                                  {e.full_name}
-                                </option>
-                              ))}
+                              {unassignedEmployees.map((e) => {
+                                const count = employeeAliasCounts.get(e.id) || 0;
+                                const isMaxed = maxPerEmp !== Infinity && count >= maxPerEmp;
+                                return (
+                                  <option key={e.id} value={e.id} disabled={isMaxed}>
+                                    {isMaxed
+                                      ? `${e.full_name} (${count}/${maxPerEmp} aliases - Max)`
+                                      : maxPerEmp !== Infinity
+                                        ? `${e.full_name} (${count}/${maxPerEmp} aliases)`
+                                        : e.full_name}
+                                  </option>
+                                );
+                              })}
                             </select>
                             <button
                               type="button"

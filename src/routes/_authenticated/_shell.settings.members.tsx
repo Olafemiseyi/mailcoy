@@ -154,15 +154,19 @@ function MembersRoute() {
                       </span>
                     ) : (
                       <>
-                        <select
-                          value={m.role}
-                          disabled={m.is_current_user}
-                          onChange={(e) => handleRoleChange(m.user_id, e.target.value as any)}
-                          className="h-8 px-2.5 rounded-lg border border-line bg-surface text-ink text-[12px] font-medium outline-none cursor-pointer disabled:opacity-60"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="member">Member</option>
-                        </select>
+                        <div className="w-28 shrink-0">
+                          <CustomSelect
+                            options={[
+                              { value: "admin", label: "Admin" },
+                              { value: "member", label: "Member" },
+                            ]}
+                            value={m.role}
+                            disabled={m.is_current_user}
+                            onChange={(val) => handleRoleChange(m.user_id, val as "admin" | "member")}
+                            size="sm"
+                            align="right"
+                          />
+                        </div>
                         {!m.is_current_user && (
                           <button
                             type="button"

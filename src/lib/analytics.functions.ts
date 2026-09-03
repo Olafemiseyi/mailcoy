@@ -145,13 +145,35 @@ export const listAliases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
-    const { data, error } = await context.supabase
+    let q = context.supabase
       .from("aliases")
       .select(
         "id, address, is_primary, employee_id, created_at, employees(id, full_name, professional_email, department, job_title)"
       )
-      .eq("organization_id", ctx.organizationId)
-      .order("created_at", { ascending: false });
+      .eq("organization_id", ctx.organizationId);
+
+    // Multi-Employee Isolation: Members only see their own aliases or shared aliases
+    if (ctx.role === "member") {
+      const userEmailLower = context.userEmail?.toLowerCase() || "";
+      const { data: myEmps } = await context.supabase
+        .from("employees")
+        .select("id")
+        .eq("organization_id", ctx.organizationId)
+        .or(
+          `user_id.eq.${context.userId},personal_email.ilike.${userEmailLower},company_email.ilike.${userEmailLower},professional_email.ilike.${userEmailLower}`
+        );
+
+      const myEmpId = myEmps?.[0]?.id;
+      if (myEmpId) {
+        q = q.or(`employee_id.eq.${myEmpId},employee_id.is.null`);
+      } else {
+        q = q.is("employee_id", null);
+      }
+    } else {
+      q = q.order("created_at", { ascending: false });
+    }
+
+    const { data, error } = await q;
 
     if (error) throw error;
     return data || [];
@@ -166,44 +188,139 @@ export const createAlias = createServerFn({ method: "POST" })
           .string()
           .trim()
           .toLowerCase()
-          .max(254)
-          .regex(
-            /^[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-            "Invalid email address. Local part cannot exceed 64 characters and special characters like quotes or apostrophes are not permitted.",
-          ),
-        employee_id: z.string().uuid(),
+          .min(1, "Please enter an alias prefix or address.")
+          .max(254),
+        employee_id: z.string().uuid("Please select a team member."),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
+
+    if (!ctx.subscription.canUseAliases) {
+      throw new Error(
+        "Shared inboxes and aliases are not available on the Free Tier. Please upgrade to Starter Pro in Settings → Billing.",
+      );
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    if (ctx.subscription.maxAliases !== Infinity) {
+      const { count: currentAliasCount } = await supabaseAdmin
+        .from("aliases")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", ctx.organizationId);
+
+      if ((currentAliasCount ?? 0) >= ctx.subscription.maxAliases) {
+        throw new Error(
+          `You have reached the maximum of ${ctx.subscription.maxAliases} aliases on your ${ctx.subscription.plan} plan. Please upgrade to Growth for unlimited aliases.`,
+        );
+      }
+    }
+
+    if (ctx.subscription.maxAliasesPerEmployee !== Infinity) {
+      const { count: empAliasCount } = await supabaseAdmin
+        .from("aliases")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", ctx.organizationId)
+        .eq("employee_id", data.employee_id);
+
+      if ((empAliasCount ?? 0) >= ctx.subscription.maxAliasesPerEmployee) {
+        throw new Error(
+          `This team member has reached the limit of ${ctx.subscription.maxAliasesPerEmployee} aliases on your ${ctx.subscription.plan} plan. Please upgrade to Growth to assign more aliases per member.`,
+        );
+      }
+    }
+
+    let fullAddress = data.address.trim().toLowerCase();
+
+    // If only prefix (e.g. "hello") was entered, auto-append the organization's verified domain
+    if (!fullAddress.includes("@")) {
+      const { data: doms } = await supabaseAdmin
+        .from("domains")
+        .select("domain_name")
+        .eq("organization_id", ctx.organizationId)
+        .eq("verification_status", "verified")
+        .order("created_at", { ascending: true });
+
+      const defaultDom = doms?.[0]?.domain_name || "mailcoy.com";
+      fullAddress = `${fullAddress}@${defaultDom}`;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]{1,64}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(fullAddress)) {
+      throw new Error("Invalid alias format. Please enter a valid name like 'sales' or 'sales@company.com'.");
+    }
+
+    // Check if duplicate for this employee
+    const { data: existing } = await supabaseAdmin
+      .from("aliases")
+      .select("id, employee_id")
+      .eq("organization_id", ctx.organizationId)
+      .eq("address", fullAddress)
+      .eq("employee_id", data.employee_id)
+      .maybeSingle();
+
+    if (existing) {
+      throw new Error(`The alias "${fullAddress}" is already assigned to this team member.`);
+    }
+
     const { data: row, error } = await context.supabase
       .from("aliases")
       .insert({
         organization_id: ctx.organizationId,
         employee_id: data.employee_id,
-        address: data.address.toLowerCase(),
+        address: fullAddress,
         is_primary: false,
       } as never)
       .select("id, address, is_primary, employee_id, created_at")
       .single();
-    if (error) throw error;
+
+    if (error) {
+      if ((error as any).code === "23505") {
+        throw new Error(`The alias "${fullAddress}" is already assigned.`);
+      }
+      throw new Error(error.message || "Failed to create alias.");
+    }
     return row;
   });
 
 export const deleteAlias = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        // Optional: when provided, ALL alias rows for this address in the org
+        // are deleted (full group wipe), not just the single row by id.
+        address: z.string().trim().toLowerCase().max(254).optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
-    const { error } = await context.supabase
-      .from("aliases")
-      .delete()
-      .eq("id", data.id)
-      .eq("organization_id", ctx.organizationId);
-    if (error) throw error;
+
+    if (data.address) {
+      // Delete the entire alias group (all employee assignments for this address)
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error } = await supabaseAdmin
+        .from("aliases")
+        .delete()
+        .eq("address", data.address)
+        .eq("organization_id", ctx.organizationId)
+        .eq("is_primary", false); // never delete primary rows this way
+      if (error) throw error;
+    } else {
+      // Fallback: delete a single alias row by ID (used when removing one member from shared inbox)
+      const { error } = await context.supabase
+        .from("aliases")
+        .delete()
+        .eq("id", data.id)
+        .eq("organization_id", ctx.organizationId);
+      if (error) throw error;
+    }
     return { ok: true };
   });
 
@@ -374,18 +491,34 @@ export const updateCatchAll = createServerFn({ method: "POST" })
     z
       .object({
         catchall_mode: z.enum(["receive", "reject", "forward"]),
-        catchall_forward_to: z.string().trim().email().max(254).nullable(),
+        catchall_forward_to: z.string().trim().max(254).nullable().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const ctx = await requireOrgContext(context.supabase, context.userId);
     assertAdmin(ctx.role);
+
+    if (!ctx.subscription.canUseCatchAll) {
+      throw new Error(
+        "Catch-all routing is a premium feature available on the Growth plan and above. Please upgrade in Settings → Billing.",
+      );
+    }
+
+    let forwardEmail: string | null = null;
+    if (data.catchall_mode === "forward") {
+      forwardEmail = (data.catchall_forward_to || "").trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!forwardEmail || !emailRegex.test(forwardEmail)) {
+        throw new Error("Please specify a valid destination email address for forwarding.");
+      }
+    }
+
     const { error } = await context.supabase.from("settings").upsert(
       {
         organization_id: ctx.organizationId,
         catchall_mode: data.catchall_mode,
-        catchall_forward_to: data.catchall_mode === "forward" ? data.catchall_forward_to : null,
+        catchall_forward_to: data.catchall_mode === "forward" ? forwardEmail : null,
       } as never,
       { onConflict: "organization_id" },
     );
