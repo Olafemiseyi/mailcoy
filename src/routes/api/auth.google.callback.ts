@@ -321,6 +321,8 @@ export const Route = createFileRoute("/api/auth/google/callback")({
             const actionLink =
               (linkData as any)?.properties?.action_link ||
               (linkData as any)?.action_link;
+            const verificationType =
+              (linkData as any)?.properties?.verification_type || "magiclink";
 
             if (linkErr || (!hashedToken && !actionLink)) {
               return new Response(null, {
@@ -333,7 +335,7 @@ export const Route = createFileRoute("/api/auth/google/callback")({
 
             // Redirect browser directly to local /auth/verify to stay on localhost/current host
             const verifyUrl = hashedToken
-              ? `${url.origin}/auth/verify?token_hash=${hashedToken}&type=magiclink&next=${encodeURIComponent(targetPath)}`
+              ? `${url.origin}/auth/verify?token_hash=${hashedToken}&type=${verificationType}&next=${encodeURIComponent(targetPath)}`
               : actionLink;
 
             return new Response(null, {
@@ -570,10 +572,12 @@ export const Route = createFileRoute("/api/auth/google/callback")({
             const actionLink =
               (linkData as any)?.properties?.action_link ||
               (linkData as any)?.action_link;
+            const verificationType =
+              (linkData as any)?.properties?.verification_type || "magiclink";
 
             if (!linkErr && (hashedToken || actionLink)) {
               const verifyUrl = hashedToken
-                ? `${url.origin}/auth/verify?token_hash=${hashedToken}&type=magiclink&next=${encodeURIComponent("/compose")}`
+                ? `${url.origin}/auth/verify?token_hash=${hashedToken}&type=${verificationType}&next=${encodeURIComponent("/compose")}`
                 : actionLink;
 
               return new Response(null, {
